@@ -28,6 +28,11 @@ assets/react.svg
 public/wxt.svg
 public/icon/*
 !public/icon/mapbridge.svg
+!public/icon/16.png
+!public/icon/32.png
+!public/icon/48.png
+!public/icon/96.png
+!public/icon/128.png
 
 # Private / internal material that must not be published
 private/
