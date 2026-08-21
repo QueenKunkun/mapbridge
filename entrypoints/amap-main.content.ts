@@ -1,0 +1,275 @@
+import { installResponseCapture } from '@/utils/capture';
+import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
+
+const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
+
+/** 高德收藏页 getFav 响应里提取 items。 */
+function extractAmapRecords(json: unknown): unknown[] {
+  if (!json || typeof json !== 'object') return [];
+  const data = (json as Record<string, unknown>)['data'];
+  if (!data || typeof data !== 'object') return [];
+  const items = (data as Record<string, unknown>)['items'];
+  return Array.isArray(items) ? items : [];
+}
+
+interface AmapItem {
+  id?: string;
+  type?: number;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * 高德收藏页 MAIN world 执行器。
+ * - 提取：拦截 /service/fav/getFav 响应。
+ * - 导入：读现有收藏 -> 合并 payload -> syncFaves 一次性提交 -> 验证。
+ */
+export default defineContentScript({
+  matches: ['*://ditu.amap.com/*', '*://www.amap.com/*'],
+  world: 'MAIN',
+  runAt: 'document_start',
+  main() {
+    const capture = installResponseCapture((url) => url.includes('/service/fav/getFav'));
+    log('capture installed');
+
+    // ---- 高德页面请求封装（优先 window.amap，其次 jQuery，最后 fetch）----
+    function getJson(url: string): Promise<unknown> {
+      return new Promise((resolve, reject) => {
+        const api = (window as unknown as { amap?: { get?: (u: string, cb: (d: unknown) => void, type: string) => void } }).amap;
+        const jq = (window as unknown as { jQuery?: { ajax: (opts: unknown) => void }; $?: { ajax: (opts: unknown) => void } }).jQuery
+          ?? (window as unknown as { $?: { ajax: (opts: unknown) => void } }).$;
+        if (api?.get) {
+          api.get(url, resolve, 'json');
+        } else if (jq?.ajax) {
+          jq.ajax({ url, type: 'GET', dataType: 'json', success: resolve, error: reject });
+        } else {
+          fetch(url, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+          })
+            .then((r) => r.json())
+            .then(resolve, reject);
+        }
+      });
+    }
+
+    function formEncode(value: unknown): string {
+      const pairs: string[] = [];
+      const add = (key: string, item: unknown): void => {
+        pairs.push(encodeURIComponent(key) + '=' + encodeURIComponent(item == null ? '' : String(item)));
+      };
+      const visit = (key: string, item: unknown): void => {
+        if (Array.isArray(item)) {
+          item.forEach((entry, index) => visit(`${key}[${entry && typeof entry === 'object' ? index : ''}]`, entry));
+        } else if (item && typeof item === 'object') {
+          Object.keys(item as Record<string, unknown>).forEach((childKey) =>
+            visit(`${key}[${childKey}]`, (item as Record<string, unknown>)[childKey]),
+          );
+        } else {
+          add(key, item);
+        }
+      };
+      visit('', value);
+      return pairs.join('&');
+    }
+
+    function postForm(url: string, body: Record<string, unknown>): Promise<unknown> {
+      return new Promise((resolve, reject) => {
+        const amap = (window as unknown as { amap?: { post?: (u: string, d: unknown, cb: (d: unknown) => void, type: string) => void } }).amap;
+        const jq = (window as unknown as { jQuery?: { ajax: (opts: unknown) => void }; $?: { ajax: (opts: unknown) => void } }).jQuery
+          ?? (window as unknown as { $?: { ajax: (opts: unknown) => void } }).$;
+        if (amap?.post) {
+          amap.post(url, body, resolve, 'json');
+        } else if (jq?.ajax) {
+          jq.ajax({ url, type: 'POST', data: body, dataType: 'json', success: resolve, error: reject });
+        } else {
+          fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              Accept: 'application/json, text/javascript, */*; q=0.01',
+              'X-Requested-With': 'XMLHttpRequest',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: formEncode(body),
+          })
+            .then((r) => r.json())
+            .then(resolve, reject);
+        }
+      });
+    }
+
+    async function runImport(payload: unknown): Promise<void> {
+      const favorites = (payload ?? []) as AmapItem[];
+      const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
+
+      log('runImport: payloadItems=', favorites.length);
+      if (!location.hostname.includes('amap.com')) {
+        throw new Error('请在已登录的高德网页（ditu.amap.com/faves）执行导入');
+      }
+
+      emit({ phase: 'read-existing', message: '读取现有收藏…' });
+      const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[]; ver?: string } };
+      log('getFav: status=', current.status, 'items=', current.data?.items?.length);
+      if (String(current.status) !== '1') {
+        throw new Error('读取高德收藏失败，请确认已在 ditu.amap.com/faves 登录');
+      }
+
+      const amap = (window as unknown as { amap?: { favesStore?: { getFave?: (k: string) => unknown; update?: (d: unknown) => void } } }).amap;
+      const currentItems = current.data?.items ?? [];
+      const ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
+
+      const merged = new Map<string, { id: string; type: number; act: string; data: Record<string, unknown> }>();
+      for (const item of currentItems) {
+        if (item?.id && item.data) merged.set(item.id, { id: item.id, type: item.type || 101, act: 'c', data: item.data });
+      }
+
+      const detail: Array<{ id: string; status: string; error?: string }> = [];
+      let imported = 0;
+      let duplicates = 0;
+      for (const item of favorites) {
+        if (!item.id || !item.data) {
+          detail.push({ id: item.id ?? '', status: 'failed', error: '缺少 id/data' });
+          continue;
+        }
+        if (merged.has(item.id)) {
+          duplicates += 1;
+          detail.push({ id: item.id, status: 'duplicate' });
+          continue;
+        }
+        merged.set(item.id, { id: item.id, type: 101, act: 'c', data: item.data });
+        imported += 1;
+        detail.push({ id: item.id, status: 'imported' });
+      }
+
+      emit({ phase: 'sync', processed: imported, total: favorites.length, message: `合并 ${imported} 条，跳过重复 ${duplicates} 条…` });
+      const syncResult = (await postForm('/service/fav/syncFaves?', { data: Array.from(merged.values()), ver })) as { status?: string | number; data?: unknown };
+      log('syncFaves: status=', syncResult.status);
+      if (String(syncResult.status) !== '1') {
+        throw new Error('高德同步失败：' + JSON.stringify(syncResult).slice(0, 500));
+      }
+      if (amap?.favesStore?.update) amap.favesStore.update(syncResult.data);
+
+      emit({ phase: 'verify', message: '验证结果…' });
+      const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+      const targetCount = after.data?.items?.length ?? undefined;
+      log('verify: targetCount=', targetCount);
+
+      postEvent({
+        mb: BRIDGE_CHANNEL,
+        type: 'import-result',
+        data: {
+          provider: 'amap',
+          done: true,
+          targetCount,
+          raw: { detail, beforeServerItems: currentItems.length },
+        },
+      });
+    }
+
+    // ---- 开发版工具：备份 + 清空高德收藏（仅 DEV 构建注册）----
+    async function runDevReadFav(): Promise<void> {
+      log('dev-read-fav');
+      try {
+        const raw = await getJson('/service/fav/getFav?');
+        let store: unknown = null;
+        const favesStore = (window as unknown as { amap?: { favesStore?: { get?: () => Promise<unknown> } } }).amap?.favesStore;
+        if (favesStore?.get) store = await favesStore.get();
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-data',
+          data: { provider: 'amap', fav: { raw, store, savedAt: Date.now() } },
+        });
+      } catch (e) {
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-data', data: { provider: 'amap', error: String(e instanceof Error ? e.message : e) } });
+      }
+    }
+
+    async function runDevClearFav(): Promise<void> {
+      log('dev-clear-fav');
+      try {
+        const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+        const items = current.data?.items ?? [];
+        const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
+        let deleted = 0;
+        let failed = 0;
+        const del = favapi?.deletefav;
+        if (!del) {
+          failed += items.length;
+        }
+        const queue = [...items];
+        const workers = Array.from({ length: Math.min(10, queue.length) }, async () => {
+          while (del && queue.length > 0) {
+            const item = queue.shift();
+            if (!item) break;
+            await new Promise<void>((resolve) => {
+              del({ id: item.id, type: item.type ?? 101, data: item.data }, (t) => {
+                if (t && String((t as { status?: unknown }).status) === '1') deleted += 1;
+                else failed += 1;
+                resolve();
+              });
+            });
+            await new Promise((r) => setTimeout(r, 120));
+          }
+        });
+        await Promise.all(workers);
+        const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+        const remaining = after.data?.items?.length ?? 0;
+        log('dev-clear-fav done', { deleted, failed, remaining });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'amap', deleted, failed, remaining, ok: failed === 0 },
+        });
+      } catch (e) {
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'amap', deleted: 0, failed: 0, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) },
+        });
+      }
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.source !== window) return;
+      if (!isBridgeCommand(event.data)) return;
+      const cmd = event.data;
+
+      if (cmd.type === 'extract') {
+        const records = extractAmapRecords(capture.responses);
+        log('extract: records=', records.length);
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'extract-data',
+          data: {
+            provider: 'amap',
+            records,
+            exhausted: true,
+            hint: records.length === 0 ? '未捕获到收藏数据。请打开 https://ditu.amap.com/faves 并确认已登录后重试。' : undefined,
+          },
+        });
+      } else if (cmd.type === 'import') {
+        log('recv import command');
+        runImport(cmd.payload)
+          .catch((error) => {
+            postEvent({
+              mb: BRIDGE_CHANNEL,
+              type: 'import-result',
+              data: { provider: 'amap', done: false, error: String(error?.message ?? error) },
+            });
+          });
+      } else if (cmd.type === 'ping') {
+        log('pong');
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'pong' });
+      } else if (import.meta.env.DEV && cmd.type === 'dev-read-fav') {
+        void runDevReadFav();
+      } else if (import.meta.env.DEV && cmd.type === 'dev-clear-fav') {
+        void runDevClearFav();
+      }
+    });
+
+    postEvent({ mb: BRIDGE_CHANNEL, type: 'ready' });
+    log('ready posted');
+  },
+});

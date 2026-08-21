@@ -1,0 +1,38 @@
+# Changelog
+
+All notable changes to this project are documented here, following the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) spec. Versioning follows [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+- Open-source release plan (Model B: on-air style dual-directory): `docs/06-open-source-release.md` (private).
+- Options page redesigned in the Annoi style: dark theme with CSS-variable design tokens, sticky sidebar category nav (Settings / Data / About / Dev), card-based setting blocks via `SettingsBlock` (fullWidth/doubleWidth), responsive `repeat(auto-fill, minmax(340px, 1fr))` grid; job history and dev tools span the full row.
+- Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then clears all favorites in parallel via `deletefav` and verifies the remaining count.
+- Project conventions persisted in `AGENTS.md` (English commit messages, English public docs, dev-build gating, release workflow).
+
+### Changed
+- Popup platform picker hides the not-yet-supported Tencent Maps (`SELECTABLE_PROVIDERS` filters `tencent`); re-enable once the adapter lands.
+- Popup auto-detects open favorites tabs (`whoami` probe): detection runs only for the selected source/target; when already detected, extract/import steps show "Detected ✓" and skip the open-page prompt.
+- Baidu extraction auto-scrolls the favorites list to load all favorites (full list by default; can be trimmed in preview).
+- Popup preview list scrolls internally with sticky footer buttons (avoids the `vh` feedback-loop collapse in auto-sized popups).
+- Active tab id is refreshed before extract/import (`get-active-tab`), fixing imports silently hanging when the target opened in a new tab while the command went to a stale tab.
+- Import progress changed from a percentage bar to phase status text (read existing → merge → sync → verify).
+- Starting a new import auto-cancels previously stuck importing jobs, preventing `import-result` from being attached to the wrong job.
+- Full-chain debug logging (`[mb:*]` prefix on background / ISOLATED / MAIN).
+- Reusable dev scripts committed: `scripts/cdp_lib.py` (CDP connect/eval helper), `scripts/cdp_popup_e2e.py` (popup end-to-end flow).
+- Incident postmortem: `docs/postmortem-001-import-stuck.md` (private).
+
+### Fixed
+- WXT content-script entry naming switched to `*.content.ts` (`content-*.ts` fell into the catch-all and was never registered, making `tabs.sendMessage` fail with "Receiving end does not exist").
+- Background now sends the `mb: '__mapbridge_v1__'` channel field on commands, fixing the MAIN world ignoring commands and the 15s extract timeout.
+- Baidu favorites extraction adapted to the real `favdata` response shape (`sync.newdata` paging, `detail.data.extdata`, skipping `action:'del'`, address/phone parsing).
+
+## [0.1.0] - 2026-08-19
+
+### Added
+- MapBridge extension skeleton (WXT + React): popup wizard (choose platforms → extract → preview/edit → import → result), options page, background job orchestration.
+- Baidu ↔ Amap favorites migration core: extraction (MAIN-world interception of the favorites API responses) and import (session reuse calling `syncFaves` batch merge).
+- Coordinates normalized to WGS-84 with BD-09 mercator → GCJ-02 → WGS-84 conversion.
+- Job persistence (IndexedDB) with a draft/extracting/preview/importing/done/failed/cancelled state machine.
+- Docs: `docs/01-architecture.md` ~ `docs/05-dev-testing.md` (with captured-protocol findings).
+- Icons & branding: MapBridge name, SVG source + `scripts/gen-icons.sh` generating multi-size PNGs.
