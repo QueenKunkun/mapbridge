@@ -26,7 +26,7 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ### Fixed
 - Options page now opens in a full browser tab (`manifest.open_in_tab` meta tag) instead of being embedded as a small dialog in `chrome://extensions`.
-- Consistent popup spacing: flex `gap` between sections plus uniform section bottom padding, so the whitespace below each step's buttons no longer varies.
+- Consistent popup spacing: removed the fixed `min-height: 100vh` from `body`/`#root` (which forced every step to stretch to the popup's max height and made button-bottom whitespace vary) and fixed the preview table's `max-height` that referenced `100vh`; button-bottom whitespace is now a uniform 16px across all steps (verified per step via `cdp_popup_geom`).
 - WXT content-script entry naming switched to `*.content.ts` (`content-*.ts` fell into the catch-all and was never registered, making `tabs.sendMessage` fail with "Receiving end does not exist").
 - Background now sends the `mb: '__mapbridge_v1__'` channel field on commands, fixing the MAIN world ignoring commands and the 15s extract timeout.
 - Baidu favorites extraction adapted to the real `favdata` response shape (`sync.newdata` paging, `detail.data.extdata`, skipping `action:'del'`, address/phone parsing).
