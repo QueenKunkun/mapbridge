@@ -11,8 +11,12 @@ All notable changes to this project are documented here, following the [Keep a C
 - Options page redesigned in the Annoi style: dark theme with CSS-variable design tokens, sticky sidebar category nav (Settings / Data / About / Dev), card-based setting blocks via `SettingsBlock` (fullWidth/doubleWidth), responsive `repeat(auto-fill, minmax(340px, 1fr))` grid; job history and dev tools span the full row.
 - Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then clears all favorites in parallel via `deletefav` and verifies the remaining count.
 - Project conventions persisted in `AGENTS.md` (English commit messages, English public docs, dev-build gating, release workflow).
+- Settings button (⚙) in the popup header that opens the options page.
+- Chinese `README.md` added as the primary readme; the English version lives at `README-en.md`.
 
 ### Changed
+- Popup header logo ("MapBridge") reduced in size for a more compact header.
+- Setup picker: source/target selects and the `→` arrow now share one row and are vertically centered.
 - Popup platform picker hides the not-yet-supported Tencent Maps (`SELECTABLE_PROVIDERS` filters `tencent`); re-enable once the adapter lands.
 - Popup auto-detects open favorites tabs (`whoami` probe): detection runs only for the selected source/target; when already detected, extract/import steps show "Detected ✓" and skip the open-page prompt.
 - Baidu extraction auto-scrolls the favorites list to load all favorites (full list by default; can be trimmed in preview).

@@ -1,69 +1,70 @@
 # MapBridge
 
-Migrate map favorites between Chinese map services (Baidu Maps ↔ Amap/AMap), directly in your browser.
+在浏览器里直接迁移地图收藏夹：百度地图 ↔ 高德地图。
 
-Data stays local: the extension reads and writes favorites using the map site's own session, so **no cloud service, no upload, no API keys**.
+数据全程留在本地：扩展复用地图站点自身的登录会话读写收藏，**无云端服务、无上传、无需任何 API Key**。
 
-> Currently verified: **Baidu Maps → Amap** extraction & import. Tencent Maps is not supported yet (hidden from the picker).
+> 当前已验证：**百度地图 → 高德地图** 的提取与导入。腾讯地图暂不支持（选择器中已隐藏）。
 
-## Features
+## 功能特性
 
-- **Extract favorites** from a signed-in favorites page by intercepting the site's own favorites API responses — no scraping the DOM, no fragile selectors.
-- **Preview & edit** the extracted list (rename, filter, trim, dedupe) before importing.
-- **Import** back into the target account by reusing the target page's session, merged with existing favorites (deduped by a deterministic coordinate+name fingerprint).
-- **Coordinate conversion** across BD-09 (mercator) → GCJ-02 → WGS-84 so places land correctly on the other map.
-- **Dev tool** (dev build only): one-click backup + wipe of Amap favorites, for resetting test data.
+- **提取收藏**：从已登录的收藏页拦截站点自身的收藏接口响应（`getFav` / `favdata`），不抓 DOM、不依赖脆弱的页面选择器。
+- **预览与编辑**：导入前可对提取列表重命名、搜索过滤、删减（编辑结果保留在列表中）。
+- **导入收藏**：复用目标页会话，按"坐标+名称"的确定性指纹去重后，与目标账号已有收藏合并导入。
+- **坐标系转换**：内置 BD-09（墨卡托）→ GCJ-02 → WGS-84，落地位置准确。
+- **登录态检测**：popup 探测收藏页是否已打开并已登录，未登录时给出黄色"未登录"提示（选择器经真实页面两种状态实测验证）。
+- **开发工具**（仅开发构建）：一键备份并清空高德收藏，用于重置测试数据。
 
-## How it works
+## 工作原理
 
-1. An ISOLATED content script bridges the extension to a MAIN-world executor on the map page.
-2. Extraction: the MAIN executor captures the site's own favorites API responses (e.g. `getFav`/`favdata`) and normalizes them to a canonical `CanonicalPlace`.
-3. Import: it reads the target's current favorites, merges the new places (keyed by `md5(point_x + "+" + point_y + "+" + name)`), and submits a single batch through the site's own sync endpoint.
+1. ISOLATED 内容脚本把扩展桥接到地图页的 MAIN 世界执行器。
+2. 提取：MAIN 执行器捕获站点自身的收藏接口响应，归一化为统一的 `CanonicalPlace`。
+3. 导入：读取目标端已有收藏，按 `md5(point_x + "+" + point_y + "+" + name)` 去重合并，通过站点自身的同步接口一次性批量提交。
 
-Everything runs inside the page with the session you're already logged into.
+所有操作都在你已登录的页面会话内完成。
 
-## Install / development
+## 安装 / 开发
 
 ```bash
 pnpm install
-pnpm dev:build      # builds the development version into .output/chrome-mv3
+pnpm dev:build      # 构建开发版到 .output/chrome-mv3
 ```
 
-Then load the unpacked extension from `.output/chrome-mv3` via `chrome://extensions` → *Load unpacked*.
+然后在 `chrome://extensions` → *加载已解压的扩展程序* 选择 `.output/chrome-mv3`。
 
-Production build (dev-only features tree-shaken):
+生产构建（dev-only 功能会被 tree-shake 掉）：
 
 ```bash
 pnpm build
-pnpm test          # unit tests
-pnpm compile       # typecheck
+pnpm test          # 单元测试
+pnpm compile       # 类型检查
 ```
 
-## Usage
+## 使用方法
 
-1. Open the popup, pick **source → target** (e.g. Baidu Maps → Amap).
-2. Open the source favorites page (the popup auto-detects open favorites tabs).
-3. **Extract** → preview/edit the list → **Import** → view the report.
+1. 打开 popup，选择 **来源 → 目标**（如 百度地图 → 高德地图）。
+2. 打开来源收藏页（popup 会自动检测已打开的收藏页并显示登录态）。
+3. **提取** → 预览 / 编辑列表 → **导入** → 查看结果报告。
 
-## Project layout
+## 项目结构
 
-| Path | Purpose |
+| 路径 | 用途 |
 |---|---|
-| `entrypoints/popup` | Migration wizard (select → extract → preview → import → report) |
-| `entrypoints/options` | Settings, job history, adapter status, dev tools |
-| `entrypoints/background` | Task orchestration, messaging, content-script bridge |
-| `entrypoints/*-main.content.ts` | MAIN-world executors on each map page |
-| `adapters/` | Per-platform normalize / import-payload builders |
-| `core/` | Job state machine, dedup, coordinate conversion |
-| `utils/` | Bridge protocol, messaging, storage helpers |
+| `entrypoints/popup` | 迁移向导（选择 → 提取 → 预览 → 导入 → 报告） |
+| `entrypoints/options` | 设置、任务历史、适配器状态、开发工具 |
+| `entrypoints/background` | 任务编排、消息路由、内容脚本桥接 |
+| `entrypoints/*-main.content.ts` | 各地图页的 MAIN 世界执行器 |
+| `adapters/` | 各平台归一化 / 导入载荷构造 |
+| `core/` | 任务状态机、去重、坐标转换 |
+| `utils/` | 桥接协议、消息、存储辅助 |
 
-See `docs/01-architecture.md`–`docs/04-user-workflow.md` for design notes (internal).
+设计笔记见 `docs/01-architecture.md`–`docs/04-user-workflow.md`（内部文档）。
 
-## Roadmap
+## 路线图
 
-- [ ] Tencent Maps adapter (extraction & import)
-- [ ] Baidu import adapter (export → re-import to Baidu)
+- [ ] 腾讯地图适配器（提取与导入）
+- [ ] 百度地图导入适配器（导出 → 重新导入百度）
 
-## License
+## 许可证
 
 [Apache-2.0](LICENSE)

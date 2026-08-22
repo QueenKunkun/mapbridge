@@ -35,7 +35,7 @@ section {
 
 .app-header h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
 }
 
 .tagline {
@@ -51,6 +51,23 @@ section {
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;
+}
+
+.icon-btn {
+  margin-left: 4px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  color: #2563eb;
+  background: #f3f4f6;
 }
 
 .steps {
@@ -140,7 +157,8 @@ button.small {
 
 .setup label {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   font-size: 12px;
   color: #6b7280;
   gap: 4px;

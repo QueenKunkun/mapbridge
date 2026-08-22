@@ -162,6 +162,14 @@ export default function App() {
         <h1>MapBridge</h1>
         <span className="tagline">地图收藏夹迁移</span>
         {ver && <span className="ver-badge">v{ver}</span>}
+        <button
+          className="icon-btn"
+          title="设置"
+          aria-label="设置"
+          onClick={() => void browser.runtime.openOptionsPage()}
+        >
+          ⚙
+        </button>
       </header>
 
       <div className="steps">
@@ -226,7 +234,7 @@ export default function App() {
               })}
             {detecting && <span className="hint">检测中…</span>}
           </div>
-          <p className="hint">默认列出全部收藏，可在预览步骤删改后再导入。</p>
+          <p className="hint">请确保地图网址已打开，并完成登录。</p>
           <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
             {canStart ? '开始' : '请选择不同平台'}
           </button>
