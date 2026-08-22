@@ -23,13 +23,15 @@ body {
 
 .app {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .app-header {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 14px;
 }
 
 .app-header h1 {
@@ -45,7 +47,6 @@ body {
 .steps {
   display: flex;
   gap: 6px;
-  margin-bottom: 16px;
 }
 
 .step {
@@ -76,7 +77,6 @@ body {
   padding: 8px 10px;
   border-radius: 6px;
   font-size: 12px;
-  margin-bottom: 12px;
   word-break: break-all;
 }
 
