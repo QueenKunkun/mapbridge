@@ -56,12 +56,18 @@ More platforms coming soon.
 After enabling GitHub Pages on the repo:
 `https://queenkunkun.github.io/mapbridge/PRIVACY`
 
-## Screenshot
+## Screenshots (at least 1 required, up to 5)
 
-At least 1 required (1280×800, PNG or JPEG). Suggested approach:
+| # | What to show | Size |
+|---|---|---|
+| 1 | Popup wizard — source/target selection | 1280×800 or 640×400 |
+| 2 | Preview step — extracted favorites list | 1280×800 or 640×400 |
+| 3 | Import result — success/failure counts | 1280×800 or 640×400 |
+| 4 | Options page — adapter status | 1280×800 or 640×400 |
 
-- Center the popup on a dark branded background, add a one-line caption
-- Or compose a before/after flow: source popup → target result
+- Format: **PNG or JPEG** (24-bit, no alpha). GIF not supported.
+- Tip: 640×400 is fine — close to popup size, easy to produce.
+- Optional: YouTube video link can supplement or replace screenshots.
 
 ## Promotional Tile (required)
 
