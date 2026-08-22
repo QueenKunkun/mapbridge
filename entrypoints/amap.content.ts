@@ -6,10 +6,8 @@ const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...ar
 function isLoggedIn(): boolean {
   return !!(
     document.querySelector('.user-name') ||
-    document.querySelector('.user-avatar') ||
-    document.querySelector('[class*="userName"]') ||
-    document.querySelector('[class*="user-name"]') ||
-    document.querySelector('.login-name')
+    document.querySelector('.quit-login') ||
+    document.querySelector('.user-panel .user-portrait')
   );
 }
 
