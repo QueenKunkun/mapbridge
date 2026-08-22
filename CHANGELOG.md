@@ -5,6 +5,8 @@ All notable changes to this project are documented here, following the [Keep a C
 ## [Unreleased]
 
 ### Added
+- Login-state detection in the popup: content scripts probe the map page DOM when answering `whoami`; a detected tab that is not logged in shows a yellow "未登录" warning instead of the green checkmark (selectors verified via CDP against logged-in and logged-out sessions).
+- Version badge (`v0.1.0`) shown in the popup header, read from `browser.runtime.getManifest()`.
 - Open-source release plan (Model B: on-air style dual-directory): `docs/06-open-source-release.md` (private).
 - Options page redesigned in the Annoi style: dark theme with CSS-variable design tokens, sticky sidebar category nav (Settings / Data / About / Dev), card-based setting blocks via `SettingsBlock` (fullWidth/doubleWidth), responsive `repeat(auto-fill, minmax(340px, 1fr))` grid; job history and dev tools span the full row.
 - Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then clears all favorites in parallel via `deletefav` and verifies the remaining count.
@@ -23,6 +25,8 @@ All notable changes to this project are documented here, following the [Keep a C
 - Incident postmortem: `docs/postmortem-001-import-stuck.md` (private).
 
 ### Fixed
+- Options page now opens in a full browser tab (`manifest.open_in_tab` meta tag) instead of being embedded as a small dialog in `chrome://extensions`.
+- Consistent popup spacing: flex `gap` between sections plus uniform section bottom padding, so the whitespace below each step's buttons no longer varies.
 - WXT content-script entry naming switched to `*.content.ts` (`content-*.ts` fell into the catch-all and was never registered, making `tabs.sendMessage` fail with "Receiving end does not exist").
 - Background now sends the `mb: '__mapbridge_v1__'` channel field on commands, fixing the MAIN world ignoring commands and the 15s extract timeout.
 - Baidu favorites extraction adapted to the real `favdata` response shape (`sync.newdata` paging, `detail.data.extdata`, skipping `action:'del'`, address/phone parsing).
