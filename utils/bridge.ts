@@ -13,6 +13,7 @@ export interface BridgeReply {
   mb: typeof BRIDGE_CHANNEL;
   type: 'pong' | 'whoami';
   provider: 'baidu' | 'amap' | 'tencent';
+  loggedIn?: boolean;
 }
 
 export interface BridgeEvent {

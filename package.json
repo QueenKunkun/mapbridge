@@ -1,11 +1,12 @@
 {
   "name": "mapbridge",
   "description": "Migrate map favorites between Chinese map services (Baidu Maps / Amap), locally in your browser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
+    "dev:watch": "chokidar 'entrypoints/**/*' 'components/**/*' 'utils/**/*' 'adapters/**/*' 'package.json' -c 'pnpm build && scripts/reload.sh'",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
     "dev:build": "wxt build --mode development && cp -R .output/chrome-mv3-dev/* .output/chrome-mv3/",

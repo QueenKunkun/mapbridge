@@ -27,7 +27,7 @@ export default function App() {
   const [tabId, setTabId] = useState<number | undefined>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number }[]>([]);
+  const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean }[]>([]);
   const [detecting, setDetecting] = useState(false);
 
   async function refreshDetection(): Promise<void> {
@@ -50,6 +50,7 @@ export default function App() {
   }, [source, target]);
 
   const detectedTab = (provider: ProviderId): number | undefined => detected.find((t) => t.providerId === provider)?.tabId;
+  const isProviderLoggedIn = (provider: ProviderId): boolean | undefined => detected.find((t) => t.providerId === provider)?.loggedIn;
 
   const canStart = source !== target;
 
@@ -198,12 +199,17 @@ export default function App() {
               .map((pid) => {
                 const p = PROVIDERS.find((x) => x.id === pid)!;
                 const ok = detected.some((d) => d.providerId === pid);
+                const loggedIn = isProviderLoggedIn(pid);
                 return (
                   <div key={pid} className="detect-item">
                     <span className={`dot${ok ? ' ok' : ''}`} />
                     <span>{p.name}收藏页</span>
                     {ok ? (
-                      <span className="ok-tag">已检测到 ✓</span>
+                      loggedIn === false ? (
+                        <span className="warn-tag">未登录</span>
+                      ) : (
+                        <span className="ok-tag">已检测到 ✓</span>
+                      )
                     ) : (
                       <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
                         打开

@@ -3,6 +3,16 @@ import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...args);
 
+function isLoggedIn(): boolean {
+  return !!(
+    document.querySelector('.user-name') ||
+    document.querySelector('.user-avatar') ||
+    document.querySelector('[class*="userName"]') ||
+    document.querySelector('[class*="user-name"]') ||
+    document.querySelector('.login-name')
+  );
+}
+
 /** 高德收藏页 ISOLATED 桥接（与百度桥接同理）。 */
 export default defineContentScript({
   matches: ['*://ditu.amap.com/*', '*://www.amap.com/*'],
@@ -24,7 +34,7 @@ export default defineContentScript({
         log('recv command, relay -> MAIN', request.command.type);
         window.postMessage(request.command, '*');
         if (request.command.type === 'ping' || request.command.type === 'whoami') {
-          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'amap' };
+          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'amap', loggedIn: isLoggedIn() };
           log('reply to background', reply);
           return Promise.resolve(reply);
         }

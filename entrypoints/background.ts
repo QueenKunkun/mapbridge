@@ -291,15 +291,15 @@ export default defineBackground(() => {
       case 'detect-map-tabs': {
         // 无需读取标签页 URL 权限：向所有标签页广播 whoami，能应答的就是已打开的地图收藏页
         const tabs = await browser.tabs.query({});
-        const detected: { providerId: ProviderId; tabId: number }[] = [];
+        const detected: { providerId: ProviderId; tabId: number; loggedIn?: boolean }[] = [];
         for (const t of tabs) {
           if (!t.id) continue;
           try {
             const resp = (await browser.tabs.sendMessage(
               t.id,
               { type: 'mb:command', command: { mb: BRIDGE_CHANNEL, type: 'whoami' } } as never,
-            )) as { provider?: ProviderId } | undefined;
-            if (resp?.provider) detected.push({ providerId: resp.provider, tabId: t.id });
+            )) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
+            if (resp?.provider) detected.push({ providerId: resp.provider, tabId: t.id, loggedIn: resp.loggedIn });
           } catch {
             /* 无内容脚本的标签页 */
           }

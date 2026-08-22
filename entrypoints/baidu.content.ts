@@ -3,6 +3,17 @@ import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:baidu]', ...args);
 
+function isLoggedIn(): boolean {
+  return !!(
+    document.querySelector('.user-name') ||
+    document.querySelector('.user-name-text') ||
+    document.querySelector('.avatar') ||
+    document.querySelector('.user-avatar') ||
+    document.querySelector('[class*="userName"]') ||
+    document.querySelector('[class*="user-name"]')
+  );
+}
+
 /**
  * 百度收藏页 ISOLATED 桥接：
  * background ──tabs.sendMessage──▶ 这里 ──postMessage──▶ MAIN world 提取器
@@ -28,7 +39,7 @@ export default defineContentScript({
         log('recv command, relay -> MAIN', request.command.type);
         window.postMessage(request.command, '*');
         if (request.command.type === 'ping' || request.command.type === 'whoami') {
-          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'baidu' };
+          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'baidu', loggedIn: isLoggedIn() };
           log('reply to background', reply);
           return Promise.resolve(reply);
         }
