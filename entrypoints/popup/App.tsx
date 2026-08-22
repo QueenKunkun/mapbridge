@@ -151,11 +151,17 @@ export default function App() {
     }
   }
 
+  const [ver, setVer] = useState('');
+  useEffect(() => {
+    try { setVer(browser.runtime.getManifest().version); } catch { setVer('dev'); }
+  }, []);
+
   return (
     <div className="app">
       <header className="app-header">
         <h1>MapBridge</h1>
         <span className="tagline">地图收藏夹迁移</span>
+        {ver && <span className="ver-badge">v{ver}</span>}
       </header>
 
       <div className="steps">
