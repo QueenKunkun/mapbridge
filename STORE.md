@@ -56,16 +56,14 @@ More platforms coming soon.
 After enabling GitHub Pages on the repo:
 `https://queenkunkun.github.io/mapbridge/PRIVACY`
 
-## Screenshots Needed
+## Screenshot
 
-| Screenshot | Description | Size |
-|---|---|---|
-| 1 | Popup wizard showing source/target selection | 1280×800 |
-| 2 | Preview step showing extracted favorites list | 1280×800 |
-| 3 | Import result with success/failure counts | 1280×800 |
-| 4 | Options page showing adapter status | 1280×800 |
+At least 1 required (1280×800, PNG or JPEG). Suggested approach:
 
-## Promotional Tile
+- Center the popup on a dark branded background, add a one-line caption
+- Or compose a before/after flow: source popup → target result
+
+## Promotional Tile (required)
 
 - Size: 440×280 px
 - Show the MapBridge logo on a dark background with the tagline: "Move your favorites between maps."
