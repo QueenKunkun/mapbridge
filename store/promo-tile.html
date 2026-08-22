@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MapBridge — Promo Tile</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .tile {
+    width: 440px;
+    height: 280px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+  .tile::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(37,99,235,0.25) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .logo {
+    width: 88px;
+    height: 88px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 12px rgba(37,99,235,0.5));
+  }
+  .text {
+    color: #fff;
+    position: relative;
+  }
+  .text h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .text p {
+    font-size: 14px;
+    color: #94a3b8;
+    margin-top: 6px;
+    max-width: 200px;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+  <div class="tile">
+    <img class="logo" src="../public/icon/mapbridge.svg" alt="MapBridge">
+    <div class="text">
+      <h1>MapBridge</h1>
+      <p>Move your favorites between maps.</p>
+    </div>
+  </div>
+</body>
+</html>

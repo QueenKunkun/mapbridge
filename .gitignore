@@ -42,4 +42,3 @@ fixtures/
 *.pyc
 .rename_history/
 .rename_history_dryrun/
-store/
