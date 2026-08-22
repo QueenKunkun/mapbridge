@@ -28,6 +28,10 @@ body {
   gap: 12px;
 }
 
+section {
+  padding-bottom: 8px;
+}
+
 .app-header {
   display: flex;
   align-items: baseline;
