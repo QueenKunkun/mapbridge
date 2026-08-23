@@ -1,5 +1,6 @@
 import { installResponseCapture } from '@/utils/capture';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
+import { mergeImportItems } from '@/core/import-merge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
 
@@ -120,31 +121,13 @@ export default defineContentScript({
       const currentItems = current.data?.items ?? [];
       const ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
 
-      const merged = new Map<string, { id: string; type: number; act: string; data: Record<string, unknown> }>();
-      for (const item of currentItems) {
-        if (item?.id && item.data) merged.set(item.id, { id: item.id, type: item.type || 101, act: 'c', data: item.data });
-      }
-
-      const detail: Array<{ id: string; status: string; error?: string }> = [];
-      let imported = 0;
-      let duplicates = 0;
-      for (const item of favorites) {
-        if (!item.id || !item.data) {
-          detail.push({ id: item.id ?? '', status: 'failed', error: '缺少 id/data' });
-          continue;
-        }
-        if (merged.has(item.id)) {
-          duplicates += 1;
-          detail.push({ id: item.id, status: 'duplicate' });
-          continue;
-        }
-        merged.set(item.id, { id: item.id, type: 101, act: 'c', data: item.data });
-        imported += 1;
-        detail.push({ id: item.id, status: 'imported' });
-      }
+      const merge = mergeImportItems(currentItems, favorites);
+      const detail = merge.detail;
+      const imported = merge.imported;
+      const duplicates = merge.duplicates;
 
       emit({ phase: 'sync', processed: imported, total: favorites.length, message: `合并 ${imported} 条，跳过重复 ${duplicates} 条…` });
-      const syncResult = (await postForm('/service/fav/syncFaves?', { data: Array.from(merged.values()), ver })) as { status?: string | number; data?: unknown };
+      const syncResult = (await postForm('/service/fav/syncFaves?', { data: merge.merged, ver })) as { status?: string | number; data?: unknown };
       log('syncFaves: status=', syncResult.status);
       if (String(syncResult.status) !== '1') {
         throw new Error('高德同步失败：' + JSON.stringify(syncResult).slice(0, 500));
