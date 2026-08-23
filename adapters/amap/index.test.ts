@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, amapAdapter } from '@/adapters/amap';
+import { normalizeAmap, amapAdapter, amapFavoriteId } from '@/adapters/amap';
 import { md5 } from '@/utils/md5';
+import { placeFingerprint } from '@/core/dedup';
+import type { CanonicalPlace } from '@/core/model';
 
 // Synthetic records (structurally identical to captured favorites; all names/coords/ids are fictional).
 const amapGetFav = {
@@ -78,10 +80,44 @@ describe('amap adapter', () => {
     // 像素坐标经 wgs84 中转后有亚像素漂移，允许 ~1m
     expect(Math.abs(Number(data.point_x) - 211796584)).toBeLessThanOrEqual(PX_TOLERANCE);
     expect(Math.abs(Number(data.point_y) - 110201320)).toBeLessThanOrEqual(PX_TOLERANCE);
-    // id 恒为 md5(point_x + "+" + point_y + "+" + name)，且与 payload 自身一致
-    expect(item.id).toBe(md5(`${data.point_x}+${data.point_y}+${place.name}`));
+    // id 现在基于归一化坐标指纹（跨来源稳定），而非像素坐标（易因亚像素精度差异产生重复）
+    expect(item.id).toBe(amapFavoriteId(place));
+    expect(item.id).toBe(md5(placeFingerprint(place)));
+    expect(data.item_id).toBe(item.id);
     expect(data.custom_name).toBe('Alpha Tech Park');
     expect(data.phone_numbers).toBe('028-88886666');
+  });
+
+  it('amapFavoriteId is stable across conversion chains for the same place', () => {
+    // 同一地点分别经 百度(bd09mc) 与 高德原生(amap_pixel) 两条转换链，
+    // 得到的 wgs84 在 5 位小数（~1m）内一致 -> 指纹相同 -> amap id 相同 -> 不会被重复导入。
+    const base: CanonicalPlace = {
+      id: 'x',
+      name: 'Same Place 国际中心',
+      address: '',
+      tags: [],
+      note: '',
+      wgs84: { lng: 104.03890, lat: 30.63746 },
+      source: { provider: 'amap', crs: 'wgs84' },
+    };
+    // 模拟另一条转换链带来 <1m 的浮点漂移（落在同一 5 位小数桶内）
+    const fromBaidu: CanonicalPlace = { ...base, id: 'y', wgs84: { lng: 104.038905, lat: 30.637464 } };
+    expect(placeFingerprint(base)).toBe(placeFingerprint(fromBaidu));
+    expect(amapFavoriteId(base)).toBe(amapFavoriteId(fromBaidu));
+    // 旧方案（像素坐标）在亚像素漂移下可能给出不同 id —— 此处确认新方案不再受其影响
+    expect(amapFavoriteId(base)).toBe(md5(placeFingerprint(base)));
+  });
+
+  it('amapFavoriteId differs for genuinely different places', () => {
+    const a: CanonicalPlace = {
+      id: 'a', name: 'Place A', address: '', tags: [], note: '',
+      wgs84: { lng: 104.0, lat: 30.0 }, source: { provider: 'amap', crs: 'wgs84' },
+    };
+    const b: CanonicalPlace = {
+      id: 'b', name: 'Place B', address: '', tags: [], note: '',
+      wgs84: { lng: 105.0, lat: 31.0 }, source: { provider: 'amap', crs: 'wgs84' },
+    };
+    expect(amapFavoriteId(a)).not.toBe(amapFavoriteId(b));
   });
 
   it('buildImportPayload converts wgs84 -> gcj02 pixel round trip', () => {

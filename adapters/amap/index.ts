@@ -1,5 +1,6 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
+import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace, Collection } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
@@ -65,6 +66,11 @@ export function normalizeAmap(raw: unknown): CanonicalPlace | null {
   };
 }
 
+/** 高德收藏 id：基于归一化坐标指纹生成，跨来源稳定（见 buildImportPayload 说明）。 */
+export function amapFavoriteId(place: CanonicalPlace): string {
+  return md5(placeFingerprint(place));
+}
+
 export const amapAdapter: ProviderAdapter = {
   id: 'amap',
   name: '高德地图',
@@ -112,7 +118,9 @@ export const amapAdapter: ProviderAdapter = {
     for (const place of places) {
       const gcj02 = fromWgs84(place.wgs84, 'gcj02');
       const px = gcj02ToAmapPixel(gcj02.lng, gcj02.lat);
-      const id = md5(`${px.x}+${px.y}+${place.name}`);
+      // 用归一化坐标指纹生成稳定 id，使跨来源（百度/高德原生）同一地点落到同一 id，
+      // 从而在高德合并阶段被正确判重，避免亚像素精度差异导致的重复收藏。
+      const id = amapFavoriteId(place);
       const address = place.address || '';
       const phone = place.metadata.phone ?? '';
       const tags = place.tags.join(';');
