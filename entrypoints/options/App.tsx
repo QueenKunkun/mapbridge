@@ -35,6 +35,8 @@ export default function App() {
   const [devLog, setDevLog] = useState<string[]>([]);
   const [devBusy, setDevBusy] = useState(false);
   const [version, setVersion] = useState('');
+  const [msg, setMsg] = useState('');
+  const [undoingId, setUndoingId] = useState<string | null>(null);
 
   const sidebar = import.meta.env.DEV
     ? [...SIDEBAR_SECTIONS, { category: '开发', items: [{ label: '开发工具', blockId: 'block-dev' }] }]
@@ -62,6 +64,27 @@ export default function App() {
   async function remove(id: string): Promise<void> {
     await sendBg({ type: 'delete-job', id });
     await refresh();
+  }
+
+  async function undoJob(job: Job): Promise<void> {
+    if (undoingId) return;
+    setMsg('');
+    const det = await sendBg({ type: 'detect-map-tabs' });
+    const tab = det.type === 'detected' ? det.tabs.find((t) => t.providerId === job.targetProvider) : undefined;
+    const tabId = tab?.tabId;
+    if (tabId === undefined) {
+      setMsg(`未检测到已登录的${PROVIDER_NAME[job.targetProvider] ?? job.targetProvider}收藏页，无法撤销`);
+      return;
+    }
+    setUndoingId(job.id);
+    const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
+    setUndoingId(null);
+    if (res.type === 'undo-result') {
+      setMsg(`已撤销导入 ${res.data.deleted} 条`);
+      await refresh();
+    } else if (res.type === 'error') {
+      setMsg(res.message);
+    }
   }
 
   async function save(): Promise<void> {
@@ -219,6 +242,7 @@ export default function App() {
             description="本机的迁移记录。提取、导入的结果都在这里可追溯。"
             fullWidth
           >
+            {msg && <p className="hint ok-tag">{msg}</p>}
             {jobs.length === 0 && <p className="empty">暂无任务。在 popup 向导里新建第一个迁移任务。</p>}
             <table>
               <thead>
@@ -249,6 +273,12 @@ export default function App() {
                     </td>
                     <td className="mono">{new Date(job.updatedAt).toLocaleString()}</td>
                     <td>
+                      {job.status === 'done' && (job.report?.importedIds?.length ?? 0) > 0 && !job.report?.undone && (
+                        <button className="danger" disabled={undoingId === job.id} onClick={() => void undoJob(job)}>
+                          {undoingId === job.id ? '撤销中…' : '撤销'}
+                        </button>
+                      )}
+                      {job.report?.undone && <span className="ok-tag">已撤销</span>}
                       <button className="ghost" onClick={() => void remove(job.id)}>
                         删除
                       </button>

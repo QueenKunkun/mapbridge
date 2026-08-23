@@ -41,6 +41,7 @@ interface PendingDev {
 
 let pendingDev: PendingDev | undefined;
 let devClearProgress: { deleted: number; failed: number; total: number; done: number } | undefined;
+let pendingUndo: { resolve: (r: { ok: boolean; data?: unknown; error?: string }) => void; timer?: ReturnType<typeof setTimeout> } | undefined;
 
 function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
   const pending = pendingDev;
@@ -52,7 +53,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav'; payload?: unknown },
+  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[] },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -147,6 +148,15 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
   if (!job) return;
   const target = getAdapter(job.targetProvider);
   const report = target.summarizeImportResult(data);
+  // 记录实际写入的目标收藏 id，供"撤销导入"使用
+  const detail = data.raw && typeof data.raw === 'object'
+    ? (data.raw as { detail?: Array<{ id?: string; status?: string }> }).detail
+    : undefined;
+  if (Array.isArray(detail)) {
+    report.importedIds = detail
+      .filter((d) => d.status === 'imported' && d.id)
+      .map((d) => d.id as string);
+  }
   await saveJob(finalizeImport(job, data, report));
 }
 
@@ -188,6 +198,31 @@ async function handleDevFavClear(tabId: number): Promise<BgResponse> {
     : { type: 'error', message: result.error ?? '清空失败' };
 }
 
+async function handleUndoImport(jobId: string, tabId: number): Promise<BgResponse> {
+  const job = await getJob(jobId);
+  const ids = job?.report?.importedIds ?? [];
+  if (!job || ids.length === 0) return { type: 'error', message: '没有可撤销的导入记录' };
+  if (job.report?.undone) return { type: 'error', message: '该次导入已撤销' };
+  const result = await new Promise<{ ok: boolean; data?: unknown; error?: string }>((resolve) => {
+    pendingUndo = {
+      resolve,
+      timer: setTimeout(() => {
+        log('undo-import timeout');
+        resolve({ ok: false, error: '撤销超时：请确认高德页面已打开并登录' });
+      }, 600000),
+    };
+    sendCommandToTab(tabId, { type: 'delete-fav-ids', ids }).catch((e) => {
+      log('undo-import send failed', String(e?.message ?? e));
+      resolve({ ok: false, error: '无法连接页面脚本：' + String(e?.message ?? e) });
+    });
+  });
+  if (!result.ok) return { type: 'error', message: result.error ?? '撤销失败' };
+  const data = result.data as { deleted: number; failed: number; remaining: number; ok: boolean; error?: string };
+  const updated = { ...job, report: { ...job.report, undone: true } };
+  await saveJob(updated);
+  return { type: 'undo-result', data };
+}
+
 export default defineBackground(() => {
   browser.runtime.onMessage.addListener(async (msg: unknown): Promise<BgResponse | undefined> => {
     const request = msg as BgRequest | ContentEvent;
@@ -221,6 +256,12 @@ export default defineBackground(() => {
         }
       } else if (event.type === 'dev-fav-progress') {
         devClearProgress = event.data as { deleted: number; failed: number; total: number; done: number };
+      } else if (event.type === 'fav-ids-deleted') {
+        if (pendingUndo) {
+          const d = event.data as { ok?: boolean; error?: string };
+          if (d.ok === false) pendingUndo.resolve({ ok: false, error: d.error ?? '撤销失败' });
+          else pendingUndo.resolve({ ok: true, data: event.data });
+        }
       }
       return undefined;
     }
@@ -329,6 +370,9 @@ export default defineBackground(() => {
       }
       case 'dev-fav-progress': {
         return { type: 'dev-progress', deleted: devClearProgress?.deleted ?? 0, failed: devClearProgress?.failed ?? 0, total: devClearProgress?.total ?? 0, done: devClearProgress?.done ?? 0 };
+      }
+      case 'undo-import': {
+        return await handleUndoImport(req.jobId, req.tabId);
       }
       default:
         return { type: 'error', message: '未知请求' };

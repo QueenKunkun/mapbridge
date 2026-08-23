@@ -21,7 +21,8 @@ export type BgRequest =
   | { type: 'detect-map-tabs' }
   | { type: 'dev-fav-read'; tabId: number }
   | { type: 'dev-fav-clear'; tabId: number }
-  | { type: 'dev-fav-progress' };
+  | { type: 'dev-fav-progress' }
+  | { type: 'undo-import'; jobId: string; tabId: number };
 
 export type BgResponse =
   | { type: 'state'; jobs: Job[]; settings: AppSettings }
@@ -34,7 +35,8 @@ export type BgResponse =
   | { type: 'detected'; tabs: { providerId: ProviderId; tabId: number }[] }
   | { type: 'dev-fav-data'; data: { provider: 'amap'; fav: unknown; error?: string } }
   | { type: 'dev-fav-cleared'; data: { provider: 'amap'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
-  | { type: 'dev-progress'; deleted: number; failed: number; total: number; done: number };
+  | { type: 'dev-progress'; deleted: number; failed: number; total: number; done: number }
+  | { type: 'undo-result'; data: { deleted: number; failed: number; remaining: number; ok: boolean; error?: string } };
 
 /** background -> content (ISOLATED) 的消息。 */
 export type ContentRequest = { type: 'mb:command'; command: BridgeCommand };

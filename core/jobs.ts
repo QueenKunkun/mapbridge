@@ -22,6 +22,10 @@ export interface ImportReport {
   skippedDuplicates: number;
   failed: number;
   failedItems: { placeId: string; error: string }[];
+  /** 实际写入目标地图的收藏 id（用于撤销导入）。 */
+  importedIds?: string[];
+  /** 本次导入是否已被撤销。 */
+  undone?: boolean;
   targetCount?: number;
   raw?: unknown;
 }

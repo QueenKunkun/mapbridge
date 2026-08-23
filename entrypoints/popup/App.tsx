@@ -32,6 +32,7 @@ export default function App() {
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
   const [exportedCount, setExportedCount] = useState(0);
+  const [undoMsg, setUndoMsg] = useState('');
 
   async function refreshDetection(): Promise<void> {
     setDetecting(true);
@@ -117,6 +118,30 @@ export default function App() {
         setExportedCount(r.job.places.length);
       } else if (r.type === 'error') {
         setError(r.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undoImport(): Promise<void> {
+    if (!job) return;
+    setBusy(true);
+    setError('');
+    setUndoMsg('');
+    try {
+      const tabId = detectedTab(job.targetProvider) ?? (await currentTabId());
+      if (tabId === undefined) {
+        setError('未检测到目标地图收藏页，请打开后重试');
+        return;
+      }
+      const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
+      if (res.type === 'undo-result') {
+        const data = res.data;
+        setJob({ ...job, report: { ...job.report!, undone: true } });
+        setUndoMsg(`已撤销导入 ${data.deleted} 条`);
+      } else if (res.type === 'error') {
+        setError(res.message);
       }
     } finally {
       setBusy(false);
@@ -462,6 +487,7 @@ export default function App() {
               </>
             )}
           </dl>
+          {undoMsg && <div className="count ok-tag">✓ {undoMsg}</div>}
           <div className="actions">
             <button className="ghost" onClick={() => void openPage(targetPage)}>
               去目标页核对
@@ -469,6 +495,11 @@ export default function App() {
             <button className="ghost" onClick={() => setStep('setup')}>
               再来一次
             </button>
+            {job.status === 'done' && (job.report?.importedIds?.length ?? 0) > 0 && !job.report?.undone && (
+              <button className="danger" disabled={busy} onClick={() => void undoImport()}>
+                {busy ? '撤销中…' : '撤销本次导入'}
+              </button>
+            )}
           </div>
         </section>
       )}

@@ -151,6 +151,42 @@ export default defineContentScript({
       });
     }
 
+    async function deleteFavIds(ids: string[]): Promise<{ deleted: number; failed: number; remaining: number }> {
+      const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+      const currentItems = current.data?.items ?? [];
+      const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
+      const del = favapi?.deletefav;
+      const found = ids.filter((id) => currentItems.some((it) => it.id === id));
+      const before = currentItems.length;
+      for (const id of ids) {
+        const rec = currentItems.find((it) => it.id === id);
+        if (!rec) continue; // 已不存在，跳过
+        if (del) await deleteOne(del, { id, type: rec.type != null ? rec.type : 101, data: rec.data });
+      }
+      const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+      const remaining = after.data?.items?.length ?? 0;
+      return { deleted: Math.max(0, before - remaining), failed: 0, remaining };
+    }
+
+    // ---- 撤销导入：删除本次写入的目标收藏（复用串行删除，避免挂起）----
+    async function runDeleteFavIds(ids: string[]): Promise<void> {
+      log('delete-fav-ids', ids.length);
+      try {
+        if (!location.hostname.includes('amap.com')) {
+          throw new Error('请在已登录的高德网页（ditu.amap.com/faves）执行撤销');
+        }
+        const res = await deleteFavIds(ids);
+        log('delete-fav-ids done', res);
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: { ...res, ok: res.deleted >= 0 } });
+      } catch (e) {
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'fav-ids-deleted',
+          data: { deleted: 0, failed: ids.length, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) },
+        });
+      }
+    }
+
     // ---- 开发版工具：备份 + 清空高德收藏（仅 DEV 构建注册）----
     async function runDevReadFav(): Promise<void> {
       log('dev-read-fav');
@@ -270,6 +306,8 @@ export default defineContentScript({
         void runDevReadFav();
       } else if (import.meta.env.DEV && cmd.type === 'dev-clear-fav') {
         void runDevClearFav();
+      } else if (cmd.type === 'delete-fav-ids') {
+        void runDeleteFavIds(Array.isArray(cmd.ids) ? cmd.ids : []);
       }
     });
 

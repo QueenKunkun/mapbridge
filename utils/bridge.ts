@@ -4,7 +4,9 @@ export const BRIDGE_CHANNEL = '__mapbridge_v1__';
 export interface BridgeCommand {
   mb: typeof BRIDGE_CHANNEL;
   /** 命令类型。dev-* 仅开发版注册。 */
-  type: 'extract' | 'import' | 'ping' | 'whoami' | 'dev-read-fav' | 'dev-clear-fav';
+  type: 'extract' | 'import' | 'ping' | 'whoami' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids';
+  /** delete-fav-ids 时的目标 id 列表。 */
+  ids?: string[];
   /** import 时为 provider 特有 payload。 */
   payload?: unknown;
 }
@@ -18,7 +20,7 @@ export interface BridgeReply {
 
 export interface BridgeEvent {
   mb: typeof BRIDGE_CHANNEL;
-  type: 'ready' | 'pong' | 'extract-data' | 'import-progress' | 'import-result' | 'dev-fav-data' | 'dev-fav-cleared' | 'dev-fav-progress';
+  type: 'ready' | 'pong' | 'extract-data' | 'import-progress' | 'import-result' | 'dev-fav-data' | 'dev-fav-cleared' | 'dev-fav-progress' | 'fav-ids-deleted';
   data?: unknown;
 }
 
