@@ -40,6 +40,16 @@ body {
 .options-version { font-size: 10px; color: var(--text-faint); opacity: 0.6; margin-left: -4px; }
 .options-subtitle { font-size: 14px; color: var(--text-subtle); margin-left: auto; }
 
+.dev-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #f59e0b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
 /* ── 主体区域：sidebar + blocks ── */
 .options-body {
   display: flex;

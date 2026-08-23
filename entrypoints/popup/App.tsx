@@ -152,6 +152,7 @@ export default function App() {
   }
 
   const [ver, setVer] = useState('');
+  const dev = import.meta.env.DEV;
   useEffect(() => {
     try { setVer(browser.runtime.getManifest().version); } catch { setVer('dev'); }
   }, []);
@@ -161,6 +162,7 @@ export default function App() {
       <header className="app-header">
         <h1>MapBridge</h1>
         <span className="tagline">地图收藏夹迁移</span>
+        {dev && <span className="dev-badge">DEV</span>}
         {ver && <span className="ver-badge">v{ver}</span>}
         <button
           className="icon-btn"

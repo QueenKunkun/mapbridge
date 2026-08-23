@@ -40,6 +40,7 @@ interface PendingDev {
 }
 
 let pendingDev: PendingDev | undefined;
+let devClearProgress: { deleted: number; failed: number; total: number; done: number } | undefined;
 
 function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
   const pending = pendingDev;
@@ -218,6 +219,8 @@ export default defineBackground(() => {
           if (d.ok === false) resolvePendingDev(false, undefined, d.error ?? '清空失败');
           else resolvePendingDev(true, event.data);
         }
+      } else if (event.type === 'dev-fav-progress') {
+        devClearProgress = event.data as { deleted: number; failed: number; total: number; done: number };
       }
       return undefined;
     }
@@ -314,6 +317,9 @@ export default defineBackground(() => {
       case 'dev-fav-clear': {
         if (!import.meta.env.DEV) return { type: 'error', message: '仅开发版可用' };
         return await handleDevFavClear(req.tabId);
+      }
+      case 'dev-fav-progress': {
+        return { type: 'dev-progress', deleted: devClearProgress?.deleted ?? 0, failed: devClearProgress?.failed ?? 0, total: devClearProgress?.total ?? 0, done: devClearProgress?.done ?? 0 };
       }
       default:
         return { type: 'error', message: '未知请求' };

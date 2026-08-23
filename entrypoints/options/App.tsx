@@ -113,7 +113,15 @@ export default function App() {
       logLine(`✓ 已下载备份 ${filename}（收藏 ${poiCount} 条 · 文件夹 ${dirCount} 个）`);
 
       logLine('清空收藏…');
-      const clear = await sendBg({ type: 'dev-fav-clear', tabId: amap.tabId });
+      const clearP = sendBg({ type: 'dev-fav-clear', tabId: amap.tabId });
+      const poll = setInterval(async () => {
+        const p = await sendBg({ type: 'dev-fav-progress' });
+        if (p.type === 'dev-progress') {
+          logLine(`清空中… ${p.done}/${p.total}（已删 ${p.deleted} · 失败 ${p.failed}）`);
+        }
+      }, 800);
+      const clear = await clearP;
+      clearInterval(poll);
       if (clear.type !== 'dev-fav-cleared') {
         logLine(`✗ 清空失败：${clear.type === 'error' ? clear.message : '未知响应'}`);
         return;
@@ -131,6 +139,7 @@ export default function App() {
       <header className="options-header">
         <span className="options-title">MapBridge 设置</span>
         {version && <span className="options-version">v{version}</span>}
+        {import.meta.env.DEV && <span className="dev-badge">DEV 构建</span>}
         <span className="options-subtitle">地图收藏夹迁移：百度 ↔ 高德 ↔ 腾讯</span>
       </header>
 

@@ -4,12 +4,16 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ## [Unreleased]
 
+### Fixed
+- Dev "Backup & wipe" could hang at "清空收藏…" when Amap dropped some `deletefav` callbacks under concurrent calls. Deletes are now serialized with a per-call timeout, and the result is derived from the real post-clear favorite count instead of the unreliable callback `status` field.
+
 ### Added
 - Login-state detection in the popup: content scripts probe the map page DOM when answering `whoami`; a detected tab that is not logged in shows a yellow "未登录" warning instead of the green checkmark (selectors verified via CDP against logged-in and logged-out sessions).
 - Version badge (`v0.1.0`) shown in the popup header, read from `browser.runtime.getManifest()`.
 - Open-source release plan (Model B: on-air style dual-directory): `docs/06-open-source-release.md` (private).
 - Options page redesigned in the Annoi style: dark theme with CSS-variable design tokens, sticky sidebar category nav (Settings / Data / About / Dev), card-based setting blocks via `SettingsBlock` (fullWidth/doubleWidth), responsive `repeat(auto-fill, minmax(340px, 1fr))` grid; job history and dev tools span the full row.
-- Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then clears all favorites in parallel via `deletefav` and verifies the remaining count.
+- Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then serially clears all favorites and verifies the remaining count; live progress is shown in the panel.
+- DEV build badge ("DEV 构建") shown in the popup and options headers so dev builds are visually distinguishable.
 - Project conventions persisted in `AGENTS.md` (English commit messages, English public docs, dev-build gating, release workflow).
 - Settings button (⚙) in the popup header that opens the options page.
 - Chinese `README.md` added as the primary readme; the English version lives at `README-en.md`.

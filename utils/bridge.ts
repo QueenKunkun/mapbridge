@@ -18,7 +18,7 @@ export interface BridgeReply {
 
 export interface BridgeEvent {
   mb: typeof BRIDGE_CHANNEL;
-  type: 'ready' | 'pong' | 'extract-data' | 'import-progress' | 'import-result' | 'dev-fav-data' | 'dev-fav-cleared';
+  type: 'ready' | 'pong' | 'extract-data' | 'import-progress' | 'import-result' | 'dev-fav-data' | 'dev-fav-cleared' | 'dev-fav-progress';
   data?: unknown;
 }
 

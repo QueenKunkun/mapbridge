@@ -186,41 +186,62 @@ export default defineContentScript({
       }
     }
 
+    async function deleteOne(
+      del: (p: unknown, cb: (r: unknown) => void) => void,
+      item: AmapItem,
+    ): Promise<void> {
+      // 只用回调确认“本次删除请求已返回”，成功与否以最终 getFav 剩余数量为准，
+      // 避免依赖 deletefav 回调里不稳定的 status 字段。
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const done = () => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            resolve();
+          }
+        };
+        // 单条删除加超时：避免 deletefav 回调不触发时永久挂起
+        const timer = setTimeout(done, 8000);
+        try {
+          const ret = del(
+            { id: item.id, type: item.type != null ? item.type : 101, data: item.data },
+            () => done(),
+          );
+          if (ret && typeof (ret as { then?: unknown }).then === 'function') {
+            (ret as Promise<unknown>).then(() => done()).catch(() => done());
+          }
+        } catch {
+          done();
+        }
+      });
+    }
+
     async function runDevClearFav(): Promise<void> {
       log('dev-clear-fav');
       try {
         const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
         const items = current.data?.items ?? [];
         const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
-        let deleted = 0;
-        let failed = 0;
         const del = favapi?.deletefav;
-        if (!del) {
-          failed += items.length;
+        const total = items.length;
+        // 串行删除：同一 favapi 实例可能不支持并发请求，并发会丢失回调导致挂起
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (del) await deleteOne(del, item);
+          postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted: i + 1, failed: 0, total, done: i + 1 } });
+          await new Promise((r) => setTimeout(r, 100));
         }
-        const queue = [...items];
-        const workers = Array.from({ length: Math.min(10, queue.length) }, async () => {
-          while (del && queue.length > 0) {
-            const item = queue.shift();
-            if (!item) break;
-            await new Promise<void>((resolve) => {
-              del({ id: item.id, type: item.type ?? 101, data: item.data }, (t) => {
-                if (t && String((t as { status?: unknown }).status) === '1') deleted += 1;
-                else failed += 1;
-                resolve();
-              });
-            });
-            await new Promise((r) => setTimeout(r, 120));
-          }
-        });
-        await Promise.all(workers);
+        // 以清空后的真实剩余数量计算删除结果（不依赖回调 status）
         const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
         const remaining = after.data?.items?.length ?? 0;
+        const deleted = Math.max(0, total - remaining);
+        const failed = Math.max(0, remaining);
         log('dev-clear-fav done', { deleted, failed, remaining });
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'dev-fav-cleared',
-          data: { provider: 'amap', deleted, failed, remaining, ok: failed === 0 },
+          data: { provider: 'amap', deleted, failed, remaining, ok: remaining === 0 },
         });
       } catch (e) {
         postEvent({
