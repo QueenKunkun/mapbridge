@@ -265,6 +265,15 @@ export default defineBackground(() => {
       case 'import': {
         return await handleImport(req.jobId, req.tabId);
       }
+      case 'import-file': {
+        // 从 MapBridge 导出文件导入：以文件声明来源（仅展示用），目标为选定地图。
+        const src = (req.places[0]?.source?.provider as ProviderId | undefined) ?? 'amap';
+        const job = createJob(src, req.target);
+        await saveJob(job);
+        const applied = applyExtraction({ ...job }, req.places, req.places.length);
+        await saveJob(applied);
+        return { type: 'job', job: applied };
+      }
       case 'get-settings': {
         return { type: 'settings', settings: await getSettings() };
       }

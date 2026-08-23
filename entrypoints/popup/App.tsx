@@ -3,6 +3,7 @@ import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
+import { serializePlaces, parsePlacesFile } from '@/core/export';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
   { id: 'baidu', name: '百度地图' },
@@ -29,6 +30,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean }[]>([]);
   const [detecting, setDetecting] = useState(false);
+  const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
+  const [exportedCount, setExportedCount] = useState(0);
 
   async function refreshDetection(): Promise<void> {
     setDetecting(true);
@@ -73,6 +76,74 @@ export default function App() {
   async function openPage(url: string): Promise<void> {
     await sendBg({ type: 'open-tab', url });
     setTimeout(() => void refreshDetection(), 3000);
+  }
+
+  function downloadPlaces(places: Job['places'], provider: ProviderId): void {
+    const text = serializePlaces(places, provider);
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = `mapbridge-${provider}-export-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function startExport(): Promise<void> {
+    setBusy(true);
+    setError('');
+    setExportedCount(0);
+    try {
+      const res = await sendBg({ type: 'new-job', source, target: source });
+      if (res.type !== 'job' || !res.job) {
+        setError('无法创建导出任务');
+        return;
+      }
+      const tabId = detectedTab(source) ?? (await currentTabId());
+      if (tabId === undefined) {
+        setError('未检测到源地图收藏页，请打开并登录后重试');
+        return;
+      }
+      const r = await sendBg({ type: 'extract', jobId: res.job.id, tabId });
+      if (r.type === 'job' && r.job) {
+        if (r.job.places.length === 0) {
+          setError('没有提取到有效收藏（可能页面还没加载收藏列表）');
+          return;
+        }
+        downloadPlaces(r.job.places, source);
+        setExportedCount(r.job.places.length);
+      } else if (r.type === 'error') {
+        setError(r.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onImportFile(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setError('');
+    try {
+      const text = await file.text();
+      const parsed = parsePlacesFile(text);
+      const res = await sendBg({ type: 'import-file', target, places: parsed.places });
+      if (res.type === 'job' && res.job) {
+        setJob(res.job);
+        setStep('preview');
+      } else if (res.type === 'error') {
+        setError(res.message);
+      }
+    } catch (err) {
+      setError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const sourcePage = job ? getAdapter(job.sourceProvider).extractPage : '';
@@ -186,60 +257,112 @@ export default function App() {
 
       {step === 'setup' && (
         <section className="setup">
-          <div className="pick">
-            <label>
-              从
-              <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
-                {SELECTABLE_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span className="arrow">→</span>
-            <label>
-              到
-              <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
-                {SELECTABLE_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="mode-tabs">
+            <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} onClick={() => setMode('migrate')}>迁移</button>
+            <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} onClick={() => setMode('export')}>导出当前地图</button>
+            <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} onClick={() => setMode('import-file')}>从文件导入</button>
           </div>
-          <div className="detect-list">
-            {[source, target]
-              .filter((v, i, a) => a.indexOf(v) === i)
-              .map((pid) => {
-                const p = PROVIDERS.find((x) => x.id === pid)!;
-                const ok = detected.some((d) => d.providerId === pid);
-                const loggedIn = isProviderLoggedIn(pid);
-                return (
-                  <div key={pid} className="detect-item">
-                    <span className={`dot${ok ? ' ok' : ''}`} />
-                    <span>{p.name}收藏页</span>
-                    {ok ? (
-                      loggedIn === false ? (
-                        <span className="warn-tag">未登录</span>
-                      ) : (
-                        <span className="ok-tag">已检测到 ✓</span>
-                      )
-                    ) : (
-                      <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
-                        打开
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            {detecting && <span className="hint">检测中…</span>}
-          </div>
-          <p className="hint">请确保地图网址已打开，并完成登录。</p>
-          <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
-            {canStart ? '开始' : '请选择不同平台'}
-          </button>
+
+          {mode === 'migrate' && (
+            <>
+              <div className="pick">
+                <label>
+                  从
+                  <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
+                    {SELECTABLE_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="arrow">→</span>
+                <label>
+                  到
+                  <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
+                    {SELECTABLE_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="detect-list">
+                {[source, target]
+                  .filter((v, i, a) => a.indexOf(v) === i)
+                  .map((pid) => {
+                    const p = PROVIDERS.find((x) => x.id === pid)!;
+                    const ok = detected.some((d) => d.providerId === pid);
+                    const loggedIn = isProviderLoggedIn(pid);
+                    return (
+                      <div key={pid} className="detect-item">
+                        <span className={`dot${ok ? ' ok' : ''}`} />
+                        <span>{p.name}收藏页</span>
+                        {ok ? (
+                          loggedIn === false ? (
+                            <span className="warn-tag">未登录</span>
+                          ) : (
+                            <span className="ok-tag">已检测到 ✓</span>
+                          )
+                        ) : (
+                          <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
+                            打开
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                {detecting && <span className="hint">检测中…</span>}
+              </div>
+              <p className="hint">请确保地图网址已打开，并完成登录。</p>
+              <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
+                {canStart ? '开始' : '请选择不同平台'}
+              </button>
+            </>
+          )}
+
+          {mode === 'export' && (
+            <>
+              <label className="field-inline">
+                选择地图
+                <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
+                  {SELECTABLE_PROVIDERS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="hint">提取该地图的收藏并下载为 JSON 文件，可被“从文件导入”或其他设备复用。</p>
+              <button className="primary" disabled={busy} onClick={() => void startExport()}>
+                {busy ? '导出中…' : '导出当前地图'}
+              </button>
+              {exportedCount > 0 && <div className="count">已导出 <b>{exportedCount}</b> 条 ✓</div>}
+            </>
+          )}
+
+          {mode === 'import-file' && (
+            <>
+              <label className="field-inline">
+                导入到
+                <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
+                  {SELECTABLE_PROVIDERS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="hint">选择已登录的目标地图收藏页，再选择 MapBridge 导出文件（<code>mapbridge-*.json</code>）。</p>
+              <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} />
+              {!detectedTab(target) && (
+                <button className="ghost small" onClick={() => void openPage(getAdapter(target).importPage)}>
+                  打开目标页
+                </button>
+              )}
+            </>
+          )}
         </section>
       )}
 

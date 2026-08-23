@@ -27,6 +27,50 @@ section {
   padding-bottom: 0;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  background: #eef0f4;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5b6472;
+  cursor: pointer;
+}
+
+.mode-tab.active {
+  background: #fff;
+  color: #1f2430;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #5b6472;
+}
+
+.field-inline select {
+  flex: 1;
+}
+
+input[type='file'] {
+  font-size: 12px;
+  color: #5b6472;
+  max-width: 100%;
+}
+
 .app-header {
   display: flex;
   align-items: baseline;
