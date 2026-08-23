@@ -9,7 +9,7 @@
     "dev:watch": "chokidar 'entrypoints/**/*' 'components/**/*' 'utils/**/*' 'adapters/**/*' 'package.json' -c 'pnpm build && scripts/reload.sh'",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
-    "dev:build": "wxt build --mode development && cp -R .output/chrome-mv3-dev/* .output/chrome-mv3/",
+    "dev:build": "wxt build --mode development",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
