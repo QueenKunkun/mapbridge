@@ -14,6 +14,8 @@ All notable changes to this project are documented here, following the [Keep a C
 - Options page redesigned in the Annoi style: dark theme with CSS-variable design tokens, sticky sidebar category nav (Settings / Data / About / Dev), card-based setting blocks via `SettingsBlock` (fullWidth/doubleWidth), responsive `repeat(auto-fill, minmax(340px, 1fr))` grid; job history and dev tools span the full row.
 - Dev-only "Dev Tools" panel (options page, only visible in `import.meta.env.DEV` builds): one-click "Backup & wipe Amap favorites" — downloads a timestamped full backup JSON (favorites + `dir` folders + `ver`), then serially clears all favorites and verifies the remaining count; live progress is shown in the panel.
 - DEV build badge ("DEV 构建") shown in the popup and options headers so dev builds are visually distinguishable.
+- Popup wizard offers three modes: 迁移（地图→地图）、导出当前地图（提取并下载 JSON）、从文件导入（上传 MapBridge 导出文件 → 预览 → 导入）。
+- 导入后可撤销：弹窗结果页与设置页"历史任务"均提供"撤销"按钮，仅删除本次实际写入目标地图的收藏（基于导入结果记录的 id），不会误删原有收藏；已撤销的任务标记"已撤销"。
 - Project conventions persisted in `AGENTS.md` (English commit messages, English public docs, dev-build gating, release workflow).
 - Settings button (⚙) in the popup header that opens the options page.
 - Chinese `README.md` added as the primary readme; the English version lives at `README-en.md`.
