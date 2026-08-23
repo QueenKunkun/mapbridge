@@ -270,14 +270,6 @@ export default function App() {
         </button>
       </header>
 
-      <div className="steps">
-        {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
-          <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
-            {i + 1}
-          </span>
-        ))}
-      </div>
-
       {error && <div className="error">⚠ {error}</div>}
 
       {step === 'setup' && (
@@ -290,6 +282,13 @@ export default function App() {
 
           {mode === 'migrate' && (
             <>
+              <div className="steps">
+                {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
+                  <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
+                    {i + 1}
+                  </span>
+                ))}
+              </div>
               <div className="pick">
                 <label>
                   从
