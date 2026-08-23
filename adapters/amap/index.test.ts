@@ -99,9 +99,10 @@ describe('amap adapter', () => {
       note: '',
       wgs84: { lng: 104.03890, lat: 30.63746 },
       source: { provider: 'amap', crs: 'wgs84' },
+      metadata: {},
     };
     // 模拟另一条转换链带来 <1m 的浮点漂移（落在同一 5 位小数桶内）
-    const fromBaidu: CanonicalPlace = { ...base, id: 'y', wgs84: { lng: 104.038905, lat: 30.637464 } };
+    const fromBaidu: CanonicalPlace = { ...base, id: 'y', wgs84: { lng: 104.038905, lat: 30.637464 }, metadata: {} };
     expect(placeFingerprint(base)).toBe(placeFingerprint(fromBaidu));
     expect(amapFavoriteId(base)).toBe(amapFavoriteId(fromBaidu));
     // 旧方案（像素坐标）在亚像素漂移下可能给出不同 id —— 此处确认新方案不再受其影响
@@ -111,11 +112,11 @@ describe('amap adapter', () => {
   it('amapFavoriteId differs for genuinely different places', () => {
     const a: CanonicalPlace = {
       id: 'a', name: 'Place A', address: '', tags: [], note: '',
-      wgs84: { lng: 104.0, lat: 30.0 }, source: { provider: 'amap', crs: 'wgs84' },
+      wgs84: { lng: 104.0, lat: 30.0 }, source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
     };
     const b: CanonicalPlace = {
       id: 'b', name: 'Place B', address: '', tags: [], note: '',
-      wgs84: { lng: 105.0, lat: 31.0 }, source: { provider: 'amap', crs: 'wgs84' },
+      wgs84: { lng: 105.0, lat: 31.0 }, source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
     };
     expect(amapFavoriteId(a)).not.toBe(amapFavoriteId(b));
   });

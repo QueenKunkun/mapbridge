@@ -5,6 +5,7 @@ import type { CanonicalPlace, Collection } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
+import type { ImportReport } from '@/core/jobs';
 
 /** 高德收藏记录：getFav items[].data 的结构。 */
 interface AmapFavoriteData {
@@ -159,7 +160,7 @@ export const amapAdapter: ProviderAdapter = {
     return payload;
   },
 
-  summarizeImportResult(result: RawImportResult) {
+  summarizeImportResult(result: RawImportResult): ImportReport {
     const failedItems: { placeId: string; error: string }[] = [];
     let imported = 0;
     let skippedDuplicates = 0;

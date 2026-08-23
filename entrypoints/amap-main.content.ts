@@ -223,13 +223,10 @@ export default defineContentScript({
         // 单条删除加超时：避免 deletefav 回调不触发时永久挂起
         const timer = setTimeout(done, 8000);
         try {
-          const ret = del(
+          del(
             { id: item.id, type: item.type != null ? item.type : 101, data: item.data },
             () => done(),
           );
-          if (ret && typeof (ret as { then?: unknown }).then === 'function') {
-            (ret as Promise<unknown>).then(() => done()).catch(() => done());
-          }
         } catch {
           done();
         }
@@ -245,8 +242,7 @@ export default defineContentScript({
         const del = favapi?.deletefav;
         const total = items.length;
         // 串行删除：同一 favapi 实例可能不支持并发请求，并发会丢失回调导致挂起
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
+        for (const [i, item] of items.entries()) {
           if (del) await deleteOne(del, item);
           postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted: i + 1, failed: 0, total, done: i + 1 } });
           await new Promise((r) => setTimeout(r, 100));

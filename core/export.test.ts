@@ -10,6 +10,7 @@ const place: CanonicalPlace = {
   note: '',
   wgs84: { lng: 104.0389, lat: 30.6374 },
   source: { provider: 'amap', crs: 'wgs84' },
+  metadata: {},
 };
 
 describe('core/export', () => {

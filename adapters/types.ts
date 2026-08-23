@@ -1,4 +1,5 @@
 import type { CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
+import type { ImportReport } from '@/core/jobs';
 
 /** 内容脚本运行所在页面的上下文（由 background 从 tab 信息构造）。 */
 export interface PageContext {
@@ -76,12 +77,5 @@ export interface ProviderAdapter {
   buildImportPayload(places: CanonicalPlace[]): unknown;
 
   /** 将 MAIN world 返回的导入结果规整为统一报告。 */
-  summarizeImportResult(result: RawImportResult): {
-    imported: number;
-    skippedDuplicates: number;
-    failed: number;
-    failedItems: { placeId: string; error: string }[];
-    targetCount?: number;
-    raw?: unknown;
-  };
+  summarizeImportResult(result: RawImportResult): ImportReport;
 }

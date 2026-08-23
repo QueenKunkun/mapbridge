@@ -202,7 +202,8 @@ async function handleUndoImport(jobId: string, tabId: number): Promise<BgRespons
   const job = await getJob(jobId);
   const ids = job?.report?.importedIds ?? [];
   if (!job || ids.length === 0) return { type: 'error', message: '没有可撤销的导入记录' };
-  if (job.report?.undone) return { type: 'error', message: '该次导入已撤销' };
+  if (!job.report) return { type: 'error', message: '导入记录缺失' };
+  if (job.report.undone) return { type: 'error', message: '该次导入已撤销' };
   const result = await new Promise<{ ok: boolean; data?: unknown; error?: string }>((resolve) => {
     pendingUndo = {
       resolve,
