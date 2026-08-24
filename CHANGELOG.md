@@ -7,6 +7,7 @@ All notable changes to this project are documented here, following the [Keep a C
 ## [0.1.8] - 2026-08-24
 
 ### Fixed
+- Removed the extra parent flex-gap above and below the migration step indicator.
 - Popup migration content retains its original compact spacing after the flow hierarchy refactor.
 - Migration mode keeps its top-level mode tabs and locks them while a migration is in progress, preventing an in-progress job from being hidden by a mode switch.
 - Migration step indicators (1–5) now remain visible after leaving the setup screen.

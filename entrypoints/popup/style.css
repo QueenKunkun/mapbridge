@@ -62,6 +62,13 @@ section {
   display: contents;
 }
 
+/* `.app` 的 flex gap 会在被提升为独立项的步骤条两侧各叠加一次；
+   抵消它，维持重构前 Tab → 步骤 → 内容的紧凑间距。 */
+.migration-flow .steps {
+  margin-top: -12px;
+  margin-bottom: 0;
+}
+
 .migration-content {
   /* 保留三层 DOM 结构，同时不改变原有内容块的外边距折叠与 popup 高度。 */
   display: contents;
