@@ -99,7 +99,7 @@ describe('baidu adapter', () => {
     expect(result.skipped[0]!.reason).toBe('重复收藏');
   });
 
-  it('buildImportPayload returns a valid favdata add payload', () => {
+  it('buildImportPayload uses the custom-place format when no Baidu POI uid exists', () => {
     const place = {
       id: 'test-1',
       name: 'Alpha Tech Park',
@@ -113,13 +113,13 @@ describe('baidu adapter', () => {
     const payloads = baiduAdapter.buildImportPayload([place]) as Array<Record<string, unknown>>;
     expect(payloads).toHaveLength(1);
     const payload = payloads[0]!;
-    expect(payload.type).toBe('10');
+    expect(payload.type).toBe('11');
     expect(payload.sourceid).toBe('');
     expect(payload.plateform).toBe(3);
     expect(payload.fromapp).toBe('百度地图');
     const extdata = payload.extdata as Record<string, string>;
     expect(extdata.name).toBe('Alpha Tech Park');
-    expect(extdata.address).toBe('No.8 Gaoshengqiao East Rd');
+    expect(extdata.content).toBe('地址:No.8 Gaoshengqiao East Rd');
     // geoptx/geopty must be Baidu mercator coordinates (wgs84 -> mc round-trips)
     expect(Math.abs(Number(extdata.geoptx) - 11582672.01)).toBeLessThan(1);
     expect(Math.abs(Number(extdata.geopty) - 3564275.74)).toBeLessThan(1);

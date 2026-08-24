@@ -256,9 +256,14 @@ export const baiduAdapter: ProviderAdapter = {
         geoptx: mc.x.toFixed(2),
         geopty: mc.y.toFixed(2),
       };
-      if (p.address) extdata.address = p.address;
+      // 跨地图导入没有百度 POI uid，不能伪装成 type 10（百度原生 POI 收藏）。
+      // 百度页面对无 uid 的地点使用 type 11，并将可显示的信息放入 content。
+      const content = [p.address ? `地址:${p.address}` : '', p.metadata.phone ? `电话:${p.metadata.phone}` : '']
+        .filter(Boolean)
+        .join('<br/>');
+      if (content) extdata.content = content;
       return {
-        type: '10',
+        type: '11',
         sourceid: '',
         plateform: 3,
         fromapp: '百度地图',
