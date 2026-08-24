@@ -420,14 +420,18 @@ export default function App() {
                 <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
               </label>
               {activeProvider && !detectedTab(activeProvider) && (
-                <button className="ghost" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
-                  打开目标页
-                </button>
+                <div className="open-right">
+                  <button className="ghost small" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
+                    打开目标页
+                  </button>
+                </div>
               )}
               {!activeProvider && !detectedTab(target) && (
-                <button className="ghost" onClick={() => void openPage(getAdapter(target).importPage)}>
-                  打开目标页
-                </button>
+                <div className="open-right">
+                  <button className="ghost small" onClick={() => void openPage(getAdapter(target).importPage)}>
+                    打开目标页
+                  </button>
+                </div>
               )}
             </>
           )}

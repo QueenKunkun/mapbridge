@@ -106,6 +106,12 @@ input[type='file'] {
   font-size: 13px;
 }
 
+.open-right {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
 .auto-provider {
   display: flex;
   align-items: center;
