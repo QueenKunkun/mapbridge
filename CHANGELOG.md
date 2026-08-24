@@ -4,12 +4,10 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ## [Unreleased]
 
-### Fixed
-- Migration step indicators (1–5) now remain visible after leaving the setup screen.
-
 ## [0.1.8] - 2026-08-24
 
 ### Fixed
+- Migration step indicators (1–5) now remain visible after leaving the setup screen.
 - Baidu imports no longer report successful writes as failures: the favorites API returns a successful top-level `result.error: 0` while its created record uses `status: "100"`.
 - Amap-to-Baidu imports now use Baidu's custom-place favorite format instead of creating invalid native-POI records without a Baidu POI UID; imported places can now open normally from the favorites list.
 - Amap-to-Baidu imports now search Baidu by name and coordinates before writing. Exact nearby matches are saved as native Baidu POI favorites; all other places safely fall back to custom-place favorites.
