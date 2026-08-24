@@ -175,7 +175,7 @@ async function handleDevFavRead(tabId: number): Promise<BgResponse> {
       resolvePendingDev(false, undefined, '无法连接页面脚本：' + String(e?.message ?? e));
     });
   });
-  return result.ok ? { type: 'dev-fav-data', data: result.data as { provider: 'amap'; fav: unknown; error?: string } } : { type: 'error', message: result.error ?? '读取失败' };
+  return result.ok ? { type: 'dev-fav-data', data: result.data as { provider: 'amap' | 'baidu'; fav: unknown; error?: string } } : { type: 'error', message: result.error ?? '读取失败' };
 }
 
 async function handleDevFavClear(tabId: number): Promise<BgResponse> {
@@ -194,7 +194,7 @@ async function handleDevFavClear(tabId: number): Promise<BgResponse> {
     });
   });
   return result.ok
-    ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
+    ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
     : { type: 'error', message: result.error ?? '清空失败' };
 }
 

@@ -76,6 +76,8 @@ export interface ResponseCapture {
   responses: unknown[];
   /** 按 URL 去重后的记录列表（多次分页会合并）。 */
   getRecords(): unknown[];
+  /** 最近一次命中的请求 URL（用于复用会话级参数，如鉴权/版本）。 */
+  readonly lastUrl?: string;
   /** 卸载钩子。 */
   dispose(): void;
 }
@@ -83,9 +85,11 @@ export interface ResponseCapture {
 /** 安装网络捕获。返回句柄。 */
 export function installResponseCapture(isRelevantUrl: RelevantUrlFn): ResponseCapture {
   const responses: unknown[] = [];
+  let lastUrl: string | undefined;
 
   const onText = (url: string, text: string): void => {
     if (!isRelevantUrl(url)) return;
+    lastUrl = url;
     const json = parseMaybeJsonp(text);
     if (json !== undefined) responses.push(json);
   };
@@ -137,6 +141,9 @@ export function installResponseCapture(isRelevantUrl: RelevantUrlFn): ResponseCa
 
   return {
     responses,
+    get lastUrl() {
+      return lastUrl;
+    },
     getRecords() {
       const seen = new Set<string>();
       const records: unknown[] = [];

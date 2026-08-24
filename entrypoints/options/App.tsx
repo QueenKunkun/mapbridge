@@ -93,7 +93,7 @@ export default function App() {
     setTimeout(() => setSaved(false), 1500);
   }
 
-  async function devBackupAndClear(): Promise<void> {
+  async function devBackupAndClear(provider: 'amap' | 'baidu'): Promise<void> {
     if (devBusy) return;
     setDevBusy(true);
     const lines: string[] = [];
@@ -104,28 +104,28 @@ export default function App() {
     setDevLog([]);
     try {
       const det = await sendBg({ type: 'detect-map-tabs' });
-      const amap = det.type === 'detected' ? det.tabs.find((t) => t.providerId === 'amap') : undefined;
-      if (!amap) {
-        logLine('✗ 未检测到已打开的高德标签页');
+      const tab = det.type === 'detected' ? det.tabs.find((t) => t.providerId === provider) : undefined;
+      const label = provider === 'amap' ? '高德' : '百度';
+      if (!tab) {
+        logLine(`✗ 未检测到已打开的${label}标签页`);
         return;
       }
-      logLine(`✓ 高德标签页 tabId=${amap.tabId}`);
+      logLine(`✓ ${label}标签页 tabId=${tab.tabId}`);
 
-      logLine('读取收藏与文件夹…');
-      const read = await sendBg({ type: 'dev-fav-read', tabId: amap.tabId });
+      logLine('读取收藏…');
+      const read = await sendBg({ type: 'dev-fav-read', tabId: tab.tabId });
       if (read.type !== 'dev-fav-data') {
         logLine(`✗ 读取失败：${read.type === 'error' ? read.message : '未知响应'}`);
         return;
       }
       const fav = read.data.fav as
-        | { raw?: unknown; store?: { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } }; savedAt?: number }
+        | { raw?: unknown[]; store?: { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } }; savedAt?: number }
         | undefined;
-      const store = fav?.store as { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } } | undefined;
-      const poiCount = store?.poi?.items?.length ?? 0;
-      const dirCount = store?.dir?.items?.length ?? 0;
+      const poiCount = fav?.store?.poi?.items?.length ?? fav?.raw?.length ?? 0;
+      const dirCount = fav?.store?.dir?.items?.length ?? 0;
       const now = new Date();
       const stamp = `${pad2(now.getFullYear())}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
-      const filename = `mapbridge-amap-backup-${stamp}.json`;
+      const filename = `mapbridge-${provider}-backup-${stamp}.json`;
       const blob = new Blob([JSON.stringify({ savedAt: new Date().toISOString(), ...fav }, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -133,10 +133,10 @@ export default function App() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      logLine(`✓ 已下载备份 ${filename}（收藏 ${poiCount} 条 · 文件夹 ${dirCount} 个）`);
+      logLine(`✓ 已下载备份 ${filename}（收藏 ${poiCount} 条${dirCount ? ` · 文件夹 ${dirCount} 个` : ''}）`);
 
       logLine('清空收藏…');
-      const clearP = sendBg({ type: 'dev-fav-clear', tabId: amap.tabId });
+      const clearP = sendBg({ type: 'dev-fav-clear', tabId: tab.tabId });
       const poll = setInterval(async () => {
         const p = await sendBg({ type: 'dev-fav-progress' });
         if (p.type === 'dev-progress') {
@@ -312,12 +312,15 @@ export default function App() {
             <SettingsBlock
               id="block-dev"
               title="开发工具（仅开发版）"
-              description="备份高德全部收藏（含文件夹）到本地 JSON 文件，然后清空收藏。用于开发/测试前重置数据，谨慎使用。"
+              description="备份地图全部收藏到本地 JSON 文件，然后清空收藏。用于开发/测试前重置数据，谨慎使用。百度清空依赖收藏页自身的删除接口（会话级鉴权），请确保在已登录的收藏页内执行。"
               fullWidth
             >
-              <div>
-                <button className="danger" disabled={devBusy} onClick={() => void devBackupAndClear()}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="danger" disabled={devBusy} onClick={() => void devBackupAndClear('amap')}>
                   {devBusy ? '处理中…' : '备份并清空高德收藏'}
+                </button>
+                <button className="danger" disabled={devBusy} onClick={() => void devBackupAndClear('baidu')}>
+                  {devBusy ? '处理中…' : '备份并清空百度收藏'}
                 </button>
               </div>
               {devLog.length > 0 && <pre className="dev-log">{devLog.join('\n')}</pre>}

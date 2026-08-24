@@ -1,4 +1,4 @@
-import { installResponseCapture, extractRecordsFromJson } from '@/utils/capture';
+import { installResponseCapture, extractRecordsFromJson, parseMaybeJsonp } from '@/utils/capture';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -54,6 +54,105 @@ export default defineContentScript({
       }
     }
 
+    // ---- 开发版工具：备份 + 清空百度收藏（仅 DEV 构建注册）----
+    function baiduFavSid(record: unknown): string | undefined {
+      const r = record as Record<string, unknown>;
+      const at = (obj: unknown, key: string): unknown =>
+        obj && typeof obj === 'object' && key in (obj as Record<string, unknown>)
+          ? (obj as Record<string, unknown>)[key]
+          : undefined;
+      const sid =
+        (at(r, 'sid') as string | undefined) ??
+        (at(at(r, 'detail'), 'data') as string | undefined) ??
+        (at(r, 'sourcedata') as string | undefined) ??
+        (at(r, 'extdata') as string | undefined);
+      return typeof sid === 'string' && sid ? sid : undefined;
+    }
+
+    function readCookie(name: string): string | undefined {
+      const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return m ? decodeURIComponent(m[1] ?? '') : undefined;
+    }
+
+    async function runDevReadFav(): Promise<void> {
+      log('dev-read-fav (baidu)');
+      try {
+        const records = capture.getRecords();
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-data',
+          data: { provider: 'baidu', fav: { raw: records, savedAt: Date.now() } },
+        });
+      } catch (e) {
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-data',
+          data: { provider: 'baidu', error: String(e instanceof Error ? e.message : e) },
+        });
+      }
+    }
+
+    async function runDevClearFav(): Promise<void> {
+      log('dev-clear-fav (baidu)');
+      const baseUrl = capture.lastUrl;
+      if (!baseUrl) {
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'baidu', deleted: 0, failed: 0, remaining: -1, ok: false, error: '未捕获到收藏列表请求，请先在收藏页滚动加载后重试' },
+        });
+        return;
+      }
+      const records = capture.getRecords();
+      const sids = records.map(baiduFavSid).filter((s): s is string => Boolean(s));
+      const total = sids.length;
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted: 0, failed: 0, total, done: 0 } });
+      if (total === 0) {
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-cleared', data: { provider: 'baidu', deleted: 0, failed: 0, remaining: 0, ok: true } });
+        return;
+      }
+      try {
+        const deleteUrl = new URL(baseUrl);
+        deleteUrl.searchParams.set('mode', 'delete');
+        const validate = readCookie('validate') ?? '';
+        const body =
+          'data=' + encodeURIComponent(JSON.stringify(sids.map((s) => ({ sid: s, action: 'del' })))) +
+          '&validate=' + encodeURIComponent(validate);
+        const res = await fetch(deleteUrl.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body,
+          credentials: 'include',
+        });
+        log('baidu clear POST status', res.status);
+        // 重新拉取列表，核对剩余数量
+        const syncUrl = new URL(baseUrl);
+        syncUrl.searchParams.set('mode', 'sync');
+        let remaining = -1;
+        try {
+          const r2 = await fetch(syncUrl.toString(), { method: 'GET', credentials: 'include' });
+          const json = parseMaybeJsonp(await r2.text());
+          remaining = extractRecordsFromJson(json).length;
+        } catch {
+          /* ignore */
+        }
+        const deleted = remaining >= 0 ? Math.max(0, total - remaining) : total;
+        const failed = remaining >= 0 ? Math.max(0, remaining) : 0;
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted, failed, total, done: total } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'baidu', deleted, failed, remaining, ok: remaining === 0 },
+        });
+      } catch (e) {
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'baidu', deleted: 0, failed: total, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) },
+        });
+      }
+    }
+
     window.addEventListener('message', async (event) => {
       if (event.source !== window) return;
       if (!isBridgeCommand(event.data)) return;
@@ -81,6 +180,10 @@ export default defineContentScript({
       } else if (cmd.type === 'ping') {
         log('pong');
         postEvent({ mb: BRIDGE_CHANNEL, type: 'pong' });
+      } else if (import.meta.env.DEV && cmd.type === 'dev-read-fav') {
+        void runDevReadFav();
+      } else if (import.meta.env.DEV && cmd.type === 'dev-clear-fav') {
+        void runDevClearFav();
       }
     });
 
