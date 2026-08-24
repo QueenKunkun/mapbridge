@@ -20,6 +20,8 @@ interface PendingExtract {
   jobId: string;
   resolve: (result: { ok: boolean; error?: string }) => void;
   timer: ReturnType<typeof setTimeout>;
+  graceTimer?: ReturnType<typeof setTimeout>;
+  bestRecords?: unknown[];
 }
 
 let pendingExtract: PendingExtract | undefined;
@@ -29,7 +31,27 @@ async function resolvePendingExtract(ok: boolean, error?: string): Promise<void>
   if (!pending) return;
   pendingExtract = undefined;
   clearTimeout(pending.timer);
+  if (pending.graceTimer) clearTimeout(pending.graceTimer);
   pending.resolve({ ok, error });
+}
+
+async function applyExtractData(data: RawExtract): Promise<void> {
+  const pending = pendingExtract;
+  if (!pending) return;
+  const job = await getJob(pending.jobId);
+  if (!job) {
+    await resolvePendingExtract(false, '任务不存在');
+    return;
+  }
+  const source = getAdapter(job.sourceProvider);
+  const result = source.buildExtractResult(data);
+  const settings = await getSettings();
+  let places = result.places;
+  if (settings.skipExisting) {
+    places = dedupPlaces(result.places, job.existingPlaces ?? []).unique;
+  }
+  await saveJob(applyExtraction({ ...job, existingPlaces: job.existingPlaces }, places, result.rawCount));
+  await resolvePendingExtract(true);
 }
 
 /** 开发版工具（备份/清空收藏）的挂起结果。 */
@@ -123,22 +145,39 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
 async function handleExtractData(event: ContentEvent['event'], data: RawExtract): Promise<void> {
   log('handleExtractData', 'pending=', Boolean(pendingExtract), 'records=', data.records?.length);
   if (!pendingExtract) return;
-  const job = await getJob(pendingExtract.jobId);
-  if (!job) {
-    await resolvePendingExtract(false, '任务不存在');
+
+  const records = data.records ?? [];
+  // 内容脚本可能因页面启动期的多次注入而先发来空响应，记录最佳（记录数最多）的结果并等待更完整的响应。
+  if (!pendingExtract.bestRecords || records.length > pendingExtract.bestRecords.length) {
+    pendingExtract.bestRecords = records;
+  }
+
+  if (records.length > 0) {
+    await applyExtractData(data);
     return;
   }
 
-  const source = getAdapter(job.sourceProvider);
-  const result = source.buildExtractResult(data);
-  const settings = await getSettings();
-  let places = result.places;
-  if (settings.skipExisting) {
-    places = dedupPlaces(result.places, job.existingPlaces ?? []).unique;
+  // 空响应：给一个宽限期等待后续非空响应（通常来自真正完成加载的页面实例）。
+  if (!pendingExtract.graceTimer) {
+    pendingExtract.graceTimer = setTimeout(() => {
+      const pending = pendingExtract;
+      if (!pending) return;
+      void (async () => {
+        const job = await getJob(pending.jobId);
+        if (!job) {
+          await resolvePendingExtract(false, '任务不存在');
+          return;
+        }
+        const best = (pending.bestRecords ?? []) as unknown[];
+        await applyExtractData({
+          provider: job.sourceProvider,
+          records: best,
+          exhausted: true,
+          hint: best.length === 0 ? '未捕获到收藏数据。请打开 https://ditu.amap.com/faves 并确认已登录后重试。' : undefined,
+        });
+      })();
+    }, 4000);
   }
-
-  await saveJob(applyExtraction({ ...job, existingPlaces: job.existingPlaces }, places, result.rawCount));
-  await resolvePendingExtract(true);
 }
 
 async function handleImportEvent(data: RawImportResult): Promise<void> {
