@@ -294,6 +294,16 @@ export default function App() {
 
       {error && <div className="error">⚠ {error}</div>}
 
+      {mode === 'migrate' && (
+        <div className="steps" aria-label="迁移步骤">
+          {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
+            <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
+              {i + 1}
+            </span>
+          ))}
+        </div>
+      )}
+
       {step === 'setup' && (
         <section className="setup">
           <div className="mode-tabs">
@@ -304,13 +314,6 @@ export default function App() {
 
           {mode === 'migrate' && (
             <>
-              <div className="steps">
-                {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
-                  <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
-                    {i + 1}
-                  </span>
-                ))}
-              </div>
               <div className="pick">
                 <label>
                   从

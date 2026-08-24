@@ -4,6 +4,9 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ## [Unreleased]
 
+### Fixed
+- Migration step indicators (1–5) now remain visible after leaving the setup screen.
+
 ## [0.1.8] - 2026-08-24
 
 ### Fixed
