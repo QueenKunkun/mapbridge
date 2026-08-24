@@ -98,8 +98,10 @@ input[type='file'] {
   cursor: not-allowed;
 }
 
-/* 覆盖 .setup label 的灰色文字，保证白色按钮文字清晰可读 */
+/* 覆盖 .setup label 的灰色文字与 display:flex，保证它是和其余按钮一致的左侧紧凑按钮 */
 .setup label.file-btn {
+  display: inline-flex;
+  align-self: flex-start;
   color: #fff;
   font-size: 13px;
 }
