@@ -1,5 +1,6 @@
 import { createStore, get, set, del, keys } from 'idb-keyval';
 import type { Job } from '@/core/jobs';
+import type { ProviderId } from '@/core/model';
 
 const store = createStore('mapbridge', 'kv');
 
@@ -53,4 +54,22 @@ export async function getSettings(): Promise<AppSettings> {
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
   await set(SETTINGS_KEY, settings, store);
+}
+
+export type UiMode = 'migrate' | 'export' | 'import-file';
+
+export interface UiSelection {
+  source?: ProviderId;
+  target?: ProviderId;
+  mode?: UiMode;
+}
+
+const UI_SELECTION_KEY = 'ui-selection';
+
+export async function getUiSelection(): Promise<UiSelection> {
+  return ((await get(UI_SELECTION_KEY, store)) as UiSelection) ?? {};
+}
+
+export async function saveUiSelection(sel: UiSelection): Promise<void> {
+  await set(UI_SELECTION_KEY, sel, store);
 }

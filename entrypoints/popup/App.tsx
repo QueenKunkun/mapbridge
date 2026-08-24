@@ -4,6 +4,7 @@ import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
 import { serializePlaces, parsePlacesFile } from '@/core/export';
+import { getUiSelection, saveUiSelection } from '@/storage/db';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
   { id: 'baidu', name: '百度地图' },
@@ -33,6 +34,21 @@ export default function App() {
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
   const [exportedCount, setExportedCount] = useState(0);
   const [undoMsg, setUndoMsg] = useState('');
+  const [selectionReady, setSelectionReady] = useState(false);
+
+  // 记住上次的选择（来源 / 目标 / 模式）
+  useEffect(() => {
+    void getUiSelection().then((sel) => {
+      if (sel.source) setSource(sel.source);
+      if (sel.target) setTarget(sel.target);
+      if (sel.mode) setMode(sel.mode);
+      setSelectionReady(true);
+    });
+  }, []);
+  useEffect(() => {
+    if (!selectionReady) return;
+    void saveUiSelection({ source, target, mode });
+  }, [source, target, mode, selectionReady]);
 
   async function refreshDetection(): Promise<void> {
     setDetecting(true);
