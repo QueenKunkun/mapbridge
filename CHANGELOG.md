@@ -4,6 +4,8 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-24
+
 ### Fixed
 - Baidu imports no longer report successful writes as failures: the favorites API returns a successful top-level `result.error: 0` while its created record uses `status: "100"`.
 - Amap-to-Baidu imports now use Baidu's custom-place favorite format instead of creating invalid native-POI records without a Baidu POI UID; imported places can now open normally from the favorites list.
