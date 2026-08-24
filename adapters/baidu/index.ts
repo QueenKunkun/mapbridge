@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import type { CanonicalPlace, Collection } from '@/core/model';
 import { Crs } from '@/core/model';
-import { toWgs84 } from '@/core/coords';
+import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
 
 interface BaiduMercator {
@@ -203,7 +203,7 @@ export const baiduAdapter: ProviderAdapter = {
   extractPage: 'https://map.baidu.com/fav/',
   importPage: 'https://map.baidu.com/fav/',
   crs: 'bd09mc',
-  capabilities: { canExtract: true, canImport: false },
+  capabilities: { canExtract: true, canImport: true },
 
   normalize: normalizeBaidu,
 
@@ -248,16 +248,33 @@ export const baiduAdapter: ProviderAdapter = {
     return { collection, places, skipped, rawCount: raw.records.length };
   },
 
-  buildImportPayload(_places) {
-    // 百度导入接口需抓包确认；当前不可导入。
-    throw new Error('百度导入尚未实现（需要抓包确认收藏写入接口）');
+  buildImportPayload(places: CanonicalPlace[]): unknown {
+    return places.map((p) => {
+      const mc = wgs84ToBd09mc(p.wgs84.lng, p.wgs84.lat);
+      const extdata: Record<string, string> = {
+        name: p.name,
+        geoptx: mc.x.toFixed(2),
+        geopty: mc.y.toFixed(2),
+      };
+      if (p.address) extdata.address = p.address;
+      return {
+        type: '10',
+        sourceid: '',
+        plateform: 3,
+        fromapp: '百度地图',
+        extdata,
+      };
+    });
   },
 
   summarizeImportResult(result: RawImportResult) {
+    const raw = result.raw as { imported?: number; failed?: number } | undefined;
+    const imported = raw?.imported ?? (result.done ? 1 : 0);
+    const failed = raw?.failed ?? (result.error ? 1 : 0);
     return {
-      imported: result.done ? 1 : 0,
+      imported,
       skippedDuplicates: 0,
-      failed: result.error ? 1 : 0,
+      failed,
       failedItems: result.error ? [{ placeId: '', error: result.error }] : [],
       targetCount: result.targetCount,
       raw: result.raw,

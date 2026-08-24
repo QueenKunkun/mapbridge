@@ -126,9 +126,46 @@ export function bd09mcToGcj02(x: number, y: number): LngLat {
 }
 
 export function gcj02ToBd09mc(lng: number, lat: number): MercatorPoint {
-  // 参考实现无逆变换；用 MC2LL 数值反演近似不现实，改由百度接口层处理。
-  // 当需要写回百度时，用公开的 bd09mc 计算库或接口；此处标记为不支持。
-  throw new Error('gcj02ToBd09mc not implemented; use Baidu API or bd09mc library');
+  const bd09 = gcj02ToBd09(lng, lat);
+  return bd09ToBd09mc(bd09.lng, bd09.lat);
+}
+
+/**
+ * BD-09 经纬度 -> 百度墨卡托（bd09mc）。bd09mcToBd09 的数值反演：
+ * 对每条 MCBAND 区间用对应系数 c，分别反解 |x| 与 cc，使 poly(cc)=|lat|，
+ * 取使反解出的 |y|=cc·c[9] 落在该区间内的那一组。
+ */
+export function bd09ToBd09mc(lng: number, lat: number): MercatorPoint {
+  const absLng = Math.abs(lng);
+  const absLat = Math.abs(lat);
+  const poly = (c: number[], cc: number): number =>
+    c[2]! + c[3]! * cc + c[4]! * cc ** 2 + c[5]! * cc ** 3 + c[6]! * cc ** 4 + c[7]! * cc ** 5 + c[8]! * cc ** 6;
+  const solve = (c: number[]): { x: number; y: number } => {
+    const ax = (absLng - c[0]!) / c[1]!;
+    const x = lng < 0 ? -ax : ax;
+    let lo = 0;
+    let hi = 4;
+    for (let it = 0; it < 60; it++) {
+      const mid = (lo + hi) / 2;
+      if (poly(c, mid) < absLat) lo = mid;
+      else hi = mid;
+    }
+    const cc = (lo + hi) / 2;
+    const ay = cc * c[9]!;
+    const y = lat < 0 ? -ay : ay;
+    return { x, y };
+  };
+  for (let i = 0; i < MCBAND.length; i++) {
+    const c = MC2LL[i]!;
+    const ax = (absLng - c[0]!) / c[1]!;
+    if (ax < 0) continue;
+    const { x, y } = solve(c);
+    const lowerOk = Math.abs(y) >= MCBAND[i]! - 1e-3;
+    const upperOk = i === 0 ? true : Math.abs(y) < MCBAND[i - 1]! + 1e-3;
+    if (lowerOk && upperOk) return { x, y };
+  }
+  // 兜底：使用最后一组系数
+  return solve(MC2LL[MC2LL.length - 1]!);
 }
 
 function clip(value: number, min: number, max: number): number {
@@ -206,10 +243,16 @@ export function toWgs84(point: { crs: Crs; lng: number; lat: number }): LngLat {
   }
 }
 
-/** 统一入口：WGS-84 -> 任意 target CRS 经纬度。bd09mc 目标需走接口，不支持。 */
+export function wgs84ToBd09mc(lng: number, lat: number): MercatorPoint {
+  const gcj = wgs84ToGcj02(lng, lat);
+  const bd09 = gcj02ToBd09(gcj.lng, gcj.lat);
+  return bd09ToBd09mc(bd09.lng, bd09.lat);
+}
+
+/** 统一入口：WGS-84 -> 任意 target CRS 经纬度。amap_pixel 目标需走接口，不支持。 */
 export function fromWgs84(
   point: LngLat,
-  crs: Exclude<Crs, 'bd09mc' | 'amap_pixel'>,
+  crs: Exclude<Crs, 'amap_pixel'>,
 ): LngLat {
   switch (crs) {
     case 'wgs84':
@@ -219,6 +262,10 @@ export function fromWgs84(
     case 'bd09': {
       const g = wgs84ToGcj02(point.lng, point.lat);
       return gcj02ToBd09(g.lng, g.lat);
+    }
+    case 'bd09mc': {
+      const m = wgs84ToBd09mc(point.lng, point.lat);
+      return { lng: m.x, lat: m.y };
     }
   }
 }

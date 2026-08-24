@@ -153,6 +153,64 @@ export default defineContentScript({
       }
     }
 
+    async function runImport(payload: unknown): Promise<void> {
+      const items = (payload ?? []) as Array<Record<string, unknown>>;
+      const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
+      log('runImport: items=', items.length);
+      if (!location.hostname.includes('map.baidu.com')) {
+        throw new Error('请在已登录的百度收藏页（map.baidu.com/fav）执行导入');
+      }
+      const base = capture.lastUrl;
+      if (!base) {
+        throw new Error('未捕获到收藏列表请求，请先在收藏页滚动加载后重试');
+      }
+      const validate = readCookie('validate') ?? '';
+      emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${items.length} 条…` });
+      const results: { ok: boolean; info?: string }[] = [];
+      let processed = 0;
+      for (const it of items) {
+        const u = new URL(base);
+        u.searchParams.set('mode', 'add');
+        u.searchParams.set('type', 'favdata');
+        u.searchParams.delete('action');
+        const body = 'data=' + encodeURIComponent(JSON.stringify(it)) + '&validate=' + encodeURIComponent(validate);
+        try {
+          const res = await fetch(u.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body,
+            credentials: 'include',
+          });
+          const text = await res.text();
+          const ok = res.status === 200 && !/["']?status["']?\s*:\s*["']?[1-9]/.test(text);
+          results.push({ ok, info: ok ? undefined : text.slice(0, 200) });
+        } catch (e) {
+          results.push({ ok: false, info: String(e instanceof Error ? e.message : e) });
+        }
+        processed++;
+        emit({ phase: 'sync', processed, total: items.length, message: `已写入 ${processed}/${items.length}` });
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      emit({ phase: 'verify', message: '验证结果…' });
+      let targetCount: number | undefined;
+      try {
+        const v = new URL(base);
+        v.searchParams.set('mode', 'sync');
+        const txt = await (await fetch(v.toString(), { credentials: 'include' })).text();
+        targetCount = extractRecordsFromJson(parseMaybeJsonp(txt)).length;
+      } catch {
+        /* ignore */
+      }
+      const imported = results.filter((r) => r.ok).length;
+      const failed = results.length - imported;
+      postEvent({
+        mb: BRIDGE_CHANNEL,
+        type: 'import-result',
+        data: { provider: 'baidu', done: true, targetCount, raw: { imported, failed, results } },
+      });
+    }
+
     window.addEventListener('message', async (event) => {
       if (event.source !== window) return;
       if (!isBridgeCommand(event.data)) return;
@@ -187,6 +245,15 @@ export default defineContentScript({
           mb: BRIDGE_CHANNEL,
           type: 'extract-data',
           data: { provider: 'baidu', records, exhausted, hint },
+        });
+      } else if (cmd.type === 'import') {
+        log('recv import command');
+        void runImport(cmd.payload).catch((error) => {
+          postEvent({
+            mb: BRIDGE_CHANNEL,
+            type: 'import-result',
+            data: { provider: 'baidu', done: false, error: String(error?.message ?? error) },
+          });
         });
       } else if (cmd.type === 'ping') {
         log('pong');

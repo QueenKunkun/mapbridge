@@ -3,12 +3,15 @@ import {
   amapPixelToGcj02,
   bd09mcToBd09,
   bd09mcToGcj02,
+  bd09ToBd09mc,
   bd09ToGcj02,
+  fromWgs84,
   gcj02ToAmapPixel,
   gcj02ToBd09,
+  gcj02ToBd09mc,
   gcj02ToWgs84,
-  fromWgs84,
   toWgs84,
+  wgs84ToBd09mc,
   wgs84ToGcj02,
 } from '@/core/coords';
 
@@ -51,6 +54,39 @@ describe('bd09 <-> gcj02', () => {
     const bd09 = gcj02ToBd09(gcj.lng, gcj.lat);
     expect(bd09.lng).toBeCloseTo(116.404, 6);
     expect(bd09.lat).toBeCloseTo(39.915, 6);
+  });
+});
+
+describe('bd09mc <-> bd09 inverse', () => {
+  it('bd09ToBd09mc inverts bd09mcToBd09 (verified vector)', () => {
+    const bd09 = bd09mcToBd09(MC_X, MC_Y);
+    const mc = bd09ToBd09mc(bd09.lng, bd09.lat);
+    expect(mc.x).toBeCloseTo(MC_X, 2);
+    expect(mc.y).toBeCloseTo(MC_Y, 2);
+  });
+
+  it('round-trips the user-captured geoptx/geopty', () => {
+    const bd09 = bd09mcToBd09(12525945.05, 4086017.57);
+    const mc = bd09ToBd09mc(bd09.lng, bd09.lat);
+    expect(mc.x).toBeCloseTo(12525945.05, 2);
+    expect(mc.y).toBeCloseTo(4086017.57, 2);
+  });
+});
+
+describe('wgs84 <-> bd09mc', () => {
+  it('wgs84ToBd09mc round-trips through toWgs84', () => {
+    const p = { lng: 104.06, lat: 30.67 };
+    const mc = wgs84ToBd09mc(p.lng, p.lat);
+    const back = toWgs84({ crs: 'bd09mc', lng: mc.x, lat: mc.y });
+    expect(back.lng).toBeCloseTo(p.lng, 4);
+    expect(back.lat).toBeCloseTo(p.lat, 4);
+  });
+
+  it('gcj02ToBd09mc is the exact inverse of bd09mcToGcj02', () => {
+    const mc = gcj02ToBd09mc(GCJ_LNG, GCJ_LAT);
+    const gcj = bd09mcToGcj02(mc.x, mc.y);
+    expect(gcj.lng).toBeCloseTo(GCJ_LNG, 5);
+    expect(gcj.lat).toBeCloseTo(GCJ_LAT, 5);
   });
 });
 
