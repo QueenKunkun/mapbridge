@@ -33,6 +33,7 @@ section {
   background: #eef0f4;
   padding: 4px;
   border-radius: 8px;
+  margin-bottom: 12px;
 }
 
 .mode-tab {
@@ -127,6 +128,7 @@ input[type='file'] {
 .steps {
   display: flex;
   gap: 6px;
+  margin-bottom: 12px;
 }
 
 .step {
