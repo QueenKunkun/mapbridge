@@ -162,7 +162,18 @@ export default defineContentScript({
         const prev = capture.getRecords().length;
         await loadAllFavorites();
         await new Promise((r) => setTimeout(r, 800));
-        const records = capture.getRecords();
+        let records = capture.getRecords();
+        // 兜底：若首屏加载早于内容脚本注入导致未捕获到响应，直接读一次收藏接口
+        if (records.length === 0 && capture.lastUrl) {
+          try {
+            const syncUrl = new URL(capture.lastUrl);
+            syncUrl.searchParams.set('mode', 'sync');
+            const text = await (await fetch(syncUrl.toString(), { credentials: 'include' })).text();
+            records = extractRecordsFromJson(parseMaybeJsonp(text));
+          } catch {
+            /* ignore */
+          }
+        }
         const loadedMore = records.length > prev;
         log('extract: records=', records.length, 'loadedMore=', loadedMore);
         const exhausted = !loadedMore || records.length >= 200;
