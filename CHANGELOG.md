@@ -4,6 +4,13 @@ All notable changes to this project are documented here, following the [Keep a C
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-08-24
+
+### Fixed
+- Migration step indicators (1–5) now remain visible after leaving the setup screen.
+- Popup migration content retains compact, consistent spacing after the flow hierarchy refactor.
+- Tightened migration step title and content spacing in the popup.
+
 ## [0.1.8] - 2026-08-24
 
 ### Fixed

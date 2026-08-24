@@ -70,8 +70,27 @@ section {
 }
 
 .migration-content {
-  /* 保留三层 DOM 结构，同时不改变原有内容块的外边距折叠与 popup 高度。 */
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 迁移内容由容器统一控制节奏，避免 h2/p 的浏览器默认外边距和父级 gap 叠加。 */
+.migration-content > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.migration-content .pick,
+.migration-content .detect-list {
+  margin: 0;
+}
+
+.migration-content.extract,
+.migration-content.preview,
+.migration-content.import,
+.migration-content.report {
+  margin-top: -4px;
 }
 
 .field-inline {
