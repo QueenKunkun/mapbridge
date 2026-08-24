@@ -1,7 +1,7 @@
 {
   "name": "mapbridge",
   "description": "Migrate map favorites between Chinese map services (Baidu Maps / Amap), locally in your browser",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
