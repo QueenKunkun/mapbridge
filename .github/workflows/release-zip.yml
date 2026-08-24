@@ -1,15 +1,27 @@
-name: Release zip
+name: Build & Release Extension
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.1.7). Leave empty to auto-generate a build tag.'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark the release as a pre-release'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -25,9 +37,25 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Sync version from tag
+      - name: Determine release tag
+        id: meta
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            TAG="build-$(date +%Y%m%d)-${GITHUB_RUN_ID}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "is_version_tag=$([[ "$TAG" == v* ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Sync version from tag
+        if: steps.meta.outputs.is_version_tag == 'true'
+        run: |
+          VERSION="${{ steps.meta.outputs.tag }}"
+          VERSION="${VERSION#v}"
           node -e "const f='package.json';const p=require('./'+f);p.version='$VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
           echo "version set to $VERSION"
 
@@ -37,14 +65,10 @@ jobs:
       - name: Zip
         run: pnpm zip
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mapbridge-extension
-          path: .output/*.zip
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.meta.outputs.tag }}
           files: .output/*.zip
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           generate_release_notes: true

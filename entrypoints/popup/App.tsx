@@ -72,6 +72,12 @@ export default function App() {
   const detectedTab = (provider: ProviderId): number | undefined => detected.find((t) => t.providerId === provider)?.tabId;
   const isProviderLoggedIn = (provider: ProviderId): boolean | undefined => detected.find((t) => t.providerId === provider)?.loggedIn;
 
+  // 当前激活标签页对应的地图平台（仅当在地图页上时有效）
+  const activeProvider = detected.find((d) => d.tabId === tabId)?.providerId;
+  // 导出/导入默认用当前地图页对应的平台；不在地图页时才退回用户手动选择
+  const effectiveSource = mode === 'export' && activeProvider ? activeProvider : source;
+  const effectiveTarget = mode === 'import-file' && activeProvider ? activeProvider : target;
+
   const canStart = source !== target;
 
   async function newJob(): Promise<Job | undefined> {
@@ -114,12 +120,12 @@ export default function App() {
     setError('');
     setExportedCount(0);
     try {
-      const res = await sendBg({ type: 'new-job', source, target: source });
+      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource });
       if (res.type !== 'job' || !res.job) {
         setError('无法创建导出任务');
         return;
       }
-      const tabId = detectedTab(source) ?? (await currentTabId());
+      const tabId = detectedTab(effectiveSource) ?? (await currentTabId());
       if (tabId === undefined) {
         setError('未检测到源地图收藏页，请打开并登录后重试');
         return;
@@ -173,7 +179,7 @@ export default function App() {
     try {
       const text = await file.text();
       const parsed = parsePlacesFile(text);
-      const res = await sendBg({ type: 'import-file', target, places: parsed.places });
+      const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places });
       if (res.type === 'job' && res.job) {
         setJob(res.job);
         setStep('preview');
@@ -364,19 +370,26 @@ export default function App() {
 
           {mode === 'export' && (
             <>
-              <label className="field-inline">
-                选择地图
-                <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
-                  {SELECTABLE_PROVIDERS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {activeProvider ? (
+                <div className="auto-provider">
+                  <span className="dot ok" />
+                  当前页面：<b>{providerName(activeProvider)}</b>（将导出此地图收藏）
+                </div>
+              ) : (
+                <label className="field-inline">
+                  选择地图
+                  <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
+                    {SELECTABLE_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <p className="hint">提取该地图的收藏并下载为 JSON 文件，可被“从文件导入”或其他设备复用。</p>
               <button className="primary" disabled={busy} onClick={() => void startExport()}>
-                {busy ? '导出中…' : '导出当前地图'}
+                {busy ? '导出中…' : `导出${activeProvider ? providerName(activeProvider) : '当前地图'}收藏`}
               </button>
               {exportedCount > 0 && <div className="count">已导出 <b>{exportedCount}</b> 条 ✓</div>}
             </>
@@ -384,19 +397,34 @@ export default function App() {
 
           {mode === 'import-file' && (
             <>
-              <label className="field-inline">
-                导入到
-                <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
-                  {SELECTABLE_PROVIDERS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {activeProvider ? (
+                <div className="auto-provider">
+                  <span className="dot ok" />
+                  当前页面：<b>{providerName(activeProvider)}</b>（将导入到此地图）
+                </div>
+              ) : (
+                <label className="field-inline">
+                  导入到
+                  <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
+                    {SELECTABLE_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <p className="hint">选择已登录的目标地图收藏页，再选择 MapBridge 导出文件（<code>mapbridge-*.json</code>）。</p>
-              <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} />
-              {!detectedTab(target) && (
+              <label className={`file-btn${busy ? ' disabled' : ''}`}>
+                选择文件
+                <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
+              </label>
+              {activeProvider && !detectedTab(activeProvider) && (
+                <button className="ghost small" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
+                  打开目标页
+                </button>
+              )}
+              {!activeProvider && !detectedTab(target) && (
                 <button className="ghost small" onClick={() => void openPage(getAdapter(target).importPage)}>
                   打开目标页
                 </button>
