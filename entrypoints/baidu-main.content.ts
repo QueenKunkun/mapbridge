@@ -1,5 +1,6 @@
 import { installResponseCapture, extractRecordsFromJson, parseMaybeJsonp } from '@/utils/capture';
 import { isBaiduFavWriteSuccess } from '@/utils/baidu-fav';
+import { chooseBaiduPoiMatch, chooseBaiduSearchCity } from '@/utils/baidu-poi';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -166,16 +167,56 @@ export default defineContentScript({
       if (!base) {
         throw new Error('未捕获到收藏列表请求，请先在收藏页滚动加载后重试');
       }
+      const favUrl: string = base;
       const validate = readCookie('validate') ?? '';
       emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${items.length} 条…` });
       const results: { ok: boolean; info?: string }[] = [];
+
+      async function searchBaiduPoi(item: Record<string, unknown>): Promise<Record<string, unknown>> {
+        const extdata = item['extdata'] as Record<string, unknown> | undefined;
+        const name = typeof extdata?.['name'] === 'string' ? extdata['name'] : '';
+        const x = Number(extdata?.['geoptx']);
+        const y = Number(extdata?.['geopty']);
+        if (!name || !Number.isFinite(x) || !Number.isFinite(y)) return item;
+
+        const request = async (cityCode: number): Promise<unknown> => {
+          const searchUrl = new URL(favUrl);
+          searchUrl.searchParams.set('qt', 's');
+          searchUrl.searchParams.set('wd', name);
+          searchUrl.searchParams.set('c', String(cityCode));
+          searchUrl.searchParams.set('b', `(${x - 10_000},${y - 10_000};${x + 10_000},${y + 10_000})`);
+          searchUrl.searchParams.set('nn', '0');
+          for (const key of ['mode', 'type', 'limit', 'lastver']) searchUrl.searchParams.delete(key);
+          const text = await (await fetch(searchUrl, { credentials: 'include' })).text();
+          return parseMaybeJsonp(text);
+        };
+
+        try {
+          const city = chooseBaiduSearchCity(await request(0), { x, y });
+          if (city === undefined) return item;
+          const match = chooseBaiduPoiMatch(await request(city), { name, x, y });
+          if (!match) return item;
+          log('matched native Baidu POI', name, match.uid);
+          return {
+            type: '10',
+            sourceid: match.uid,
+            plateform: 3,
+            fromapp: '百度地图',
+            extdata: { name: match.name, geoptx: match.x, geopty: match.y },
+          };
+        } catch (error) {
+          log('Baidu POI search failed; falling back to custom favorite', name, String(error));
+          return item;
+        }
+      }
       let processed = 0;
       for (const it of items) {
-        const u = new URL(base);
+        const importItem = await searchBaiduPoi(it);
+        const u = new URL(favUrl);
         u.searchParams.set('mode', 'add');
         u.searchParams.set('type', 'favdata');
         u.searchParams.delete('action');
-        const body = 'data=' + encodeURIComponent(JSON.stringify(it)) + '&validate=' + encodeURIComponent(validate);
+        const body = 'data=' + encodeURIComponent(JSON.stringify(importItem)) + '&validate=' + encodeURIComponent(validate);
         try {
           const res = await fetch(u.toString(), {
             method: 'POST',
@@ -198,7 +239,7 @@ export default defineContentScript({
       emit({ phase: 'verify', message: '验证结果…' });
       let targetCount: number | undefined;
       try {
-        const v = new URL(base);
+        const v = new URL(favUrl);
         v.searchParams.set('mode', 'sync');
         const txt = await (await fetch(v.toString(), { credentials: 'include' })).text();
         targetCount = extractRecordsFromJson(parseMaybeJsonp(txt)).length;
