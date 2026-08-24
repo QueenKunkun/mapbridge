@@ -268,14 +268,19 @@ export default defineContentScript({
         // 优先直接读接口（导入流程已验证可靠），再回退到网络捕获
         try {
           const live = (await getJson('/service/fav/getFav?')) as { data?: { items?: unknown[] } };
+          log('extract: live fetched, items=', (live as { data?: { items?: unknown[] } })?.data?.items?.length ?? 0);
           records = extractAmapRecords(live);
-        } catch {
-          /* ignore */
+        } catch (e) {
+          log('extract: live fetch failed:', String(e));
         }
         if (records.length === 0) {
-          records = capture.responses.flatMap((r) => extractAmapRecords(r));
+          const fromCapture = capture.responses.flatMap((r) => extractAmapRecords(r));
+          log('extract: capture responses=', capture.responses.length, 'fromCapture=', fromCapture.length);
+          records = fromCapture;
+        } else {
+          log('extract: using live records=', records.length);
         }
-        log('extract: records=', records.length);
+        log('extract: final records=', records.length);
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'extract-data',

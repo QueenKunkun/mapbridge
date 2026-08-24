@@ -50,6 +50,7 @@ async function applyExtractData(data: RawExtract): Promise<void> {
   if (settings.skipExisting) {
     places = dedupPlaces(result.places, job.existingPlaces ?? []).unique;
   }
+  log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
   await saveJob(applyExtraction({ ...job, existingPlaces: job.existingPlaces }, places, result.rawCount));
   await resolvePendingExtract(true);
 }
@@ -144,15 +145,20 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
 
 async function handleExtractData(event: ContentEvent['event'], data: RawExtract): Promise<void> {
   log('handleExtractData', 'pending=', Boolean(pendingExtract), 'records=', data.records?.length);
-  if (!pendingExtract) return;
+  if (!pendingExtract) {
+    log('handleExtractData: no pending extract, dropping');
+    return;
+  }
 
   const records = data.records ?? [];
   // 内容脚本可能因页面启动期的多次注入而先发来空响应，记录最佳（记录数最多）的结果并等待更完整的响应。
   if (!pendingExtract.bestRecords || records.length > pendingExtract.bestRecords.length) {
     pendingExtract.bestRecords = records;
   }
+  log('handleExtractData: bestRecords now=', (pendingExtract.bestRecords ?? []).length);
 
   if (records.length > 0) {
+    log('handleExtractData: got non-empty, applying immediately');
     await applyExtractData(data);
     return;
   }
