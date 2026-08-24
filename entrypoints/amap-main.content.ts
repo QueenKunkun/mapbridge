@@ -267,13 +267,22 @@ export default defineContentScript({
       }
     }
 
-    window.addEventListener('message', (event) => {
+    window.addEventListener('message', async (event) => {
       if (event.source !== window) return;
       if (!isBridgeCommand(event.data)) return;
       const cmd = event.data;
 
       if (cmd.type === 'extract') {
-        const records = extractAmapRecords(capture.responses);
+        let records = capture.responses.flatMap((r) => extractAmapRecords(r));
+        // 兜底：若首屏加载早于内容脚本注入导致未捕获到响应，直接读一次接口
+        if (records.length === 0) {
+          try {
+            const live = (await getJson('/service/fav/getFav?')) as { data?: { items?: unknown[] } };
+            records = extractAmapRecords(live);
+          } catch {
+            /* ignore */
+          }
+        }
         log('extract: records=', records.length);
         postEvent({
           mb: BRIDGE_CHANNEL,
