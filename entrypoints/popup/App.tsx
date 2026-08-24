@@ -294,26 +294,28 @@ export default function App() {
 
       {error && <div className="error">⚠ {error}</div>}
 
+      <nav className="mode-tabs" aria-label="操作模式">
+        <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('migrate')}>迁移</button>
+        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('export')}>导出当前地图</button>
+        <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('import-file')}>从文件导入</button>
+      </nav>
+
       {mode === 'migrate' && (
-        <div className="steps" aria-label="迁移步骤">
-          {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
-            <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
-              {i + 1}
-            </span>
-          ))}
+        <div className="migration-flow">
+          <div className="steps" aria-label="迁移步骤">
+            {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
+              <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
+                {i + 1}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
       {step === 'setup' && (
         <section className="setup">
-          <div className="mode-tabs">
-            <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} onClick={() => setMode('migrate')}>迁移</button>
-            <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} onClick={() => setMode('export')}>导出当前地图</button>
-            <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} onClick={() => setMode('import-file')}>从文件导入</button>
-          </div>
-
           {mode === 'migrate' && (
-            <>
+            <div className="migration-content">
               <div className="pick">
                 <label>
                   从
@@ -368,7 +370,7 @@ export default function App() {
               <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
                 {canStart ? '开始' : '请选择不同平台'}
               </button>
-            </>
+            </div>
           )}
 
           {mode === 'export' && (
@@ -442,7 +444,7 @@ export default function App() {
       )}
 
       {step === 'extract' && job && (
-        <section className="extract">
+        <section className="migration-content extract">
           <h2>提取收藏 · {providerName(job.sourceProvider)}</h2>
           {detectedTab(job.sourceProvider) !== undefined ? (
             <p className="hint ok-tag">源收藏页已检测到 ✓，可直接提取</p>
@@ -473,14 +475,14 @@ export default function App() {
       )}
 
       {step === 'preview' && job && (
-        <section className="preview">
+        <section className="migration-content preview">
           <h2>预览与编辑</h2>
           <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
         </section>
       )}
 
       {step === 'import' && job && (
-        <section className="import">
+        <section className="migration-content import">
           <h2>导入 · {providerName(job.targetProvider)}</h2>
           {detectedTab(job.targetProvider) !== undefined ? (
             <p className="hint ok-tag">目标收藏页已检测到 ✓，可直接导入</p>
@@ -512,7 +514,7 @@ export default function App() {
       )}
 
       {step === 'report' && job && (
-        <section className="report">
+        <section className="migration-content report">
           <h2>{job.status === 'done' ? '导入完成 ✅' : job.status === 'failed' ? '导入失败 ❌' : '导入中…'}</h2>
           <dl>
             <dt>来源</dt>
