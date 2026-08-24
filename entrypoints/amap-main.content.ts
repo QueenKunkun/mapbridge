@@ -32,25 +32,16 @@ export default defineContentScript({
     const capture = installResponseCapture((url) => url.includes('/service/fav/getFav'));
     log('capture installed');
 
-    // ---- 高德页面请求封装（优先 window.amap，其次 jQuery，最后 fetch）----
+    // 高德页面请求封装：- 优先原生 fetch（amap.get 在某些情况下不回调，导致卡死）。
     function getJson(url: string): Promise<unknown> {
       return new Promise((resolve, reject) => {
-        const api = (window as unknown as { amap?: { get?: (u: string, cb: (d: unknown) => void, type: string) => void } }).amap;
-        const jq = (window as unknown as { jQuery?: { ajax: (opts: unknown) => void }; $?: { ajax: (opts: unknown) => void } }).jQuery
-          ?? (window as unknown as { $?: { ajax: (opts: unknown) => void } }).$;
-        if (api?.get) {
-          api.get(url, resolve, 'json');
-        } else if (jq?.ajax) {
-          jq.ajax({ url, type: 'GET', dataType: 'json', success: resolve, error: reject });
-        } else {
-          fetch(url, {
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
-          })
-            .then((r) => r.json())
-            .then(resolve, reject);
-        }
+        void fetch(url, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+          .then((r) => r.json())
+          .then(resolve, reject);
       });
     }
 
@@ -273,15 +264,16 @@ export default defineContentScript({
       const cmd = event.data;
 
       if (cmd.type === 'extract') {
-        let records = capture.responses.flatMap((r) => extractAmapRecords(r));
-        // 兜底：若首屏加载早于内容脚本注入导致未捕获到响应，直接读一次接口
+        let records: unknown[] = [];
+        // 优先直接读接口（导入流程已验证可靠），再回退到网络捕获
+        try {
+          const live = (await getJson('/service/fav/getFav?')) as { data?: { items?: unknown[] } };
+          records = extractAmapRecords(live);
+        } catch {
+          /* ignore */
+        }
         if (records.length === 0) {
-          try {
-            const live = (await getJson('/service/fav/getFav?')) as { data?: { items?: unknown[] } };
-            records = extractAmapRecords(live);
-          } catch {
-            /* ignore */
-          }
+          records = capture.responses.flatMap((r) => extractAmapRecords(r));
         }
         log('extract: records=', records.length);
         postEvent({
