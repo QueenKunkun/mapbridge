@@ -1,4 +1,5 @@
 import { installResponseCapture, extractRecordsFromJson, parseMaybeJsonp } from '@/utils/capture';
+import { isBaiduFavWriteSuccess } from '@/utils/baidu-fav';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -183,7 +184,9 @@ export default defineContentScript({
             credentials: 'include',
           });
           const text = await res.text();
-          const ok = res.status === 200 && !/["']?status["']?\s*:\s*["']?[1-9]/.test(text);
+          // 百度成功响应的每条记录也会携带 status: "100"；真正的接口
+          // 成功标志是顶层 result.error === 0，不能按记录 status 判错。
+          const ok = isBaiduFavWriteSuccess(res.status, text);
           results.push({ ok, info: ok ? undefined : text.slice(0, 200) });
         } catch (e) {
           results.push({ ok: false, info: String(e instanceof Error ? e.message : e) });

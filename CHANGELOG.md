@@ -5,6 +5,7 @@ All notable changes to this project are documented here, following the [Keep a C
 ## [Unreleased]
 
 ### Fixed
+- Baidu imports no longer report successful writes as failures: the favorites API returns a successful top-level `result.error: 0` while its created record uses `status: "100"`.
 - Dev "Backup & wipe" could hang at "清空收藏…" when Amap dropped some `deletefav` callbacks under concurrent calls. Deletes are now serialized with a per-call timeout, and the result is derived from the real post-clear favorite count instead of the unreliable callback `status` field.
 
 ### Added
