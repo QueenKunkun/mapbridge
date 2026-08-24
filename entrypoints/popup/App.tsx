@@ -420,12 +420,12 @@ export default function App() {
                 <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
               </label>
               {activeProvider && !detectedTab(activeProvider) && (
-                <button className="ghost small" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
+                <button className="ghost" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
                   打开目标页
                 </button>
               )}
               {!activeProvider && !detectedTab(target) && (
-                <button className="ghost small" onClick={() => void openPage(getAdapter(target).importPage)}>
+                <button className="ghost" onClick={() => void openPage(getAdapter(target).importPage)}>
                   打开目标页
                 </button>
               )}
