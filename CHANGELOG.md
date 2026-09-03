@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- Amap import failing with "非法 token" on new SSR version (`ditu.amap.com/ssr/faves`) by sending `x-csrf-token` header in POST requests.
+
 ## [0.2.0] - 2026-08-24
 
 ### Added

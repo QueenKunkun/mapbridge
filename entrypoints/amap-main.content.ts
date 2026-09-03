@@ -65,6 +65,11 @@ export default defineContentScript({
       return pairs.join('&');
     }
 
+    function getCsrfToken(): string {
+      const m = document.cookie.match(/x-csrf-token=([^;]+)/);
+      return m?.[1] ? decodeURIComponent(m[1]) : '';
+    }
+
     function postForm(url: string, body: Record<string, unknown>): Promise<unknown> {
       return new Promise((resolve, reject) => {
         const amap = (window as unknown as { amap?: { post?: (u: string, d: unknown, cb: (d: unknown) => void, type: string) => void } }).amap;
@@ -75,14 +80,17 @@ export default defineContentScript({
         } else if (jq?.ajax) {
           jq.ajax({ url, type: 'POST', data: body, dataType: 'json', success: resolve, error: reject });
         } else {
+          const headers: Record<string, string> = {
+            Accept: 'application/json, text/javascript, */*; q=0.01',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          };
+          const csrf = getCsrfToken();
+          if (csrf) headers['x-csrf-token'] = csrf;
           fetch(url, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: {
-              Accept: 'application/json, text/javascript, */*; q=0.01',
-              'X-Requested-With': 'XMLHttpRequest',
-              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            },
+            headers,
             body: formEncode(body),
           })
             .then((r) => r.json())
