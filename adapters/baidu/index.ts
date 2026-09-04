@@ -299,7 +299,7 @@ export const baiduAdapter: ProviderAdapter = {
       const r = record as Record<string, unknown>;
       const detail = r['detail'] as Record<string, unknown> | undefined;
       if (r['action'] === 'del' || detail?.data === false) {
-        skipped.push({ index, reason: '已删除' });
+        skipped.push({ index, reason: '源地图已标记为删除，已跳过' });
         return;
       }
       const route = normalizeBaiduRoute(record);

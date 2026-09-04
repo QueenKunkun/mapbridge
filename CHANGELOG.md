@@ -5,6 +5,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Changed
+- Import previews now separate Places and Routes into dedicated tabs, while keeping Routes read-only for provider import.
+- Baidu extraction warnings now clarify when a source record was already marked as deleted.
 - MapBridge exports now use a versioned `mapbridge` document with v2 `items`; existing v1 `mapbridge-places` files remain importable.
 - Added an explicit provider-independent POI identity and runtime schemas for v2 point geometry.
 - Added GPX 1.1 and KML 2.2 export for MapBridge POI items, with metadata preservation where supported.

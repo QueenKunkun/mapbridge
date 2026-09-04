@@ -41,6 +41,7 @@ export default function App() {
   const [fileWarnings, setFileWarnings] = useState<string[]>([]);
   const [undoMsg, setUndoMsg] = useState('');
   const [selectionReady, setSelectionReady] = useState(false);
+  const [previewTab, setPreviewTab] = useState<'places' | 'routes'>('places');
 
   // 记住上次的选择（来源 / 目标 / 模式）
   useEffect(() => {
@@ -55,6 +56,11 @@ export default function App() {
     if (!selectionReady) return;
     void saveUiSelection({ source, target, mode });
   }, [source, target, mode, selectionReady]);
+
+  useEffect(() => {
+    if (step !== 'preview' || !job) return;
+    setPreviewTab(job.places.length > 0 ? 'places' : 'routes');
+  }, [step, job?.id]);
 
   async function refreshDetection(): Promise<void> {
     setDetecting(true);
@@ -85,6 +91,8 @@ export default function App() {
   const effectiveTarget = mode === 'import-file' && activeProvider ? activeProvider : target;
 
   const canStart = source !== target;
+  const previewRoutes = job?.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route') ?? [];
+  const activePreviewTab = previewTab === 'routes' && previewRoutes.length === 0 ? 'places' : previewTab;
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({ type: 'new-job', source, target });
@@ -236,7 +244,7 @@ export default function App() {
       const res = await sendBg({ type: 'extract', jobId: job.id, tabId });
       if (res.type === 'job' && res.job) {
         setJob(res.job);
-        if (res.job.places.length > 0) setStep('preview');
+        if (res.job.items.length > 0) setStep('preview');
         else setError('没有提取到有效收藏（可能页面还没加载收藏列表）');
       } else if (res.type === 'error') {
         setError(res.message);
@@ -509,17 +517,41 @@ export default function App() {
         <section className="migration-content preview">
           <h2>预览与编辑</h2>
           {job.warnings.length > 0 && <div className="export-warning">⚠ {job.warnings.join('；')}</div>}
-          {job.items.some((item) => item.kind === 'route') && (
+          <div className="preview-tabs" role="tablist" aria-label="导入项目类型">
+            <button
+              className={`preview-tab${activePreviewTab === 'places' ? ' active' : ''}`}
+              role="tab"
+              aria-selected={activePreviewTab === 'places'}
+              disabled={job.places.length === 0}
+              onClick={() => setPreviewTab('places')}
+            >
+              地点 <span>{job.places.length}</span>
+            </button>
+            <button
+              className={`preview-tab${activePreviewTab === 'routes' ? ' active' : ''}`}
+              role="tab"
+              aria-selected={activePreviewTab === 'routes'}
+              disabled={previewRoutes.length === 0}
+              onClick={() => setPreviewTab('routes')}
+            >
+              Route <span>{previewRoutes.length}</span>
+            </button>
+          </div>
+          {activePreviewTab === 'places' ? (
+            <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
+          ) : (
             <>
-              <p className="hint">已识别 {job.items.filter((item) => item.kind === 'route').length} 条 Route；当前保留在任务中，但不会进入 POI 导入。</p>
+              <p className="hint">Route 当前保留在任务中，但不会进入 POI 导入。</p>
               <div className="route-list">
-                {job.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route').map((route) => (
-                  <RouteSummary key={route.id} route={route} />
-                ))}
+                {previewRoutes.map((route) => <RouteSummary key={route.id} route={route} />)}
+              </div>
+              <div className="actions">
+                <button className="ghost" disabled={job.places.length === 0} onClick={() => setStep('import')}>
+                  {job.places.length === 0 ? '没有可导入的地点' : '下一步：导入地点 →'}
+                </button>
               </div>
             </>
           )}
-          <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
         </section>
       )}
 

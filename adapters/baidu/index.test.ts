@@ -174,7 +174,7 @@ describe('baidu adapter', () => {
   it('skips deleted favdata records (action=del / detail.data=false)', () => {
     const records = (favdataReal.sync as { newdata: unknown[] }).newdata;
     const result = baiduAdapter.buildExtractResult({ provider: 'baidu', records, exhausted: true });
-    const deleted = result.skipped.filter((s) => s.reason === '已删除');
+    const deleted = result.skipped.filter((s) => s.reason === '源地图已标记为删除，已跳过');
     expect(deleted.length).toBeGreaterThanOrEqual(2);
     expect(result.skipped.length).toBeGreaterThanOrEqual(2);
   });
