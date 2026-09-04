@@ -5,6 +5,7 @@ import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
 import { migratePlaceToPoi, serializePlaces, parsePlacesFile } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
+import { parsePortableImport } from '@/core/portable-import';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
@@ -37,6 +38,7 @@ export default function App() {
   const [exportedCount, setExportedCount] = useState(0);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('mapbridge');
   const [exportWarnings, setExportWarnings] = useState<string[]>([]);
+  const [fileWarnings, setFileWarnings] = useState<string[]>([]);
   const [undoMsg, setUndoMsg] = useState('');
   const [selectionReady, setSelectionReady] = useState(false);
 
@@ -193,9 +195,13 @@ export default function App() {
     if (!file) return;
     setBusy(true);
     setError('');
+    setFileWarnings([]);
     try {
       const text = await file.text();
-      const parsed = parsePlacesFile(text);
+      const parsed = text.trimStart().startsWith('<')
+        ? parsePortableImport(text, effectiveTarget)
+        : parsePlacesFile(text);
+      setFileWarnings('warnings' in parsed ? parsed.warnings : []);
       const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places });
       if (res.type === 'job' && res.job) {
         setJob(res.job);
@@ -446,9 +452,10 @@ export default function App() {
                 </label>
               )}
               <p className="hint">选择已登录的目标地图收藏页，再选择 MapBridge 导出文件（<code>mapbridge-*.json</code>）。</p>
+              {fileWarnings.length > 0 && <div className="export-warning">⚠ {fileWarnings.join('；')}</div>}
               <label className={`file-btn${busy ? ' disabled' : ''}`}>
                 选择文件
-                <input type="file" accept="application/json,.json" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
+                <input type="file" accept="application/json,.json,.gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
               </label>
               {activeProvider && !detectedTab(activeProvider) && (
                 <div className="open-right">
