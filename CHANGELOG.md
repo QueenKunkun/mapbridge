@@ -4,6 +4,13 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-04
+
+### Added
+- feat: 百度自动导入（支持双向迁移）
+- feat: 百度 POI 匹配（导入前自动匹配已有收藏）
+- feat: 高德新版本 SSR 支持（CSRF token 修复）
+
 ### Fixed
 - Amap import failing with "非法 token" on new SSR version (`ditu.amap.com/ssr/faves`) by sending `x-csrf-token` header in POST requests.
 
