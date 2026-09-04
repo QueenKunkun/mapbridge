@@ -27,6 +27,7 @@ export type GeoPoint = z.infer<typeof GeoPoint>;
 
 export const CanonicalPlace = z.object({
   id: z.string(),
+  identity: z.string().optional(),
   name: z.string(),
   address: z.string().default(''),
   tags: z.array(z.string()).default([]),
@@ -36,6 +37,7 @@ export const CanonicalPlace = z.object({
     provider: ProviderId,
     crs: Crs,
     original: GeoPoint.optional(),
+    recordId: z.string().optional(),
     raw: z.record(z.string(), z.unknown()).optional(),
   }),
   metadata: z

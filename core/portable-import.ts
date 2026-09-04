@@ -44,19 +44,19 @@ function createPoi(
     tags: metadata.tags ? metadata.tags.split(';').filter(Boolean) : [],
     note: '',
     wgs84: point,
-    source: { provider, crs: 'wgs84' },
+    source: { provider, crs: 'wgs84', recordId: metadata.sourceRecordId },
     metadata: { phone: metadata.phone, folder: metadata.folder },
   };
   return {
     kind: 'poi',
     id: place.id,
-    identity: placeIdentity(place),
+    identity: metadata.identity || placeIdentity(place),
     name: place.name,
     address: place.address,
     tags: place.tags,
     note: place.note,
     geometry: { type: 'point', point },
-    source: { provider, crs: 'wgs84', adapterVersion },
+    source: { provider, crs: 'wgs84', recordId: metadata.sourceRecordId, adapterVersion },
     metadata: place.metadata,
   };
 }
@@ -75,6 +75,7 @@ function parseGpx(raw: Record<string, unknown>, provider: ProviderId): PortableI
     items.push(createPoi(
       text(waypoint.name), point, text(waypoint.desc), provider, 'gpx', {
         tags: extensionValue(extension, 'tags'), phone: extensionValue(extension, 'phone'), folder: extensionValue(extension, 'folder'),
+        identity: extensionValue(extension, 'identity'), sourceRecordId: extensionValue(extension, 'sourceRecordId'),
       },
     ));
   }
@@ -101,7 +102,7 @@ function parseKml(raw: Record<string, unknown>, provider: ProviderId): PortableI
     for (const entry of data) {
       const key = text(entry['@_name']);
       const value = text((entry.value as unknown));
-      if (key === 'tags' || key === 'phone' || key === 'folder') metadata[key] = value;
+      if (key === 'tags' || key === 'phone' || key === 'folder' || key === 'identity' || key === 'sourceRecordId') metadata[key] = value;
     }
     items.push(createPoi(text(placemark.name), point, text(placemark.description), provider, 'kml', metadata));
   }
@@ -112,6 +113,7 @@ function parseKml(raw: Record<string, unknown>, provider: ProviderId): PortableI
 export function poiToPlace(item: CanonicalPoi): CanonicalPlace {
   return {
     id: item.id,
+    identity: item.identity,
     name: item.name,
     address: item.address,
     tags: item.tags,

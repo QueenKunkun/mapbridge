@@ -28,7 +28,7 @@ export function migratePlaceToPoi(place: CanonicalPlace): CanonicalPoi {
   return {
     kind: 'poi',
     id: place.id,
-    identity: placeIdentity(place),
+    identity: place.identity ?? placeIdentity(place),
     name: place.name,
     address: place.address,
     tags: place.tags,
@@ -51,7 +51,9 @@ function migratePoiToPlace(item: CanonicalPoi): CanonicalPlace {
       provider: item.source.provider,
       crs: item.source.crs,
       original: item.source.original,
+      recordId: item.source.recordId,
     },
+    identity: item.identity,
     metadata: item.metadata,
   };
 }
