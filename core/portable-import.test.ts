@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { parsePortableImport } from '@/core/portable-import';
+import { parsePortableFile, parsePortableImport } from '@/core/portable-import';
+import { parseMapBridgeDocument, serializeItems, serializePlaces } from '@/core/export';
+import type { CanonicalPlace } from '@/core/model';
 
 describe('portable import', () => {
   it('imports GPX waypoints and preserves MapBridge extensions', () => {
@@ -25,5 +27,17 @@ describe('portable import', () => {
 
   it('rejects XML without supported points', () => {
     expect(() => parsePortableImport('<gpx><rte><name>Only route</name></rte></gpx>', 'amap')).toThrow(/没有可导入的 GPX waypoint/);
+  });
+
+  it('dispatches JSON and XML through one portable-file entry point', () => {
+    const place: CanonicalPlace = {
+      id: 'json-1', name: 'JSON POI', address: '', tags: [], note: '', wgs84: { lng: 104, lat: 30 },
+      source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
+    };
+    const json = parsePortableFile(serializePlaces([place], 'amap'), 'amap');
+    const xml = parsePortableFile('<gpx><wpt lat="30" lon="104"><name>XML POI</name></wpt></gpx>', 'amap');
+    expect(json.places[0]!.name).toBe('JSON POI');
+    expect(xml.items[0]!.name).toBe('XML POI');
+    expect(parseMapBridgeDocument(serializeItems(xml.items, 'amap')).items[0]!.kind).toBe('poi');
   });
 });

@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { randomUUID } from '@/utils/uuid';
 import { placeIdentity } from './dedup';
+import { parsePlacesFile, type PlacesExport } from './export';
 import type { CanonicalPoi, CanonicalPlace, ProviderId } from './model';
 
 export interface PortableImportResult {
@@ -8,6 +9,8 @@ export interface PortableImportResult {
   places: CanonicalPlace[];
   warnings: string[];
 }
+
+export type PortableFileResult = PortableImportResult | PlacesExport;
 
 function asArray<T>(value: T | T[] | undefined): T[] {
   return value === undefined ? [] : Array.isArray(value) ? value : [value];
@@ -136,4 +139,8 @@ export function parsePortableImport(textValue: string, provider: ProviderId): Po
   if (record.gpx) return parseGpx(record, provider);
   if (record.kml) return parseKml(record, provider);
   throw new Error('不支持的 XML 文件格式：仅支持 GPX 或 KML');
+}
+
+export function parsePortableFile(textValue: string, provider: ProviderId): PortableFileResult {
+  return textValue.trimStart().startsWith('<') ? parsePortableImport(textValue, provider) : parsePlacesFile(textValue);
 }

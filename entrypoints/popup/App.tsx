@@ -3,9 +3,9 @@ import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
-import { serializeItems, parsePlacesFile } from '@/core/export';
+import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
-import { parsePortableImport } from '@/core/portable-import';
+import { parsePortableFile } from '@/core/portable-import';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
@@ -197,9 +197,7 @@ export default function App() {
     setFileWarnings([]);
     try {
       const text = await file.text();
-      const parsed = text.trimStart().startsWith('<')
-        ? parsePortableImport(text, effectiveTarget)
-        : parsePlacesFile(text);
+      const parsed = parsePortableFile(text, effectiveTarget);
       setFileWarnings('warnings' in parsed ? parsed.warnings : []);
       const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places, warnings: 'warnings' in parsed ? parsed.warnings : [] });
       if (res.type === 'job' && res.job) {
