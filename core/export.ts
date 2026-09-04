@@ -25,7 +25,6 @@ export function serializeItems(items: CanonicalItem[], provider?: ProviderId): s
 }
 
 export function migratePlaceToPoi(place: CanonicalPlace): CanonicalPoi {
-  const { raw: _raw, ...source } = place.source;
   return {
     kind: 'poi',
     id: place.id,
@@ -35,7 +34,7 @@ export function migratePlaceToPoi(place: CanonicalPlace): CanonicalPoi {
     tags: place.tags,
     note: place.note,
     geometry: { type: 'point', point: place.wgs84 },
-    source,
+    source: place.source,
     metadata: place.metadata,
   };
 }

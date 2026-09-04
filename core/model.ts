@@ -38,7 +38,6 @@ export const CanonicalPlace = z.object({
     crs: Crs,
     original: GeoPoint.optional(),
     recordId: z.string().optional(),
-    raw: z.record(z.string(), z.unknown()).optional(),
   }),
   metadata: z
     .object({

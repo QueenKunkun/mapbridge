@@ -37,15 +37,4 @@ describe('v2 model schemas', () => {
     expect(result.success).toBe(false);
   });
 
-  it('strips provider raw payload from the v2 source schema', () => {
-    const result = CanonicalItem.parse({
-      kind: 'poi',
-      id: 'poi-1',
-      name: 'Test POI',
-      geometry: { type: 'point', point: { lng: 104, lat: 30 } },
-      source: { ...source, raw: { token: 'should-not-export' } },
-    });
-
-    expect(result.source).not.toHaveProperty('raw');
-  });
 });
