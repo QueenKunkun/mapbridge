@@ -5,6 +5,15 @@ export interface PortableExportResult {
   warnings: string[];
 }
 
+function lossWarnings(format: 'GPX' | 'KML', items: CanonicalItem[]): string[] {
+  const warnings: string[] = [];
+  const hasPoi = items.some((item) => item.kind === 'poi');
+  const hasRoute = items.some((item) => item.kind === 'route');
+  if (hasPoi) warnings.push(`${format} 导出无法完整保留 POI 内部 id，未映射的 metadata 也可能丢失`);
+  if (hasRoute) warnings.push(`${format} 导出会将 Route 转为 stops/线段，无法保留内部 id、routing、source 和 metadata`);
+  return warnings;
+}
+
 function escapeXml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -38,7 +47,8 @@ function itemData(item: Extract<CanonicalItem, { kind: 'poi' }>): Array<[string,
 export function exportGpx(items: CanonicalItem[]): PortableExportResult {
   const poiItems = items.filter((item): item is Extract<CanonicalItem, { kind: 'poi' }> => item.kind === 'poi');
   const routeItems = items.filter((item): item is Extract<CanonicalItem, { kind: 'route' }> => item.kind === 'route');
-  const warnings: string[] = items.length === poiItems.length + routeItems.length ? [] : ['部分项目类型暂不支持 GPX 导出，已跳过'];
+  const warnings = lossWarnings('GPX', items);
+  if (items.length !== poiItems.length + routeItems.length) warnings.push('部分项目类型暂不支持 GPX 导出，已跳过');
   const waypoints = poiItems
     .map((item) => {
       const { lng, lat } = item.geometry.point;
@@ -79,7 +89,8 @@ export function exportGpx(items: CanonicalItem[]): PortableExportResult {
 export function exportKml(items: CanonicalItem[]): PortableExportResult {
   const poiItems = items.filter((item): item is Extract<CanonicalItem, { kind: 'poi' }> => item.kind === 'poi');
   const routeItems = items.filter((item): item is Extract<CanonicalItem, { kind: 'route' }> => item.kind === 'route');
-  const warnings: string[] = items.length === poiItems.length + routeItems.length ? [] : ['部分项目类型暂不支持 KML 导出，已跳过'];
+  const warnings = lossWarnings('KML', items);
+  if (items.length !== poiItems.length + routeItems.length) warnings.push('部分项目类型暂不支持 KML 导出，已跳过');
   const placemarks = poiItems
     .map((item) => {
       const { lng, lat } = item.geometry.point;
