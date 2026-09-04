@@ -93,6 +93,8 @@ export default function App() {
   const canStart = source !== target;
   const previewRoutes = job?.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route') ?? [];
   const activePreviewTab = previewTab === 'routes' && previewRoutes.length === 0 ? 'places' : previewTab;
+  const reportRoutes = job?.items.filter((item) => item.kind === 'route').length ?? 0;
+  const reportSkipped = job ? Math.max(job.rawCount - job.items.length, 0) : 0;
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({ type: 'new-job', source, target });
@@ -605,21 +607,34 @@ export default function App() {
             <dd>{providerName(job.sourceProvider)}</dd>
             <dt>目标</dt>
             <dd>{providerName(job.targetProvider)}</dd>
-            <dt>条数</dt>
+            <dt>源端记录</dt>
             <dd>
-              原始 {job.rawCount}，可导入 {job.places.length}（导入 {job.report?.imported ?? '—'}，重复 {job.report?.skippedDuplicates ?? '—'}，失败{' '}
-              {job.report?.failed ?? '—'}）
+              {job.rawCount} 条
             </dd>
-            {job.items.length > job.places.length && (
+            <dt>已识别项目</dt>
+            <dd>{job.items.length} 条</dd>
+            <dt>可导入地点</dt>
+            <dd>{job.places.length} 条</dd>
+            <dt>导入结果</dt>
+            <dd>
+              成功 {job.report?.imported ?? '—'} 条 / 重复 {job.report?.skippedDuplicates ?? '—'} 条 / 失败 {job.report?.failed ?? '—'} 条
+            </dd>
+            {reportRoutes > 0 && (
               <>
-                <dt>未导入项目</dt>
-                <dd>{job.items.length - job.places.length}（当前不支持 provider 导入）</dd>
+                <dt>未导入 Route</dt>
+                <dd>{reportRoutes} 条（目标平台暂不支持 Route 导入）</dd>
+              </>
+            )}
+            {reportSkipped > 0 && (
+              <>
+                <dt>提取阶段跳过</dt>
+                <dd>{reportSkipped} 条（详见下方提示）</dd>
               </>
             )}
             {job.report?.targetCount !== undefined && (
               <>
-                <dt>目标端收藏数</dt>
-                <dd>{job.report.targetCount}</dd>
+                <dt>目标端收藏总数</dt>
+                <dd>{job.report.targetCount} 条（导入后）</dd>
               </>
             )}
             {job.error && (
