@@ -67,6 +67,7 @@ describe('amap adapter', () => {
     expect(place!.metadata.uid).toBe('000000000000000000000000000000aa');
     expect(place!.metadata.phone).toBe('028-88886666');
     expect(place!.tags).toEqual(['房产', '成都市']);
+    expect(place!.identity).toContain('alphatechpark|104.03891|30.63747');
   });
 
   it('buildExtractResult collects places', () => {

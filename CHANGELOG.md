@@ -19,6 +19,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Extraction and portable-file warnings are now persisted with jobs and remain visible after reopening a task.
 - Final import reports now show excluded unified items and retained extraction/file warnings.
 - Previously saved jobs are migrated in memory with unified POI items and warning defaults when reopened.
+- Baidu and Amap normalized POIs now carry the same deterministic cross-provider identity before entering migration jobs.
 
 ## [0.2.1] - 2026-09-04
 

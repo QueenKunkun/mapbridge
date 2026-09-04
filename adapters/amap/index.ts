@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
-import { placeFingerprint } from '@/core/dedup';
+import { placeFingerprint, placeIdentity } from '@/core/dedup';
 import type { CanonicalPlace, Collection } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
@@ -49,7 +49,7 @@ export function normalizeAmap(raw: unknown): CanonicalPlace | null {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  return {
+  const place: CanonicalPlace = {
     id: randomUUID(),
     name,
     address: String(data['custom_address'] ?? data['address'] ?? '').trim(),
@@ -66,6 +66,8 @@ export function normalizeAmap(raw: unknown): CanonicalPlace | null {
       phone: String(data['custom_phone_numbers'] ?? data['phone_numbers'] ?? '') || undefined,
     },
   };
+  place.identity = placeIdentity(place);
+  return place;
 }
 
 /** 高德收藏 id：基于归一化坐标指纹生成，跨来源稳定（见 buildImportPayload 说明）。 */

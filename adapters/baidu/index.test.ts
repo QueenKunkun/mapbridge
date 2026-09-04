@@ -90,6 +90,7 @@ describe('baidu adapter', () => {
     expect(place!.wgs84.lng).toBeCloseTo(104.03890680461457, 6);
     expect(place!.wgs84.lat).toBeCloseTo(30.637464954736895, 6);
     expect(place!.source.crs).toBe('bd09mc');
+    expect(place!.identity).toContain('alphatechpark|104.03891|30.63746');
   });
 
   it('normalizes a locx/locy record', () => {

@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
-import { routeIdentity } from '@/core/dedup';
+import { placeIdentity, routeIdentity } from '@/core/dedup';
 import { migratePlaceToPoi } from '@/core/export';
 import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
@@ -178,7 +178,7 @@ export function normalizeBaidu(raw: unknown): CanonicalPlace | null {
 
   const wgs84 = toWgs84({ crs: 'bd09mc', lng: point.x, lat: point.y });
 
-  return {
+  const place: CanonicalPlace = {
     id: randomUUID(),
     name,
     address: readAddress(record),
@@ -196,6 +196,8 @@ export function normalizeBaidu(raw: unknown): CanonicalPlace | null {
       createdAt: readCreatedAt(record),
     },
   };
+  place.identity = placeIdentity(place);
+  return place;
 }
 
 interface BaiduRouteNode {
