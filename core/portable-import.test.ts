@@ -40,4 +40,11 @@ describe('portable import', () => {
     expect(xml.items[0]!.name).toBe('XML POI');
     expect(parseMapBridgeDocument(serializeItems(xml.items, 'amap')).items[0]!.kind).toBe('poi');
   });
+
+  it('accepts namespace-qualified GPX and KML documents', () => {
+    const gpx = parsePortableImport('<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:mapbridge="https://mapbridge.app/ns/gpx"><wpt lat="30" lon="104"><name>GPX POI</name><extensions><mapbridge:identity>gpx-id</mapbridge:identity></extensions></wpt></gpx>', 'amap');
+    const kml = parsePortableImport('<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Placemark><name>KML POI</name><Point><coordinates>104,30,0</coordinates></Point></Placemark></Document></kml>', 'baidu');
+    expect(gpx.items[0]!.identity).toBe('gpx-id');
+    expect(kml.items[0]!.name).toBe('KML POI');
+  });
 });
