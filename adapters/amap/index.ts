@@ -80,7 +80,7 @@ export const amapAdapter: ProviderAdapter = {
   extractPage: 'https://ditu.amap.com/faves',
   importPage: 'https://ditu.amap.com/faves',
   crs: 'amap_pixel',
-  capabilities: { canExtract: true, canImport: true },
+  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi'], importKinds: ['poi'] },
 
   normalize: normalizeAmap,
 

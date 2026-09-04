@@ -279,7 +279,7 @@ export const baiduAdapter: ProviderAdapter = {
   extractPage: 'https://map.baidu.com/fav/',
   importPage: 'https://map.baidu.com/fav/',
   crs: 'bd09mc',
-  capabilities: { canExtract: true, canImport: true },
+  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi'] },
 
   normalize: normalizeBaidu,
 

@@ -123,6 +123,11 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
   if (!target.capabilities.canImport) {
     return { type: 'error', message: `${target.name} 暂不支持自动导入` };
   }
+  const unsupportedKinds = [...new Set(job.items.map((item) => item.kind))]
+    .filter((kind) => !target.capabilities.importKinds.includes(kind));
+  if (unsupportedKinds.length > 0 && job.places.length === 0) {
+    return { type: 'error', message: `${target.name} 暂不支持导入：${unsupportedKinds.join('、')}` };
+  }
 
   try {
     const payload = target.buildImportPayload(job.places);

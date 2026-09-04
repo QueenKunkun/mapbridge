@@ -13,7 +13,7 @@ export const tencentAdapter: ProviderAdapter = {
   extractPage: 'https://map.qq.com/fav',
   importPage: 'https://map.qq.com/fav',
   crs: 'gcj02',
-  capabilities: { canExtract: false, canImport: false },
+  capabilities: { canExtract: false, canImport: false, extractKinds: [], importKinds: [] },
 
   normalize(): CanonicalPlace | null {
     return null;

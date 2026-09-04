@@ -50,6 +50,11 @@ const amapGetFav = {
 const PX_TOLERANCE = 8;
 
 describe('amap adapter', () => {
+  it('declares POI-only extraction and import capabilities', () => {
+    expect(amapAdapter.capabilities.extractKinds).toEqual(['poi']);
+    expect(amapAdapter.capabilities.importKinds).toEqual(['poi']);
+  });
+
   it('normalizes a getFav item (pixel coords)', () => {
     const items = (amapGetFav.data as { items: unknown[] }).items;
     const place = normalizeAmap(items[0]!);

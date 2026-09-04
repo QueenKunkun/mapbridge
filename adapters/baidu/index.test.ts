@@ -75,6 +75,11 @@ const routeFavorite = {
 };
 
 describe('baidu adapter', () => {
+  it('declares Route extraction but POI-only provider import', () => {
+    expect(baiduAdapter.capabilities.extractKinds).toEqual(['poi', 'route']);
+    expect(baiduAdapter.capabilities.importKinds).toEqual(['poi']);
+  });
+
   it('normalizes a share-item record (bd_mercator_x/y fields)', () => {
     const place = normalizeBaidu(shareItems[0]!);
     expect(place).not.toBeNull();

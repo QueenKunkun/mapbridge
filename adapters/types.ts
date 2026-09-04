@@ -1,4 +1,4 @@
-import type { CanonicalItem, CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
+import type { CanonicalItem, CanonicalItemKind, CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
 import type { ImportReport } from '@/core/jobs';
 
 /** 内容脚本运行所在页面的上下文（由 background 从 tab 信息构造）。 */
@@ -54,6 +54,8 @@ export interface ProviderAdapter {
   capabilities: {
     canExtract: boolean;
     canImport: boolean;
+    extractKinds: CanonicalItemKind[];
+    importKinds: CanonicalItemKind[];
   };
 
   /**

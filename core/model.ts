@@ -132,6 +132,7 @@ export type CanonicalRoute = z.infer<typeof CanonicalRoute>;
 
 export const CanonicalItem = z.discriminatedUnion('kind', [CanonicalPoi, CanonicalRoute]);
 export type CanonicalItem = z.infer<typeof CanonicalItem>;
+export type CanonicalItemKind = CanonicalItem['kind'];
 
 export const MapBridgeDocument = z.object({
   format: z.literal('mapbridge'),
