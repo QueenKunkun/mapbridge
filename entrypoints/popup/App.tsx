@@ -728,10 +728,10 @@ function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave:
           共 {rows.length} 条，显示 {shown.length}
         </span>
         <div className="actions">
-          <button className="primary" disabled={saving} onClick={() => void save()}>
+          <button className="ghost" disabled={saving} onClick={() => void save()}>
             {saving ? '保存中…' : '保存修改'}
           </button>
-          <button className="ghost" onClick={onNext}>
+          <button className="primary" onClick={onNext}>
             下一步：导入 →
           </button>
         </div>
