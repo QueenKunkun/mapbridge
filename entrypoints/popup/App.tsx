@@ -201,7 +201,7 @@ export default function App() {
         ? parsePortableImport(text, effectiveTarget)
         : parsePlacesFile(text);
       setFileWarnings('warnings' in parsed ? parsed.warnings : []);
-      const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places });
+      const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places, warnings: 'warnings' in parsed ? parsed.warnings : [] });
       if (res.type === 'job' && res.job) {
         setJob(res.job);
         setStep('preview');
@@ -510,6 +510,7 @@ export default function App() {
       {step === 'preview' && job && (
         <section className="migration-content preview">
           <h2>预览与编辑</h2>
+          {job.warnings.length > 0 && <div className="export-warning">⚠ {job.warnings.join('；')}</div>}
           {job.items.some((item) => item.kind === 'route') && (
             <>
               <p className="hint">已识别 {job.items.filter((item) => item.kind === 'route').length} 条 Route；当前保留在任务中，但不会进入 POI 导入。</p>

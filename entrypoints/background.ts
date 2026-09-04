@@ -5,6 +5,7 @@ import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
+import { migratePlaceToPoi } from '@/core/export';
 import type { ProviderId } from '@/core/model';
 
 function now(): string {
@@ -51,7 +52,8 @@ async function applyExtractData(data: RawExtract): Promise<void> {
     places = dedupPlaces(result.places, job.existingPlaces ?? []).unique;
   }
   log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
-  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount));
+  const warnings = result.skipped.map((item) => `第 ${item.index + 1} 条：${item.reason}`);
+  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings));
   await resolvePendingExtract(true);
 }
 
@@ -356,7 +358,7 @@ export default defineBackground(() => {
         const src = (req.places[0]?.source?.provider as ProviderId | undefined) ?? 'amap';
         const job = createJob(src, req.target);
         await saveJob(job);
-        const applied = applyExtraction({ ...job }, req.places, req.places.length);
+        const applied = applyExtractionItems({ ...job }, req.places.map(migratePlaceToPoi), req.places, req.places.length, req.warnings ?? []);
         await saveJob(applied);
         return { type: 'job', job: applied };
       }

@@ -28,4 +28,9 @@ describe('core/jobs unified items', () => {
     expect(updated.items.map((item) => item.kind)).toEqual(['route', 'poi']);
     expect(updated.places).toEqual([place]);
   });
+
+  it('persists extraction and file warnings with the job', () => {
+    const job = applyExtractionItems(createJob('baidu', 'amap'), [route], [], 1, ['GPX 中跳过 1 条 Route']);
+    expect(job.warnings).toEqual(['GPX 中跳过 1 条 Route']);
+  });
 });

@@ -42,6 +42,8 @@ export interface Job {
   places: CanonicalPlace[];
   /** 统一模型项目；places 是当前 POI 导入链路的兼容视图。 */
   items: CanonicalItem[];
+  /** 提取或文件解析阶段产生的可恢复提示。 */
+  warnings: string[];
   /** 目标导入 payload（幂等构建一次，重试复用）。 */
   importPayload?: unknown;
   /** 目标地图已有的收藏（用于去重提示，可选）。 */
@@ -62,6 +64,7 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     status: 'draft',
     places: [],
     items: [],
+    warnings: [],
     progress: { processed: 0, total: 0 },
   };
 }
@@ -70,11 +73,12 @@ export function applyExtraction(job: Job, places: CanonicalPlace[], rawCount: nu
   return applyExtractionItems(job, places.map(migratePlaceToPoi), places, rawCount);
 }
 
-export function applyExtractionItems(job: Job, items: CanonicalItem[], places: CanonicalPlace[], rawCount: number): Job {
+export function applyExtractionItems(job: Job, items: CanonicalItem[], places: CanonicalPlace[], rawCount: number, warnings: string[] = []): Job {
   return {
     ...job,
     items,
     places,
+    warnings,
     status: 'preview',
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),

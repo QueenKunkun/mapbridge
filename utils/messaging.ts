@@ -13,7 +13,7 @@ export type BgRequest =
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[] }
   | { type: 'import'; jobId: string; tabId: number }
-  | { type: 'import-file'; target: ProviderId; places: CanonicalPlace[] }
+  | { type: 'import-file'; target: ProviderId; places: CanonicalPlace[]; warnings?: string[] }
   | { type: 'get-settings' }
   | { type: 'save-settings'; settings: AppSettings }
   | { type: 'open-tab'; url: string }

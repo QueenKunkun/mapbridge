@@ -14,7 +14,11 @@ export async function saveJob(job: Job): Promise<void> {
 export async function getJob(id: string): Promise<Job | undefined> {
   const job = (await get(`${JOB_PREFIX}${id}`, store)) as Job | undefined;
   if (!job) return undefined;
-  return job.items ? job : { ...job, items: job.places.map(migratePlaceToPoi) };
+  return job.items && job.warnings ? job : {
+    ...job,
+    items: job.items ?? job.places.map(migratePlaceToPoi),
+    warnings: job.warnings ?? [],
+  };
 }
 
 export async function listJobs(): Promise<Job[]> {
