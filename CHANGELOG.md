@@ -17,6 +17,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Export mode now uses the unified extracted items, so recognized Routes are included in MapBridge, GPX, and KML exports.
 - Provider adapters now declare item-kind extraction and import capabilities, with unsupported Route-only imports blocked explicitly.
 - Extraction and portable-file warnings are now persisted with jobs and remain visible after reopening a task.
+- Final import reports now show excluded unified items and retained extraction/file warnings.
 
 ## [0.2.1] - 2026-09-04
 

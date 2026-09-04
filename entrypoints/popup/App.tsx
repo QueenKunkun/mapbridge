@@ -573,6 +573,12 @@ export default function App() {
               {job.places.length}（导入 {job.report?.imported ?? '—'}，重复 {job.report?.skippedDuplicates ?? '—'}，失败{' '}
               {job.report?.failed ?? '—'}）
             </dd>
+            {job.items.length > job.places.length && (
+              <>
+                <dt>未导入项目</dt>
+                <dd>{job.items.length - job.places.length}（当前不支持 provider 导入）</dd>
+              </>
+            )}
             {job.report?.targetCount !== undefined && (
               <>
                 <dt>目标端收藏数</dt>
@@ -586,6 +592,14 @@ export default function App() {
               </>
             )}
           </dl>
+          {job.warnings.length > 0 && (
+            <div className="export-warning">
+              <strong>提取/解析提示</strong>
+              <ul>
+                {job.warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
+              </ul>
+            </div>
+          )}
           {undoMsg && <div className="count ok-tag">✓ {undoMsg}</div>}
           <div className="actions">
             <button className="ghost" onClick={() => void openPage(targetPage)}>
