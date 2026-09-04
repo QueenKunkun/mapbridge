@@ -494,7 +494,8 @@ export default function App() {
           </div>
           {job.places.length > 0 && (
             <div className="count">
-              已提取 <b>{job.places.length}</b> 条
+              已提取 <b>{job.items.length}</b> 条，其中可导入 POI <b>{job.places.length}</b> 条
+              {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route，但当前仅支持导出，暂不能导入到地图。</div>}
             </div>
           )}
         </section>
@@ -503,6 +504,9 @@ export default function App() {
       {step === 'preview' && job && (
         <section className="migration-content preview">
           <h2>预览与编辑</h2>
+          {job.items.some((item) => item.kind === 'route') && (
+            <p className="hint">已识别 {job.items.filter((item) => item.kind === 'route').length} 条 Route；当前保留在任务中，但不会进入 POI 导入。</p>
+          )}
           <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
         </section>
       )}

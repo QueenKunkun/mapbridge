@@ -1,5 +1,6 @@
 import { createStore, get, set, del, keys } from 'idb-keyval';
 import type { Job } from '@/core/jobs';
+import { migratePlaceToPoi } from '@/core/export';
 import type { ProviderId } from '@/core/model';
 
 const store = createStore('mapbridge', 'kv');
@@ -11,7 +12,9 @@ export async function saveJob(job: Job): Promise<void> {
 }
 
 export async function getJob(id: string): Promise<Job | undefined> {
-  return (await get(`${JOB_PREFIX}${id}`, store)) as Job | undefined;
+  const job = (await get(`${JOB_PREFIX}${id}`, store)) as Job | undefined;
+  if (!job) return undefined;
+  return job.items ? job : { ...job, items: job.places.map(migratePlaceToPoi) };
 }
 
 export async function listJobs(): Promise<Job[]> {

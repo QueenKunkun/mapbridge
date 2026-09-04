@@ -3,7 +3,7 @@ import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
-import { createJob, applyExtraction, startImport, progressImport, finalizeImport, type Job, type JobProgress } from '@/core/jobs';
+import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
 
@@ -51,7 +51,7 @@ async function applyExtractData(data: RawExtract): Promise<void> {
     places = dedupPlaces(result.places, job.existingPlaces ?? []).unique;
   }
   log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
-  await saveJob(applyExtraction({ ...job, existingPlaces: job.existingPlaces }, places, result.rawCount));
+  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount));
   await resolvePendingExtract(true);
 }
 
@@ -339,13 +339,7 @@ export default defineBackground(() => {
       case 'preview-update': {
         const job = await getJob(req.jobId);
         if (!job) return { type: 'error', message: '任务不存在' };
-        const updated: Job = {
-          ...job,
-          places: req.places,
-          status: job.status === 'draft' || job.status === 'extracting' ? 'preview' : job.status,
-          progress: { processed: 0, total: req.places.length },
-          updatedAt: now(),
-        };
+        const updated: Job = applyPreviewPlaces(job, req.places);
         await saveJob(updated);
         return { type: 'job', job: updated };
       }

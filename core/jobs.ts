@@ -1,4 +1,5 @@
-import type { CanonicalPlace, ProviderId } from './model';
+import { migratePlaceToPoi } from './export';
+import type { CanonicalItem, CanonicalPlace, ProviderId } from './model';
 import type { RawImportResult } from '@/adapters/types';
 
 export type JobStatus =
@@ -39,6 +40,8 @@ export interface Job {
   status: JobStatus;
   /** 归一化后的收藏（CDM），可被预览编辑。 */
   places: CanonicalPlace[];
+  /** 统一模型项目；places 是当前 POI 导入链路的兼容视图。 */
+  items: CanonicalItem[];
   /** 目标导入 payload（幂等构建一次，重试复用）。 */
   importPayload?: unknown;
   /** 目标地图已有的收藏（用于去重提示，可选）。 */
@@ -58,15 +61,32 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     targetProvider,
     status: 'draft',
     places: [],
+    items: [],
     progress: { processed: 0, total: 0 },
   };
 }
 
 export function applyExtraction(job: Job, places: CanonicalPlace[], rawCount: number): Job {
+  return applyExtractionItems(job, places.map(migratePlaceToPoi), places, rawCount);
+}
+
+export function applyExtractionItems(job: Job, items: CanonicalItem[], places: CanonicalPlace[], rawCount: number): Job {
   return {
     ...job,
+    items,
     places,
     status: 'preview',
+    progress: { processed: 0, total: places.length },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function applyPreviewPlaces(job: Job, places: CanonicalPlace[]): Job {
+  return {
+    ...job,
+    items: [...job.items.filter((item) => item.kind !== 'poi'), ...places.map(migratePlaceToPoi)],
+    places,
+    status: job.status === 'draft' || job.status === 'extracting' ? 'preview' : job.status,
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),
   };

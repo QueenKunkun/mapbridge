@@ -10,6 +10,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Added GPX 1.1 and KML 2.2 export for MapBridge POI items, with metadata preservation where supported.
 - Added an internal Route schema based on confirmed Baidu route-favorite endpoints; Route items can now round-trip in v2 documents and export to GPX/KML, while provider import remains disabled.
 - Portable GPX/KML exports now report fields that cannot be fully preserved, and their generated XML has structural regression coverage.
+- Extraction jobs now retain recognized Route items and show them as unavailable for provider import while keeping the existing POI workflow.
 
 ## [0.2.1] - 2026-09-04
 
