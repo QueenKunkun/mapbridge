@@ -16,6 +16,11 @@ const place: CanonicalPlace = {
 describe('core/export', () => {
   it('round-trips serialize -> parse', () => {
     const text = serializePlaces([place], 'amap');
+    const raw = JSON.parse(text) as { format: string; version: number; items: unknown[]; places?: unknown[] };
+    expect(raw.format).toBe('mapbridge');
+    expect(raw.version).toBe(2);
+    expect(raw.items).toHaveLength(1);
+    expect(raw.places).toBeUndefined();
     const parsed = parsePlacesFile(text);
     expect(parsed.provider).toBe('amap');
     expect(parsed.places).toHaveLength(1);
@@ -45,5 +50,22 @@ describe('core/export', () => {
     const parsed = parsePlacesFile(text);
     expect(parsed.places).toHaveLength(1);
     expect(parsed.places[0]!.id).toBe('ok');
+  });
+
+  it('reads v1 files and migrates them to v2 POI items in memory', () => {
+    const parsed = parsePlacesFile(JSON.stringify({
+      format: 'mapbridge-places',
+      version: 1,
+      exportedAt: '2026-01-01T00:00:00Z',
+      places: [place],
+    }));
+    expect(parsed.version).toBe(1);
+    expect(parsed.items[0]!.kind).toBe('poi');
+    expect(parsed.items[0]!.geometry.type).toBe('point');
+    expect(parsed.items[0]!.source).not.toHaveProperty('raw');
+  });
+
+  it('rejects unsupported v2 versions', () => {
+    expect(() => parsePlacesFile(JSON.stringify({ format: 'mapbridge', version: 3, items: [] }))).toThrow(/不支持的 MapBridge 文件版本/);
   });
 });

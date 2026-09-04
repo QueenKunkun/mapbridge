@@ -50,6 +50,50 @@ export const CanonicalPlace = z.object({
 });
 export type CanonicalPlace = z.infer<typeof CanonicalPlace>;
 
+/** v2 文档中的几何类型。当前先落地 POI，线几何供后续 Route/Mark/Track 使用。 */
+export const Geometry = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('point'), point: LngLat }),
+  z.object({ type: z.literal('line'), points: z.array(LngLat).min(2) }),
+]);
+export type Geometry = z.infer<typeof Geometry>;
+
+/** v2 文档中的有限来源信息；默认导出不携带 provider raw payload。 */
+export const CanonicalSource = z.object({
+  provider: ProviderId,
+  crs: Crs,
+  original: GeoPoint.optional(),
+  recordId: z.string().optional(),
+  adapterVersion: z.string().optional(),
+});
+export type CanonicalSource = z.infer<typeof CanonicalSource>;
+
+/** 当前支持迁移/导出的 v2 项目类型。后续按真实 fixture 扩展 Route/Mark/Track。 */
+export const CanonicalPoi = z.object({
+  kind: z.literal('poi'),
+  id: z.string(),
+  identity: z.string().optional(),
+  name: z.string(),
+  address: z.string().default(''),
+  tags: z.array(z.string()).default([]),
+  note: z.string().default(''),
+  geometry: z.object({ type: z.literal('point'), point: LngLat }),
+  source: CanonicalSource,
+  metadata: z
+    .object({
+      uid: z.string().optional(),
+      phone: z.string().optional(),
+      folder: z.string().optional(),
+      createdAt: z.string().optional(),
+      updatedAt: z.string().optional(),
+    })
+    .default({}),
+});
+export type CanonicalPoi = z.infer<typeof CanonicalPoi>;
+
+// 目前仅启用 POI，避免在没有真实协议和 fixture 前虚构其他类型的字段语义。
+export const CanonicalItem = CanonicalPoi;
+export type CanonicalItem = CanonicalPoi;
+
 export const Collection = z.object({
   id: z.string(),
   name: z.string(),

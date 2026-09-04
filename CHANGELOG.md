@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Changed
+- MapBridge exports now use a versioned `mapbridge` document with v2 `items`; existing v1 `mapbridge-places` files remain importable.
+
 ## [0.2.1] - 2026-09-04
 
 ### Added
