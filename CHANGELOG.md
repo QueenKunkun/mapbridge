@@ -22,6 +22,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Baidu and Amap normalized POIs now carry the same deterministic cross-provider identity before entering migration jobs.
 - POI deduplication now honors an explicit canonical identity and falls back to the deterministic coordinate fingerprint.
 - Editing a POI name in preview now invalidates its old identity so deduplication can recalculate it safely.
+- MapBridge files containing both supported POIs and unsupported item kinds now import the POIs while reporting the skipped items.
 
 ## [0.2.1] - 2026-09-04
 

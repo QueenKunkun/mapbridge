@@ -10,6 +10,7 @@ export interface PlacesExport {
   items: CanonicalItem[];
   /** v1 API compatibility for the current popup and adapter pipeline. */
   places: CanonicalPlace[];
+  warnings?: string[];
 }
 
 export function serializeItems(items: CanonicalItem[], provider?: ProviderId): string {
@@ -113,7 +114,8 @@ export function parsePlacesFile(text: string): PlacesExport {
     for (let i = 0; i < document.items.length; i++) {
       const item = document.items[i]!;
       if (item.kind !== 'poi') {
-        throw new Error(`文件包含当前导入流程不支持的项目类型：${item.kind}（第 ${i + 1} 条）`);
+        errors.push(`第 ${i + 1} 条：项目类型 ${item.kind} 当前不支持 provider 导入，已跳过`);
+        continue;
       }
       const r = CanonicalItemSchema.safeParse(item);
       if (r.success && r.data.kind === 'poi') {
@@ -132,5 +134,6 @@ export function parsePlacesFile(text: string): PlacesExport {
     provider: obj.provider as ProviderId | undefined,
     items,
     places: valid,
+    warnings: errors,
   };
 }

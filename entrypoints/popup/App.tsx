@@ -198,7 +198,7 @@ export default function App() {
     try {
       const text = await file.text();
       const parsed = parsePortableFile(text, effectiveTarget);
-      setFileWarnings('warnings' in parsed ? parsed.warnings : []);
+      setFileWarnings('warnings' in parsed ? parsed.warnings ?? [] : []);
       const res = await sendBg({ type: 'import-file', target: effectiveTarget, places: parsed.places, warnings: 'warnings' in parsed ? parsed.warnings : [] });
       if (res.type === 'job' && res.job) {
         setJob(res.job);

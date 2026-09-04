@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMapBridgeDocument, serializeItems, serializePlaces, parsePlacesFile } from '@/core/export';
+import { migratePlaceToPoi, parseMapBridgeDocument, serializeItems, serializePlaces, parsePlacesFile } from '@/core/export';
 import type { CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -85,6 +85,9 @@ describe('core/export', () => {
     };
     const parsed = parseMapBridgeDocument(serializeItems([route], 'baidu'));
     expect(parsed.items[0]!.kind).toBe('route');
-    expect(() => parsePlacesFile(serializeItems([route], 'baidu'))).toThrow(/不支持的项目类型：route/);
+    const parsedPlaces = parsePlacesFile(serializeItems([migratePlaceToPoi(place), route], 'baidu'));
+    expect(parsedPlaces.places).toHaveLength(1);
+    expect(parsedPlaces.warnings).toEqual(['第 2 条：项目类型 route 当前不支持 provider 导入，已跳过']);
+    expect(() => parsePlacesFile(serializeItems([route], 'baidu'))).toThrow(/没有有效的收藏记录/);
   });
 });
