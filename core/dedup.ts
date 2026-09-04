@@ -20,7 +20,7 @@ export function placeFingerprint(place: CanonicalPlace): string {
 
 /** 跨 provider 使用的 POI identity；保留可读指纹，目标平台再自行哈希。 */
 export function placeIdentity(place: CanonicalPlace): string {
-  return placeFingerprint(place);
+  return place.identity ?? placeFingerprint(place);
 }
 
 /** Route identity：保留 stop 顺序，避免把相同端点但不同途经点的路线合并。 */
