@@ -394,6 +394,15 @@ button.remove {
   font-size: 13px;
 }
 
+.export-warning {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
 .progress {
   margin-top: 12px;
   font-size: 12px;

@@ -13,6 +13,7 @@ Data stays local: the extension reads and writes favorites using the map site's 
 - **Import** back into the target account by reusing the target page's session, merged with existing favorites (deduped by a deterministic coordinate+name fingerprint).
 - **Coordinate conversion** across BD-09 (mercator) → GCJ-02 → WGS-84 so places land correctly on the other map.
 - **Login-state detection**: the popup probes whether a favorites tab is open and logged in, showing a yellow "not logged in" warning when the session is missing (selectors verified against real logged-in/logged-out sessions).
+- **Portable export**: export POI favorites as MapBridge JSON, GPX 1.1, or KML 2.2.
 - **Dev tool** (dev build only): one-click backup + wipe of Amap favorites, for resetting test data.
 
 ## How it works

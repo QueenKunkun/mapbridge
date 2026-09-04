@@ -3,7 +3,8 @@ import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
-import { serializePlaces, parsePlacesFile } from '@/core/export';
+import { migratePlaceToPoi, serializePlaces, parsePlacesFile } from '@/core/export';
+import { exportGpx, exportKml } from '@/core/exporters';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
@@ -16,6 +17,7 @@ const PROVIDERS: { id: ProviderId; name: string }[] = [
 const SELECTABLE_PROVIDERS = PROVIDERS.filter((p) => p.id !== 'tencent');
 
 type Step = 'setup' | 'extract' | 'preview' | 'import' | 'report';
+type ExportFormat = 'mapbridge' | 'gpx' | 'kml';
 
 function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
@@ -33,6 +35,8 @@ export default function App() {
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
   const [exportedCount, setExportedCount] = useState(0);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('mapbridge');
+  const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [undoMsg, setUndoMsg] = useState('');
   const [selectionReady, setSelectionReady] = useState(false);
 
@@ -101,24 +105,37 @@ export default function App() {
     setTimeout(() => void refreshDetection(), 3000);
   }
 
-  function downloadPlaces(places: Job['places'], provider: ProviderId): void {
-    const text = serializePlaces(places, provider);
-    const blob = new Blob([text], { type: 'application/json' });
+  function downloadPlaces(places: Job['places'], provider: ProviderId): string[] {
+    const items = places.map(migratePlaceToPoi);
+    const exported = exportFormat === 'gpx'
+      ? exportGpx(items)
+      : exportFormat === 'kml'
+        ? exportKml(items)
+        : { text: serializePlaces(places, provider), warnings: [] };
+    const extension = exportFormat === 'mapbridge' ? 'json' : exportFormat;
+    const mime = exportFormat === 'mapbridge'
+      ? 'application/json'
+      : exportFormat === 'gpx'
+        ? 'application/gpx+xml'
+        : 'application/vnd.google-earth.kml+xml';
+    const blob = new Blob([exported.text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     a.href = url;
-    a.download = `mapbridge-${provider}-export-${stamp}.json`;
+    a.download = `mapbridge-${provider}-export-${stamp}.${extension}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    return exported.warnings;
   }
 
   async function startExport(): Promise<void> {
     setBusy(true);
     setError('');
     setExportedCount(0);
+    setExportWarnings([]);
     try {
       const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource });
       if (res.type !== 'job' || !res.job) {
@@ -136,7 +153,7 @@ export default function App() {
           setError('没有提取到有效收藏（可能页面还没加载收藏列表）');
           return;
         }
-        downloadPlaces(r.job.places, source);
+        setExportWarnings(downloadPlaces(r.job.places, effectiveSource));
         setExportedCount(r.job.places.length);
       } else if (r.type === 'error') {
         setError(r.message);
@@ -392,11 +409,20 @@ export default function App() {
                   </select>
                 </label>
               )}
-              <p className="hint">提取该地图的收藏并下载为 JSON 文件，可被“从文件导入”或其他设备复用。</p>
+              <label className="field-inline">
+                导出格式
+                <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value as ExportFormat)}>
+                  <option value="mapbridge">MapBridge JSON（完整备份）</option>
+                  <option value="gpx">GPX 1.1（通用交换）</option>
+                  <option value="kml">KML 2.2（通用交换）</option>
+                </select>
+              </label>
+              <p className="hint">MapBridge JSON 可用于完整恢复；GPX/KML 适合在其他地图软件中交换，部分平台字段可能无法保留。</p>
               <button className="primary" disabled={busy} onClick={() => void startExport()}>
                 {busy ? '导出中…' : `导出${activeProvider ? providerName(activeProvider) : '当前地图'}收藏`}
               </button>
               {exportedCount > 0 && <div className="count">已导出 <b>{exportedCount}</b> 条 ✓</div>}
+              {exportWarnings.length > 0 && <div className="export-warning">⚠ {exportWarnings.join('；')}</div>}
             </>
           )}
 
