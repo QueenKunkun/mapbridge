@@ -8,6 +8,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - MapBridge exports now use a versioned `mapbridge` document with v2 `items`; existing v1 `mapbridge-places` files remain importable.
 - Added an explicit provider-independent POI identity and runtime schemas for v2 point geometry.
 - Added GPX 1.1 and KML 2.2 export for MapBridge POI items, with metadata preservation where supported.
+- Added an internal Route schema based on confirmed Baidu route-favorite endpoints; Route import/export is not enabled yet.
 
 ## [0.2.1] - 2026-09-04
 

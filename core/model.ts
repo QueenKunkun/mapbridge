@@ -93,6 +93,32 @@ export const CanonicalPoi = z.object({
 });
 export type CanonicalPoi = z.infer<typeof CanonicalPoi>;
 
+export const RouteStop = z.object({
+  role: z.enum(['start', 'waypoint', 'end']),
+  name: z.string(),
+  point: LngLat,
+  sourceRecordId: z.string().optional(),
+});
+export type RouteStop = z.infer<typeof RouteStop>;
+
+/** 百度 type 20 当前确认能表达的路线收藏：有序 stops，不代表真实道路几何。 */
+export const CanonicalRoute = z.object({
+  kind: z.literal('route'),
+  id: z.string(),
+  identity: z.string().optional(),
+  name: z.string(),
+  stops: z.array(RouteStop).min(2),
+  travelMode: z.string().optional(),
+  source: CanonicalSource,
+  metadata: z
+    .object({
+      createdAt: z.string().optional(),
+      updatedAt: z.string().optional(),
+    })
+    .default({}),
+});
+export type CanonicalRoute = z.infer<typeof CanonicalRoute>;
+
 // 目前仅启用 POI，避免在没有真实协议和 fixture 前虚构其他类型的字段语义。
 export const CanonicalItem = CanonicalPoi;
 export type CanonicalItem = CanonicalPoi;

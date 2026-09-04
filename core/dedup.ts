@@ -1,4 +1,4 @@
-import type { CanonicalPlace } from './model';
+import type { CanonicalPlace, CanonicalRoute } from './model';
 
 /** 规整化名称：去空白、转小写、折叠内部空格，用于指纹比对。 */
 export function normalizeName(name: string): string {
@@ -21,6 +21,14 @@ export function placeFingerprint(place: CanonicalPlace): string {
 /** 跨 provider 使用的 POI identity；保留可读指纹，目标平台再自行哈希。 */
 export function placeIdentity(place: CanonicalPlace): string {
   return placeFingerprint(place);
+}
+
+/** Route identity：保留 stop 顺序，避免把相同端点但不同途经点的路线合并。 */
+export function routeIdentity(route: CanonicalRoute): string {
+  const stops = route.stops
+    .map((stop) => `${normalizeName(stop.name)}@${stop.point.lng.toFixed(5)},${stop.point.lat.toFixed(5)}`)
+    .join('>');
+  return `${normalizeName(route.name)}|${stops}`;
 }
 
 export interface DedupResult {
