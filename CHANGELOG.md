@@ -14,6 +14,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Route previews now show stop names, roles, coordinates, and travel mode; Route-only jobs cannot start provider import.
 - File import now accepts GPX waypoints and KML Points, with explicit warnings when Route/LineString data is skipped.
 - Portable POI imports now preserve exported identity and source record identifiers when those fields are available.
+- Export mode now uses the unified extracted items, so recognized Routes are included in MapBridge, GPX, and KML exports.
 
 ## [0.2.1] - 2026-09-04
 

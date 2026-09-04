@@ -3,7 +3,7 @@ import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
-import { migratePlaceToPoi, serializePlaces, parsePlacesFile } from '@/core/export';
+import { serializeItems, parsePlacesFile } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableImport } from '@/core/portable-import';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
@@ -107,13 +107,12 @@ export default function App() {
     setTimeout(() => void refreshDetection(), 3000);
   }
 
-  function downloadPlaces(places: Job['places'], provider: ProviderId): string[] {
-    const items = places.map(migratePlaceToPoi);
+  function downloadItems(items: Job['items'], provider: ProviderId): string[] {
     const exported = exportFormat === 'gpx'
       ? exportGpx(items)
       : exportFormat === 'kml'
         ? exportKml(items)
-        : { text: serializePlaces(places, provider), warnings: [] };
+        : { text: serializeItems(items, provider), warnings: [] };
     const extension = exportFormat === 'mapbridge' ? 'json' : exportFormat;
     const mime = exportFormat === 'mapbridge'
       ? 'application/json'
@@ -151,12 +150,12 @@ export default function App() {
       }
       const r = await sendBg({ type: 'extract', jobId: res.job.id, tabId });
       if (r.type === 'job' && r.job) {
-        if (r.job.places.length === 0) {
+        if (r.job.items.length === 0) {
           setError('没有提取到有效收藏（可能页面还没加载收藏列表）');
           return;
         }
-        setExportWarnings(downloadPlaces(r.job.places, effectiveSource));
-        setExportedCount(r.job.places.length);
+        setExportWarnings(downloadItems(r.job.items, effectiveSource));
+        setExportedCount(r.job.items.length);
       } else if (r.type === 'error') {
         setError(r.message);
       }
