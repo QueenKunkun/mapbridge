@@ -4,33 +4,22 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-04
+
+### Added
+- Added versioned MapBridge JSON documents with POI and Route support while keeping v1 files importable.
+- Added Baidu Route extraction and read-only Route previews, with Route export to GPX and KML.
+- Added POI import and export for GPX 1.1 and KML 2.2, with clear warnings when unsupported route data or fields cannot be preserved.
+- Added richer import reports that distinguish recognized items, import outcomes, unsupported Routes, and skipped source records.
+
 ### Changed
-- Import reports now separate source records, recognized items, import results, unsupported Routes, and extraction-stage skips.
-- Import preview tabs now show item counts with explicit parentheses and units.
-- Amap login detection now probes the read-only favorites endpoint before falling back to page markers, improving accuracy on the SSR favorites page.
-- Added an explicit detection refresh on the setup screen and clarified that map-page detection may not be able to confirm login state.
-- Import preview now emphasizes the primary next-step action over saving edits.
-- Import previews now separate Places and Routes into dedicated tabs, while keeping Routes read-only for provider import.
-- Baidu extraction warnings now clarify when a source record was already marked as deleted.
-- MapBridge exports now use a versioned `mapbridge` document with v2 `items`; existing v1 `mapbridge-places` files remain importable.
-- Added an explicit provider-independent POI identity and runtime schemas for v2 point geometry.
-- Added GPX 1.1 and KML 2.2 export for MapBridge POI items, with metadata preservation where supported.
-- Added an internal Route schema based on confirmed Baidu route-favorite endpoints; Route items can now round-trip in v2 documents and export to GPX/KML, while provider import remains disabled.
-- Portable GPX/KML exports now report fields that cannot be fully preserved, and their generated XML has structural regression coverage.
-- Extraction jobs now retain recognized Route items and show them as unavailable for provider import while keeping the existing POI workflow.
-- Route previews now show stop names, roles, coordinates, and travel mode; Route-only jobs cannot start provider import.
-- File import now accepts GPX waypoints and KML Points, with explicit warnings when Route/LineString data is skipped.
-- Portable POI imports now preserve exported identity and source record identifiers when those fields are available.
-- Export mode now uses the unified extracted items, so recognized Routes are included in MapBridge, GPX, and KML exports.
-- Provider adapters now declare item-kind extraction and import capabilities, with unsupported Route-only imports blocked explicitly.
-- Extraction and portable-file warnings are now persisted with jobs and remain visible after reopening a task.
-- Final import reports now show excluded unified items and retained extraction/file warnings.
-- Import reports now distinguish raw extracted record counts from the POIs available for import.
-- Previously saved jobs are migrated in memory with unified POI items and warning defaults when reopened.
-- Baidu and Amap normalized POIs now carry the same deterministic cross-provider identity before entering migration jobs.
-- POI deduplication now honors an explicit canonical identity and falls back to the deterministic coordinate fingerprint.
-- Editing a POI name in preview now invalidates its old identity so deduplication can recalculate it safely.
-- MapBridge files containing both supported POIs and unsupported item kinds now import the POIs while reporting the skipped items.
+- Import previews now separate Places and Routes into dedicated tabs, and the primary next-step action is visually emphasized.
+- POI matching and deduplication now use a stable provider-independent identity where available.
+
+### Fixed
+- Improved Amap login detection on the SSR favorites page by probing the read-only favorites endpoint before falling back to page markers.
+- Improved detection refresh controls and clarified warnings for records already marked as deleted by the source map.
+- Existing jobs and mixed documents now migrate or import supported POIs without silently discarding unsupported items.
 
 ## [0.2.1] - 2026-09-04
 
