@@ -11,6 +11,7 @@ const route = {
     { role: 'end' as const, name: '终点', point: { lng: 105, lat: 31 } },
   ],
   travelMode: 'driving',
+  routing: {},
   source: { provider: 'baidu' as const, crs: 'bd09mc' as const },
   metadata: {},
 };
@@ -34,5 +35,13 @@ describe('route model', () => {
   it('does not invent a route geometry from stops', () => {
     const parsed = CanonicalRoute.parse(route);
     expect(parsed).not.toHaveProperty('geometry');
+  });
+
+  it('preserves provider-neutral routing metadata', () => {
+    const parsed = CanonicalRoute.parse({
+      ...route,
+      routing: { pathType: 1, planKind: 2, pageNumber: 3 },
+    });
+    expect(parsed.routing).toEqual({ pathType: 1, planKind: 2, pageNumber: 3 });
   });
 });

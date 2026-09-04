@@ -1,6 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
-import type { CanonicalPlace, Collection } from '@/core/model';
+import type { CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
+import { routeIdentity } from '@/core/dedup';
 import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
 
@@ -194,6 +195,80 @@ export function normalizeBaidu(raw: unknown): CanonicalPlace | null {
       createdAt: readCreatedAt(record),
     },
   };
+}
+
+interface BaiduRouteNode {
+  name: string;
+  point: BaiduMercator;
+  uid?: string;
+}
+
+function readRouteNode(extdata: Record<string, unknown>, key: 'sfavnode' | 'efavnode'): BaiduRouteNode | null {
+  const node = extdata[key];
+  if (!node || typeof node !== 'object') return null;
+  const record = node as Record<string, unknown>;
+  const x = Number(record['geoptx']);
+  const y = Number(record['geopty']);
+  const name = String(record['name'] ?? '').trim();
+  if (!name || !Number.isFinite(x) || !Number.isFinite(y) || (x === 0 && y === 0)) return null;
+  return { name, point: { x, y }, uid: record['uid'] ? String(record['uid']) : undefined };
+}
+
+function readOptionalNumber(record: Record<string, unknown>, key: string): number | undefined {
+  const value = Number(record[key]);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** 将百度 type 20 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
+export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const detail = record['detail'];
+  if (!detail || typeof detail !== 'object') return null;
+  const data = (detail as Record<string, unknown>)['data'];
+  if (!data || typeof data !== 'object') return null;
+  const routeData = data as Record<string, unknown>;
+  if (String(routeData['type'] ?? '') !== '20') return null;
+  const extdata = routeData['extdata'];
+  if (!extdata || typeof extdata !== 'object') return null;
+  const ext = extdata as Record<string, unknown>;
+  const start = readRouteNode(ext, 'sfavnode');
+  const end = readRouteNode(ext, 'efavnode');
+  const pathname = String(ext['pathname'] ?? '').trim();
+  if (!start || !end || !pathname) return null;
+
+  const toStop = (node: BaiduRouteNode, role: RouteStop['role']): RouteStop => ({
+    role,
+    name: node.name,
+    point: toWgs84({ crs: 'bd09mc', lng: node.point.x, lat: node.point.y }),
+    sourceRecordId: node.uid,
+  });
+  const routing = {
+    pathType: readOptionalNumber(ext, 'pathtype'),
+    planKind: readOptionalNumber(ext, 'plankind'),
+    transitKind: String(ext['transkind'] ?? '') || undefined,
+    pageNumber: readOptionalNumber(ext, 'pagenumber'),
+    busIndex: readOptionalNumber(ext, 'busidx'),
+  };
+  const route: CanonicalRoute = {
+    kind: 'route',
+    id: randomUUID(),
+    name: pathname,
+    stops: [toStop(start, 'start'), toStop(end, 'end')],
+    travelMode: routing.transitKind,
+    routing,
+    source: {
+      provider: 'baidu',
+      crs: 'bd09mc',
+      recordId: String(record['sid'] ?? record['cid'] ?? routeData['fid'] ?? '') || undefined,
+    },
+    metadata: {
+      createdAt: readCreatedAt(record),
+      updatedAt: routeData['mtime'] == null ? undefined : String(routeData['mtime']),
+    },
+  };
+  route.identity = routeIdentity(route);
+  return route;
 }
 
 export const baiduAdapter: ProviderAdapter = {

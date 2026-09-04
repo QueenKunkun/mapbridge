@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeBaidu, baiduAdapter } from '@/adapters/baidu';
+import { normalizeBaidu, normalizeBaiduRoute, baiduAdapter } from '@/adapters/baidu';
 
 // Synthetic records (structurally identical to captured favorites; all names/coords/ids are fictional).
 const shareItems: Record<string, unknown>[] = [
@@ -45,6 +45,32 @@ const favdataReal = {
       { action: 'del', sid: 's3', detail: { data: false } },
       { action: 'del', sid: 's4', detail: { data: false } },
     ],
+  },
+};
+
+const routeFavorite = {
+  sid: '20_route-1',
+  cid: '20_route-1',
+  status: '100',
+  action: 'add',
+  ver: 'route-ver',
+  detail: {
+    data: {
+      type: '20',
+      fid: '20_route-1',
+      ctime: '1700000000',
+      mtime: '1700000001',
+      extdata: {
+        pathname: '自驾路线',
+        pathtype: 1,
+        plankind: 2,
+        transkind: 'driving',
+        pagenumber: 0,
+        busidx: 0,
+        sfavnode: { cityid: 1, geoptx: 11582672.01, geopty: 3564275.74, uid: 'start-1', name: '起点', type: 1 },
+        efavnode: { cityid: 1, geoptx: 11583000.01, geopty: 3564500.74, uid: 'end-1', name: '终点', type: 1 },
+      },
+    },
   },
 };
 
@@ -145,5 +171,25 @@ describe('baidu adapter', () => {
     const deleted = result.skipped.filter((s) => s.reason === '已删除');
     expect(deleted.length).toBeGreaterThanOrEqual(2);
     expect(result.skipped.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('normalizes a confirmed type 20 route into ordered WGS-84 stops', () => {
+    const route = normalizeBaiduRoute(routeFavorite);
+    expect(route).not.toBeNull();
+    expect(route!.kind).toBe('route');
+    expect(route!.name).toBe('自驾路线');
+    expect(route!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
+    expect(route!.stops[0]!.name).toBe('起点');
+    expect(route!.stops[1]!.sourceRecordId).toBe('end-1');
+    expect(route!.stops[0]!.point.lng).toBeGreaterThan(100);
+    expect(route!.routing).toMatchObject({ pathType: 1, planKind: 2, transitKind: 'driving' });
+    expect(route!.source.recordId).toBe('20_route-1');
+    expect(route!.identity).toContain('自驾路线|起点@');
+  });
+
+  it('rejects a type 20 route without a valid endpoint', () => {
+    const invalid = structuredClone(routeFavorite) as Record<string, unknown>;
+    (((invalid.detail as Record<string, unknown>).data as Record<string, unknown>).extdata as Record<string, unknown>).efavnode = {};
+    expect(normalizeBaiduRoute(invalid)).toBeNull();
   });
 });

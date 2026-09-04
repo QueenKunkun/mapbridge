@@ -109,6 +109,15 @@ export const CanonicalRoute = z.object({
   name: z.string(),
   stops: z.array(RouteStop).min(2),
   travelMode: z.string().optional(),
+  routing: z
+    .object({
+      pathType: z.number().optional(),
+      planKind: z.number().optional(),
+      transitKind: z.string().optional(),
+      pageNumber: z.number().optional(),
+      busIndex: z.number().optional(),
+    })
+    .default({}),
   source: CanonicalSource,
   metadata: z
     .object({
