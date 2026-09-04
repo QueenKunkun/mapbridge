@@ -1,4 +1,4 @@
-import type { CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
+import type { CanonicalItem, CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
 import type { ImportReport } from '@/core/jobs';
 
 /** 内容脚本运行所在页面的上下文（由 background 从 tab 信息构造）。 */
@@ -65,6 +65,7 @@ export interface ProviderAdapter {
   /** 将一批原始记录转为提取结果（含去重、skip 记录、来源收藏夹名）。 */
   buildExtractResult(raw: RawExtract): {
     collection: Collection;
+    items: CanonicalItem[];
     places: CanonicalPlace[];
     skipped: { index: number; reason: string }[];
     rawCount: number;

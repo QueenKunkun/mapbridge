@@ -1,7 +1,8 @@
 import { randomUUID } from '@/utils/uuid';
-import type { CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
+import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
 import { routeIdentity } from '@/core/dedup';
+import { migratePlaceToPoi } from '@/core/export';
 import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
 
@@ -283,6 +284,7 @@ export const baiduAdapter: ProviderAdapter = {
   normalize: normalizeBaidu,
 
   buildExtractResult(raw: RawExtract) {
+    const items: CanonicalItem[] = [];
     const places: CanonicalPlace[] = [];
     const skipped: { index: number; reason: string }[] = [];
     const seenIds = new Set<string>();
@@ -298,6 +300,11 @@ export const baiduAdapter: ProviderAdapter = {
         skipped.push({ index, reason: '已删除' });
         return;
       }
+      const route = normalizeBaiduRoute(record);
+      if (route) {
+        items.push(route);
+        return;
+      }
       const place = normalizeBaidu(record);
       if (!place) {
         skipped.push({ index, reason: '缺少名称或百度墨卡托坐标' });
@@ -310,17 +317,18 @@ export const baiduAdapter: ProviderAdapter = {
       }
       seenIds.add(dedupKey);
       places.push(place);
+      items.push(migratePlaceToPoi(place));
     });
 
     const collection: Collection = {
       id: randomUUID(),
       name: '百度地图收藏夹',
       provider: 'baidu',
-      placeCount: places.length,
+      placeCount: items.length,
       createdAt: new Date().toISOString(),
     };
 
-    return { collection, places, skipped, rawCount: raw.records.length };
+    return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
   buildImportPayload(places: CanonicalPlace[]): unknown {

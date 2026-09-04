@@ -152,6 +152,7 @@ export type Collection = z.infer<typeof Collection>;
 
 export const ExtractResult = z.object({
   collection: Collection,
+  items: z.array(CanonicalItem),
   places: z.array(CanonicalPlace),
   skipped: z.array(
     z.object({

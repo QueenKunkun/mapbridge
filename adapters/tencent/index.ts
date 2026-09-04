@@ -22,6 +22,7 @@ export const tencentAdapter: ProviderAdapter = {
   buildExtractResult(_raw: RawExtract) {
     return {
       collection: { id: '', name: '腾讯地图收藏夹', provider: 'tencent', placeCount: 0, createdAt: '' } as Collection,
+      items: [],
       places: [],
       skipped: [],
       rawCount: 0,

@@ -1,5 +1,6 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
+import { migratePlaceToPoi } from '@/core/export';
 import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace, Collection } from '@/core/model';
 import { Crs } from '@/core/model';
@@ -111,7 +112,7 @@ export const amapAdapter: ProviderAdapter = {
       createdAt: new Date().toISOString(),
     };
 
-    return { collection, places, skipped, rawCount: raw.records.length };
+    return { collection, items: places.map(migratePlaceToPoi), places, skipped, rawCount: raw.records.length };
   },
 
   buildImportPayload(places: CanonicalPlace[]): unknown[] {

@@ -187,6 +187,13 @@ describe('baidu adapter', () => {
     expect(route!.identity).toContain('自驾路线|起点@');
   });
 
+  it('includes confirmed routes in unified extraction items while keeping POI places compatible', () => {
+    const result = baiduAdapter.buildExtractResult({ provider: 'baidu', records: [routeFavorite, shareItems[0]!], exhausted: true });
+    expect(result.items.map((item) => item.kind)).toEqual(['route', 'poi']);
+    expect(result.places).toHaveLength(1);
+    expect(result.collection.placeCount).toBe(2);
+  });
+
   it('rejects a type 20 route without a valid endpoint', () => {
     const invalid = structuredClone(routeFavorite) as Record<string, unknown>;
     (((invalid.detail as Record<string, unknown>).data as Record<string, unknown>).extdata as Record<string, unknown>).efavnode = {};

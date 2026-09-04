@@ -67,6 +67,8 @@ describe('amap adapter', () => {
   it('buildExtractResult collects places', () => {
     const items = (amapGetFav.data as { items: unknown[] }).items;
     const result = amapAdapter.buildExtractResult({ provider: 'amap', records: items, exhausted: true });
+    expect(result.items).toHaveLength(2);
+    expect(result.items.every((item) => item.kind === 'poi')).toBe(true);
     expect(result.places).toHaveLength(2);
     expect(result.skipped).toHaveLength(0);
   });
