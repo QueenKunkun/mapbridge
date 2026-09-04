@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyExtractionItems, applyPreviewPlaces, createJob } from '@/core/jobs';
+import { applyExtractionItems, applyPreviewPlaces, createJob, hydrateJob } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -32,5 +32,14 @@ describe('core/jobs unified items', () => {
   it('persists extraction and file warnings with the job', () => {
     const job = applyExtractionItems(createJob('baidu', 'amap'), [route], [], 1, ['GPX 中跳过 1 条 Route']);
     expect(job.warnings).toEqual(['GPX 中跳过 1 条 Route']);
+  });
+
+  it('hydrates legacy jobs without items or warnings', () => {
+    const current = createJob('baidu', 'amap');
+    const { items: _items, warnings: _warnings, ...legacy } = { ...current, places: [place] };
+    const hydrated = hydrateJob(legacy);
+    expect(hydrated.items).toHaveLength(1);
+    expect(hydrated.items[0]!.kind).toBe('poi');
+    expect(hydrated.warnings).toEqual([]);
   });
 });

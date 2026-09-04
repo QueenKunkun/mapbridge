@@ -53,6 +53,17 @@ export interface Job {
   error?: string;
 }
 
+type PersistedJob = Omit<Job, 'items' | 'warnings'> & Partial<Pick<Job, 'items' | 'warnings'>>;
+
+/** Fill fields introduced after the first persisted Job format. */
+export function hydrateJob(job: PersistedJob): Job {
+  return {
+    ...job,
+    items: job.items ?? job.places.map(migratePlaceToPoi),
+    warnings: job.warnings ?? [],
+  };
+}
+
 export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId): Job {
   const now = new Date().toISOString();
   return {
