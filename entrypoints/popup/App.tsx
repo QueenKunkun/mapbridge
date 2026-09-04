@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
-import type { Job } from '@/core/jobs';
+import { updatePreviewPlace, type Job } from '@/core/jobs';
 import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableFile } from '@/core/portable-import';
@@ -651,7 +651,7 @@ function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave:
   const shown = rows.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
 
   function update(id: string, patch: Partial<Job['places'][number]>) {
-    setRows((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setRows((prev) => prev.map((p) => (p.id === id ? updatePreviewPlace(p, patch) : p)));
   }
 
   function remove(id: string) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyExtractionItems, applyPreviewPlaces, createJob, hydrateJob } from '@/core/jobs';
+import { applyExtractionItems, applyPreviewPlaces, createJob, hydrateJob, updatePreviewPlace } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -41,5 +41,11 @@ describe('core/jobs unified items', () => {
     expect(hydrated.items).toHaveLength(1);
     expect(hydrated.items[0]!.kind).toBe('poi');
     expect(hydrated.warnings).toEqual([]);
+  });
+
+  it('invalidates identity when a preview name changes', () => {
+    const withIdentity = { ...place, identity: 'old-identity' };
+    expect(updatePreviewPlace(withIdentity, { address: 'New address' }).identity).toBe('old-identity');
+    expect(updatePreviewPlace(withIdentity, { name: 'Renamed' }).identity).toBeUndefined();
   });
 });

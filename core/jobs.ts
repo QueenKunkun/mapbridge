@@ -107,6 +107,15 @@ export function applyPreviewPlaces(job: Job, places: CanonicalPlace[]): Job {
   };
 }
 
+/** Apply a preview edit; changing the name invalidates a derived canonical identity. */
+export function updatePreviewPlace(place: CanonicalPlace, patch: Partial<CanonicalPlace>): CanonicalPlace {
+  return {
+    ...place,
+    ...patch,
+    ...(patch.name !== undefined && patch.name !== place.name ? { identity: undefined } : {}),
+  };
+}
+
 export function startImport(job: Job, payload: unknown): Job {
   return {
     ...job,
