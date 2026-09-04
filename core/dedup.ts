@@ -18,6 +18,11 @@ export function placeFingerprint(place: CanonicalPlace): string {
   return `${normalizeName(place.name)}|${lng}|${lat}`;
 }
 
+/** 跨 provider 使用的 POI identity；保留可读指纹，目标平台再自行哈希。 */
+export function placeIdentity(place: CanonicalPlace): string {
+  return placeFingerprint(place);
+}
+
 export interface DedupResult {
   /** 保留下来的去重后集合。 */
   unique: CanonicalPlace[];
@@ -30,11 +35,11 @@ export interface DedupResult {
  * 指纹命中即视为重复。否则仅在传入集合内部去重。
  */
 export function dedupPlaces(places: CanonicalPlace[], existing: CanonicalPlace[] = []): DedupResult {
-  const seen = new Set(existing.map(placeFingerprint));
+  const seen = new Set(existing.map(placeIdentity));
   const unique: CanonicalPlace[] = [];
   const duplicates: CanonicalPlace[] = [];
   for (const place of places) {
-    const fp = placeFingerprint(place);
+    const fp = placeIdentity(place);
     if (seen.has(fp)) {
       duplicates.push(place);
     } else {

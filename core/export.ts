@@ -1,6 +1,6 @@
 import type { CanonicalItem, CanonicalPlace, CanonicalPoi, ProviderId } from './model';
 import { CanonicalItem as CanonicalItemSchema, CanonicalPlace as CanonicalPlaceSchema } from './model';
-import { placeFingerprint } from './dedup';
+import { placeIdentity } from './dedup';
 
 export interface PlacesExport {
   format: 'mapbridge';
@@ -17,7 +17,7 @@ export function migratePlaceToPoi(place: CanonicalPlace): CanonicalPoi {
   return {
     kind: 'poi',
     id: place.id,
-    identity: placeFingerprint(place),
+    identity: placeIdentity(place),
     name: place.name,
     address: place.address,
     tags: place.tags,

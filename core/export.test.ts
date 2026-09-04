@@ -26,6 +26,7 @@ describe('core/export', () => {
     expect(parsed.places).toHaveLength(1);
     expect(parsed.places[0]!.name).toBe('Test POI 测试点');
     expect(parsed.places[0]!.wgs84.lng).toBeCloseTo(104.0389, 4);
+    expect(parsed.items[0]!.identity).toBe('testpoi测试点|104.03890|30.63740');
   });
 
   it('rejects non-mapbridge JSON', () => {

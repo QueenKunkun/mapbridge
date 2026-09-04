@@ -51,8 +51,11 @@ export const CanonicalPlace = z.object({
 export type CanonicalPlace = z.infer<typeof CanonicalPlace>;
 
 /** v2 文档中的几何类型。当前先落地 POI，线几何供后续 Route/Mark/Track 使用。 */
+export const PointGeometry = z.object({ type: z.literal('point'), point: LngLat });
+export type PointGeometry = z.infer<typeof PointGeometry>;
+
 export const Geometry = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('point'), point: LngLat }),
+  PointGeometry,
   z.object({ type: z.literal('line'), points: z.array(LngLat).min(2) }),
 ]);
 export type Geometry = z.infer<typeof Geometry>;
@@ -76,7 +79,7 @@ export const CanonicalPoi = z.object({
   address: z.string().default(''),
   tags: z.array(z.string()).default([]),
   note: z.string().default(''),
-  geometry: z.object({ type: z.literal('point'), point: LngLat }),
+  geometry: PointGeometry,
   source: CanonicalSource,
   metadata: z
     .object({

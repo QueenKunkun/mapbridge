@@ -6,6 +6,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Changed
 - MapBridge exports now use a versioned `mapbridge` document with v2 `items`; existing v1 `mapbridge-places` files remain importable.
+- Added an explicit provider-independent POI identity and runtime schemas for v2 point geometry.
 
 ## [0.2.1] - 2026-09-04
 
