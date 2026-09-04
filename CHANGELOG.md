@@ -18,6 +18,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Provider adapters now declare item-kind extraction and import capabilities, with unsupported Route-only imports blocked explicitly.
 - Extraction and portable-file warnings are now persisted with jobs and remain visible after reopening a task.
 - Final import reports now show excluded unified items and retained extraction/file warnings.
+- Import reports now distinguish raw extracted record counts from the POIs available for import.
 - Previously saved jobs are migrated in memory with unified POI items and warning defaults when reopened.
 - Baidu and Amap normalized POIs now carry the same deterministic cross-provider identity before entering migration jobs.
 - POI deduplication now honors an explicit canonical identity and falls back to the deterministic coordinate fingerprint.

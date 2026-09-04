@@ -568,7 +568,7 @@ export default function App() {
             <dd>{providerName(job.targetProvider)}</dd>
             <dt>条数</dt>
             <dd>
-              {job.places.length}（导入 {job.report?.imported ?? '—'}，重复 {job.report?.skippedDuplicates ?? '—'}，失败{' '}
+              原始 {job.rawCount}，可导入 {job.places.length}（导入 {job.report?.imported ?? '—'}，重复 {job.report?.skippedDuplicates ?? '—'}，失败{' '}
               {job.report?.failed ?? '—'}）
             </dd>
             {job.items.length > job.places.length && (

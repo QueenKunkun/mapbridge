@@ -44,6 +44,8 @@ export interface Job {
   items: CanonicalItem[];
   /** 提取或文件解析阶段产生的可恢复提示。 */
   warnings: string[];
+  /** 提取阶段收到的原始记录数。 */
+  rawCount: number;
   /** 目标导入 payload（幂等构建一次，重试复用）。 */
   importPayload?: unknown;
   /** 目标地图已有的收藏（用于去重提示，可选）。 */
@@ -53,7 +55,7 @@ export interface Job {
   error?: string;
 }
 
-type PersistedJob = Omit<Job, 'items' | 'warnings'> & Partial<Pick<Job, 'items' | 'warnings'>>;
+type PersistedJob = Omit<Job, 'items' | 'warnings' | 'rawCount'> & Partial<Pick<Job, 'items' | 'warnings' | 'rawCount'>>;
 
 /** Fill fields introduced after the first persisted Job format. */
 export function hydrateJob(job: PersistedJob): Job {
@@ -61,6 +63,7 @@ export function hydrateJob(job: PersistedJob): Job {
     ...job,
     items: job.items ?? job.places.map(migratePlaceToPoi),
     warnings: job.warnings ?? [],
+    rawCount: job.rawCount ?? job.places.length,
   };
 }
 
@@ -76,6 +79,7 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     places: [],
     items: [],
     warnings: [],
+    rawCount: 0,
     progress: { processed: 0, total: 0 },
   };
 }
@@ -90,6 +94,7 @@ export function applyExtractionItems(job: Job, items: CanonicalItem[], places: C
     items,
     places,
     warnings,
+    rawCount,
     status: 'preview',
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),
