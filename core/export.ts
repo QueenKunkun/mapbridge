@@ -1,5 +1,5 @@
-import type { CanonicalItem, CanonicalPlace, CanonicalPoi, ProviderId } from './model';
-import { CanonicalItem as CanonicalItemSchema, CanonicalPlace as CanonicalPlaceSchema } from './model';
+import type { CanonicalItem, CanonicalPlace, CanonicalPoi, MapBridgeDocument, ProviderId } from './model';
+import { CanonicalItem as CanonicalItemSchema, CanonicalPlace as CanonicalPlaceSchema, MapBridgeDocument as MapBridgeDocumentSchema } from './model';
 import { placeIdentity } from './dedup';
 
 export interface PlacesExport {
@@ -10,6 +10,17 @@ export interface PlacesExport {
   items: CanonicalItem[];
   /** v1 API compatibility for the current popup and adapter pipeline. */
   places: CanonicalPlace[];
+}
+
+export function serializeItems(items: CanonicalItem[], provider?: ProviderId): string {
+  const document: MapBridgeDocument = {
+    format: 'mapbridge',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    provider,
+    items,
+  };
+  return JSON.stringify(document, null, 2);
 }
 
 export function migratePlaceToPoi(place: CanonicalPlace): CanonicalPoi {
@@ -48,16 +59,24 @@ function migratePoiToPlace(item: CanonicalPoi): CanonicalPlace {
 /** 将归一化收藏序列化为可移植的 JSON 文本（跨地图/跨设备复用）。 */
 export function serializePlaces(places: CanonicalPlace[], provider?: ProviderId): string {
   const items = places.map(migratePlaceToPoi);
-  const data: PlacesExport = {
-    format: 'mapbridge',
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    provider,
-    items,
-    places,
-  };
-  const { places: _places, ...document } = data;
-  return JSON.stringify(document, null, 2);
+  return serializeItems(items, provider);
+}
+
+export function parseMapBridgeDocument(text: string): MapBridgeDocument {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error('文件不是合法的 JSON');
+  }
+  const result = MapBridgeDocumentSchema.safeParse(raw);
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    throw new Error(issue?.path[0] === 'version'
+      ? `不支持的 MapBridge 文件版本：${String((raw as Record<string, unknown>)?.version ?? '')}`
+      : `MapBridge 文件格式不正确：${issue?.message ?? '字段缺失'}`);
+  }
+  return result.data;
 }
 
 /** 解析 MapBridge 导出文件；逐条用 schema 校验，返回合法记录（跳过非法项但至少需 1 条）。 */
@@ -85,18 +104,20 @@ export function parsePlacesFile(text: string): PlacesExport {
       if (r.success) {
         valid.push(r.data);
         items.push(migratePlaceToPoi(r.data));
-      } else errors.push(`第 ${i + 1} 条：${r.error.issues[0]?.message ?? '字段缺失'}`);
+      } else errors.push(`第 ${i + 1} 条：${r.error?.issues[0]?.message ?? '字段缺失'}`);
     }
   } else {
-    if (Number(obj.version) !== 2) throw new Error(`不支持的 MapBridge 文件版本：${String(obj.version ?? '')}`);
-    const rawItems = obj.items;
-    if (!Array.isArray(rawItems)) throw new Error('文件中缺少 items 数组');
-    for (let i = 0; i < rawItems.length; i++) {
-      const r = CanonicalItemSchema.safeParse(rawItems[i]);
-      if (r.success) {
+    const document = parseMapBridgeDocument(text);
+    for (let i = 0; i < document.items.length; i++) {
+      const item = document.items[i]!;
+      if (item.kind !== 'poi') {
+        throw new Error(`文件包含当前导入流程不支持的项目类型：${item.kind}（第 ${i + 1} 条）`);
+      }
+      const r = CanonicalItemSchema.safeParse(item);
+      if (r.success && r.data.kind === 'poi') {
         items.push(r.data);
         valid.push(migratePoiToPlace(r.data));
-      } else errors.push(`第 ${i + 1} 条：${r.error.issues[0]?.message ?? '字段缺失或类型暂不支持'}`);
+      } else errors.push(`第 ${i + 1} 条：${r.error?.issues[0]?.message ?? '字段缺失'}`);
     }
   }
   if (valid.length === 0) {

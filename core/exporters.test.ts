@@ -15,6 +15,19 @@ const poi: CanonicalItem = {
   metadata: { phone: '123', folder: 'Favorites' },
 };
 
+const route: CanonicalItem = {
+  kind: 'route',
+  id: 'route-1',
+  name: 'Route A',
+  stops: [
+    { role: 'start', name: 'Start', point: { lng: 104, lat: 30 } },
+    { role: 'end', name: 'End', point: { lng: 105, lat: 31 } },
+  ],
+  routing: {},
+  source: { provider: 'baidu', crs: 'bd09mc' },
+  metadata: {},
+};
+
 describe('portable exporters', () => {
   it('exports POI as GPX waypoint with escaped content and metadata extensions', () => {
     const result = exportGpx([poi]);
@@ -34,8 +47,20 @@ describe('portable exporters', () => {
   });
 
   it('returns a warning when an unsupported item is supplied', () => {
-    const result = exportGpx([poi, { ...poi, id: 'future', kind: 'route' } as never]);
+    const result = exportGpx([poi, { ...poi, id: 'future', kind: 'future' } as never]);
     expect(result.warnings).toEqual(['部分项目类型暂不支持 GPX 导出，已跳过']);
     expect(result.text.match(/<wpt /g)).toHaveLength(1);
+  });
+
+  it('exports Route stops as GPX rte and KML LineString', () => {
+    const gpx = exportGpx([route]);
+    expect(gpx.warnings).toEqual([]);
+    expect(gpx.text).toContain('<rte>');
+    expect(gpx.text).toContain('<rtept lat="30" lon="104"><name>Start</name></rtept>');
+
+    const kml = exportKml([route]);
+    expect(kml.warnings).toEqual([]);
+    expect(kml.text).toContain('<LineString>');
+    expect(kml.text).toContain('<coordinates>104,30,0 105,31,0</coordinates>');
   });
 });

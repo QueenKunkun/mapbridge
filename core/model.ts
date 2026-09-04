@@ -128,9 +128,17 @@ export const CanonicalRoute = z.object({
 });
 export type CanonicalRoute = z.infer<typeof CanonicalRoute>;
 
-// 目前仅启用 POI，避免在没有真实协议和 fixture 前虚构其他类型的字段语义。
-export const CanonicalItem = CanonicalPoi;
-export type CanonicalItem = CanonicalPoi;
+export const CanonicalItem = z.discriminatedUnion('kind', [CanonicalPoi, CanonicalRoute]);
+export type CanonicalItem = z.infer<typeof CanonicalItem>;
+
+export const MapBridgeDocument = z.object({
+  format: z.literal('mapbridge'),
+  version: z.literal(2),
+  exportedAt: z.string(),
+  items: z.array(CanonicalItem).min(1),
+  provider: ProviderId.optional(),
+});
+export type MapBridgeDocument = z.infer<typeof MapBridgeDocument>;
 
 export const Collection = z.object({
   id: z.string(),

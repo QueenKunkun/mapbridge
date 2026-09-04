@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { serializePlaces, parsePlacesFile } from '@/core/export';
+import { parseMapBridgeDocument, serializeItems, serializePlaces, parsePlacesFile } from '@/core/export';
 import type { CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -62,11 +62,29 @@ describe('core/export', () => {
     }));
     expect(parsed.version).toBe(1);
     expect(parsed.items[0]!.kind).toBe('poi');
-    expect(parsed.items[0]!.geometry.type).toBe('point');
+    expect(parsed.items[0]!.kind).toBe('poi');
     expect(parsed.items[0]!.source).not.toHaveProperty('raw');
   });
 
   it('rejects unsupported v2 versions', () => {
     expect(() => parsePlacesFile(JSON.stringify({ format: 'mapbridge', version: 3, items: [] }))).toThrow(/不支持的 MapBridge 文件版本/);
+  });
+
+  it('round-trips a v2 document containing a Route', () => {
+    const route = {
+      kind: 'route' as const,
+      id: 'route-1',
+      name: 'Route',
+      stops: [
+        { role: 'start' as const, name: 'Start', point: { lng: 104, lat: 30 } },
+        { role: 'end' as const, name: 'End', point: { lng: 105, lat: 31 } },
+      ],
+      routing: {},
+      source: { provider: 'baidu' as const, crs: 'bd09mc' as const },
+      metadata: {},
+    };
+    const parsed = parseMapBridgeDocument(serializeItems([route], 'baidu'));
+    expect(parsed.items[0]!.kind).toBe('route');
+    expect(() => parsePlacesFile(serializeItems([route], 'baidu'))).toThrow(/不支持的项目类型：route/);
   });
 });

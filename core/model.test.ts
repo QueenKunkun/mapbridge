@@ -15,7 +15,7 @@ describe('v2 model schemas', () => {
     });
 
     expect(result.success).toBe(true);
-    if (result.success) {
+    if (result.success && result.data.kind === 'poi') {
       expect(result.data.address).toBe('');
       expect(result.data.tags).toEqual([]);
     }
