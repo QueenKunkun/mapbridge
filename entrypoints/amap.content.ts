@@ -1,9 +1,10 @@
 import { BRIDGE_CHANNEL, isBridgeEvent } from '@/utils/bridge';
 import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
+import { readAmapLoginStatus } from '@/utils/login-status';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...args);
 
-function isLoggedIn(): boolean | undefined {
+function readDomLoginStatus(): boolean | undefined {
   if (
     document.querySelector('.user-name') ||
     document.querySelector('.quit-login') ||
@@ -11,6 +12,21 @@ function isLoggedIn(): boolean | undefined {
   ) return true;
   // 高德页面结构和登录组件会异步变化；没有命中选择器不能证明未登录。
   return undefined;
+}
+
+async function detectLoginStatus(): Promise<boolean | undefined> {
+  try {
+    const response = await fetch('/service/fav/getFav?', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    const status = readAmapLoginStatus(await response.json(), response.status);
+    if (status !== undefined) return status;
+  } catch {
+    // Network failures are inconclusive; use the best available DOM signal.
+  }
+  return readDomLoginStatus();
 }
 
 /** 高德收藏页 ISOLATED 桥接（与百度桥接同理）。 */
@@ -32,12 +48,14 @@ export default defineContentScript({
       const request = msg as { type?: string; command?: BridgeCommand };
       if (request?.type === 'mb:command' && request.command) {
         log('recv command, relay -> MAIN', request.command.type);
-        window.postMessage(request.command, '*');
         if (request.command.type === 'ping' || request.command.type === 'whoami') {
-          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'amap', loggedIn: isLoggedIn() };
-          log('reply to background', reply);
-          return Promise.resolve(reply);
+          return detectLoginStatus().then((loggedIn) => {
+            const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'amap', loggedIn };
+            log('reply to background', reply);
+            return reply;
+          });
         }
+        window.postMessage(request.command, '*');
       } else {
         log('recv unknown message', msg);
       }
