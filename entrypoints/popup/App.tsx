@@ -532,7 +532,7 @@ export default function App() {
               disabled={job.places.length === 0}
               onClick={() => setPreviewTab('places')}
             >
-              地点 <span>{job.places.length}</span>
+              地点 <span>({job.places.length}条)</span>
             </button>
             <button
               className={`preview-tab${activePreviewTab === 'routes' ? ' active' : ''}`}
@@ -541,7 +541,7 @@ export default function App() {
               disabled={previewRoutes.length === 0}
               onClick={() => setPreviewTab('routes')}
             >
-              Route <span>{previewRoutes.length}</span>
+              路线 <span>({previewRoutes.length}条)</span>
             </button>
           </div>
           {activePreviewTab === 'places' ? (

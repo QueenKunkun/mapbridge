@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Changed
+- Import preview tabs now show item counts with explicit parentheses and units.
 - Amap login detection now probes the read-only favorites endpoint before falling back to page markers, improving accuracy on the SSR favorites page.
 - Added an explicit detection refresh on the setup screen and clarified that map-page detection may not be able to confirm login state.
 - Import preview now emphasizes the primary next-step action over saving edits.
