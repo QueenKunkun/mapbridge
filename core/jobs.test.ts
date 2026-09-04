@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyExtractionItems, applyPreviewPlaces, createJob, hydrateJob, updatePreviewPlace } from '@/core/jobs';
+import { migratePlaceToPoi } from '@/core/export';
+import { applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -47,5 +48,28 @@ describe('core/jobs unified items', () => {
     const withIdentity = { ...place, identity: 'old-identity' };
     expect(updatePreviewPlace(withIdentity, { address: 'New address' }).identity).toBe('old-identity');
     expect(updatePreviewPlace(withIdentity, { name: 'Renamed' }).identity).toBeUndefined();
+  });
+
+  it('transitions an import through progress to done', () => {
+    const job = applyExtractionItems(createJob('baidu', 'amap'), [migratePlaceToPoi(place)], [place], 1);
+    const started = startImport(job, [{ name: 'POI' }]);
+    const progressing = progressImport(started, { processed: 1, total: 1, phase: 'verify' });
+    const done = finalizeImport(progressing, { provider: 'amap', done: true, targetCount: 1 }, {
+      imported: 1, skippedDuplicates: 0, failed: 0, failedItems: [], targetCount: 1,
+    });
+    expect(started.status).toBe('importing');
+    expect(progressing.progress).toMatchObject({ processed: 1, phase: 'verify' });
+    expect(done.status).toBe('done');
+    expect(done.error).toBeUndefined();
+  });
+
+  it('marks a provider import failure as failed', () => {
+    const job = startImport(createJob('baidu', 'amap'), []);
+    const failed = finalizeImport(job, { provider: 'amap', done: false, error: 'network failed' }, {
+      imported: 0, skippedDuplicates: 0, failed: 1, failedItems: [{ placeId: 'poi-1', error: 'network failed' }],
+    });
+    expect(failed.status).toBe('failed');
+    expect(failed.error).toBe('network failed');
+    expect(failed.report?.failed).toBe(1);
   });
 });
