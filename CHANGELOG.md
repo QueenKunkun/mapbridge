@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Changed
+- Added an explicit detection refresh on the setup screen and clarified that map-page detection may not be able to confirm login state.
 - Import preview now emphasizes the primary next-step action over saving edits.
 - Import previews now separate Places and Routes into dedicated tabs, while keeping Routes read-only for provider import.
 - Baidu extraction warnings now clarify when a source record was already marked as deleted.

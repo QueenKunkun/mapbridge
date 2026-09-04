@@ -3,12 +3,14 @@ import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...args);
 
-function isLoggedIn(): boolean {
-  return !!(
+function isLoggedIn(): boolean | undefined {
+  if (
     document.querySelector('.user-name') ||
     document.querySelector('.quit-login') ||
     document.querySelector('.user-panel .user-portrait')
-  );
+  ) return true;
+  // 高德页面结构和登录组件会异步变化；没有命中选择器不能证明未登录。
+  return undefined;
 }
 
 /** 高德收藏页 ISOLATED 桥接（与百度桥接同理）。 */

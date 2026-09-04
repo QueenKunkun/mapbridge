@@ -366,6 +366,12 @@ input[type='file'] {
   gap: 8px;
 }
 
+.detect-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .detect-item .dot {
   width: 8px;
   height: 8px;

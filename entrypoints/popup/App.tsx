@@ -381,8 +381,10 @@ export default function App() {
                         {ok ? (
                           loggedIn === false ? (
                             <span className="warn-tag">未登录</span>
+                          ) : loggedIn === true ? (
+                            <span className="ok-tag">已登录 ✓</span>
                           ) : (
-                            <span className="ok-tag">已检测到 ✓</span>
+                            <span className="hint">已检测到，登录状态待确认</span>
                           )
                         ) : (
                           <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
@@ -392,7 +394,12 @@ export default function App() {
                       </div>
                     );
                   })}
-                {detecting && <span className="hint">检测中…</span>}
+                <div className="detect-actions">
+                  {detecting && <span className="hint">检测中…</span>}
+                  <button className="ghost small" disabled={detecting} onClick={() => void refreshDetection()}>
+                    刷新检测
+                  </button>
+                </div>
               </div>
               <p className="hint">请确保地图网址已打开，并完成登录。</p>
               <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
@@ -501,7 +508,7 @@ export default function App() {
               {busy ? '提取中…' : '开始提取'}
             </button>
             <button className="ghost" onClick={() => { void refreshJob(); void refreshDetection(); }}>
-              刷新
+              刷新状态
             </button>
           </div>
           {job.places.length > 0 && (
