@@ -81,6 +81,49 @@ section {
   margin-bottom: 0;
 }
 
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.route-summary {
+  border: 1px solid #dbe2ec;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.route-summary-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #334155;
+}
+
+.route-summary-head span,
+.route-summary small {
+  color: #64748b;
+}
+
+.route-summary ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+
+.route-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.route-summary code {
+  color: #64748b;
+  white-space: nowrap;
+}
+
 .migration-content .pick,
 .migration-content .detect-list {
   margin: 0;
@@ -401,6 +444,14 @@ button.remove {
   border-radius: 8px;
   padding: 7px 9px;
   font-size: 12px;
+}
+
+.hint.warning {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 7px 9px;
 }
 
 .progress {

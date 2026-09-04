@@ -505,7 +505,14 @@ export default function App() {
         <section className="migration-content preview">
           <h2>预览与编辑</h2>
           {job.items.some((item) => item.kind === 'route') && (
-            <p className="hint">已识别 {job.items.filter((item) => item.kind === 'route').length} 条 Route；当前保留在任务中，但不会进入 POI 导入。</p>
+            <>
+              <p className="hint">已识别 {job.items.filter((item) => item.kind === 'route').length} 条 Route；当前保留在任务中，但不会进入 POI 导入。</p>
+              <div className="route-list">
+                {job.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route').map((route) => (
+                  <RouteSummary key={route.id} route={route} />
+                ))}
+              </div>
+            </>
           )}
           <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
         </section>
@@ -527,9 +534,12 @@ export default function App() {
             </>
           )}
           <div className="count">待导入 {job.places.length} 条</div>
+          {job.items.some((item) => item.kind === 'route') && (
+            <p className="hint warning">另有 {job.items.filter((item) => item.kind === 'route').length} 条 Route 不会导入；如需保留，请使用 GPX/KML 或 MapBridge JSON 导出。</p>
+          )}
           <div className="actions">
-            <button className="primary" disabled={busy} onClick={() => void startImport()}>
-              {busy ? '导入中…' : '开始导入'}
+            <button className="primary" disabled={busy || job.places.length === 0} onClick={() => void startImport()}>
+              {busy ? '导入中…' : job.places.length === 0 ? '没有可导入的 POI' : '开始导入'}
             </button>
             <button className="ghost" onClick={() => setStep('preview')}>
               返回编辑
@@ -591,6 +601,27 @@ export default function App() {
 
 function stepIndex(s: Step): number {
   return ['setup', 'extract', 'preview', 'import', 'report'].indexOf(s);
+}
+
+function RouteSummary({ route }: { route: Extract<Job['items'][number], { kind: 'route' }> }) {
+  const roleName: Record<string, string> = { start: '起点', waypoint: '途经点', end: '终点' };
+  return (
+    <article className="route-summary">
+      <div className="route-summary-head">
+        <strong>{route.name}</strong>
+        <span>{route.travelMode ?? route.routing.transitKind ?? '路线'}</span>
+      </div>
+      <ol>
+        {route.stops.map((stop) => (
+          <li key={`${stop.role}-${stop.point.lng}-${stop.point.lat}`}>
+            <span>{roleName[stop.role] ?? stop.role}：{stop.name}</span>
+            <code>{stop.point.lng.toFixed(5)}, {stop.point.lat.toFixed(5)}</code>
+          </li>
+        ))}
+      </ol>
+      <small>Route 目前只读，暂不参与地图导入。</small>
+    </article>
+  );
 }
 
 function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave: (p: Job['places']) => Promise<void>; onNext: () => void }) {
