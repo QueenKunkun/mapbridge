@@ -4,7 +4,7 @@ Migrate map favorites between Chinese map services (Baidu Maps ↔ Amap/AMap), d
 
 Data stays local: the extension reads and writes favorites using the map site's own session, so **no cloud service, no upload, no API keys**.
 
-> Currently verified: **Baidu Maps → Amap** extraction & import. Tencent Maps is not supported yet (hidden from the picker).
+> Currently verified: **Baidu Maps ↔ Amap** extraction & import. Tencent Maps is not supported yet (hidden from the picker).
 
 ## Features
 
@@ -64,7 +64,7 @@ See `docs/01-architecture.md`–`docs/04-user-workflow.md` for design notes (int
 ## Roadmap
 
 - [ ] Tencent Maps adapter (extraction & import)
-- [ ] Baidu import adapter (export → re-import to Baidu)
+- [ ] Route import (after confirming route-favorite APIs on target providers)
 
 ## License
 
