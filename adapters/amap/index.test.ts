@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload, buildAmapRoutePayloadForImport } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, normalizeAmapLegacyRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload, buildAmapRoutePayloadForImport } from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
 import { toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
@@ -89,17 +89,19 @@ describe('amap adapter', () => {
     expect(result.places).toHaveLength(0);
   });
 
-  it('classifies unsupported legacy route records with bounded labels', () => {
+  it('normalizes legacy route records returned by the new favorites page', () => {
     const result = amapAdapter.buildExtractResult({
       provider: 'amap',
-      records: [{ id: 'legacy-route-1', type: 104, data: { name: '旧版自驾路线' } }],
+      records: [{ id: 'legacy-route-1', type: 102, data: {
+        route_name: '旧版自驾路线', route_type: '1', method: '1', route_len: '1200', mCostTime: '300',
+        from_poi: { mId: 'start', mName: '起点', mx: '211796584', my: '110201320' },
+        to_poi: { mId: 'end', mName: '终点', mx: '211800000', my: '110205000' },
+      } }],
       exhausted: true,
     });
-    expect(result.skipped).toEqual([{
-      index: 0,
-      reason: '高德旧版路线暂不支持解析',
-      label: 'type:104 · 旧版自驾路线 · ID:legacy-route-1',
-    }]);
+    expect(result.skipped).toHaveLength(0);
+    expect(result.items[0]).toMatchObject({ kind: 'route', name: '旧版自驾路线', travelMode: 'driving' });
+    expect(result.items[0]!.kind === 'route' && result.items[0]!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
   });
 
   it('builds a deterministic SSR type 117 route payload with converted points', () => {

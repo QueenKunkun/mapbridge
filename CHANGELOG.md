@@ -9,7 +9,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Fixed
 - Grouped extraction warnings by reason on both the preview and result pages, limited the warning panel height, and added expandable source summaries to identify skipped records.
-- Classified unsupported Amap legacy Route records separately from incomplete POI records in extraction results.
+- Parsed Amap `type:102/103/104` Route records returned by the current favorites page instead of treating them as unsupported legacy data.
 
 ## [0.4.0] - 2026-09-05
 

@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
-import { placeFingerprint, placeIdentity } from '@/core/dedup';
+import { placeFingerprint, placeIdentity, routeIdentity } from '@/core/dedup';
 import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
@@ -151,6 +151,71 @@ export function normalizeAmapRoute(raw: unknown): CanonicalRoute | null {
     },
     metadata: {},
   };
+}
+
+interface AmapLegacyRoutePoi {
+  mId?: unknown;
+  mName?: unknown;
+  mx?: unknown;
+  my?: unknown;
+}
+
+function normalizeAmapLegacyRoutePoi(raw: unknown): RouteStop | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const poi = raw as AmapLegacyRoutePoi;
+  const name = String(poi.mName ?? '').trim();
+  const x = Number(poi.mx);
+  const y = Number(poi.my);
+  if (!name || !Number.isFinite(x) || !Number.isFinite(y) || (x === 0 && y === 0)) return null;
+  return {
+    role: 'waypoint',
+    name,
+    point: toWgs84({ crs: 'amap_pixel', lng: x, lat: y }),
+    sourceRecordId: poi.mId ? String(poi.mId) : undefined,
+  };
+}
+
+/** 高德旧路线协议记录：新版收藏页仍会返回这些历史类型。 */
+export function normalizeAmapLegacyRoute(raw: unknown): CanonicalRoute | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const data = record['data'] && typeof record['data'] === 'object' ? record['data'] as Record<string, unknown> : record;
+  const type = String(record['type'] ?? data['type'] ?? '');
+  const mode = ({ '102': 'driving', '103': 'transit', '104': 'walking' } as Record<string, string>)[type];
+  if (!mode) return null;
+  const start = normalizeAmapLegacyRoutePoi(data['from_poi']);
+  const end = normalizeAmapLegacyRoutePoi(data['to_poi']);
+  if (!start || !end) return null;
+  const middle = Array.isArray(data['mid_pois'])
+    ? data['mid_pois'].map(normalizeAmapLegacyRoutePoi).filter((stop): stop is RouteStop => stop !== null)
+    : [];
+  const stops: RouteStop[] = [
+    { ...start, role: 'start' },
+    ...middle.map((stop) => ({ ...stop, role: 'waypoint' as const })),
+    { ...end, role: 'end' },
+  ];
+  const route: CanonicalRoute = {
+    kind: 'route',
+    id: crypto.randomUUID(),
+    name: String(data['route_name'] ?? `${start.name} → ${end.name}`).trim(),
+    stops,
+    travelMode: mode,
+    routing: {
+      pathType: Number.isFinite(Number(data['method'])) ? Number(data['method']) : undefined,
+      distanceMeters: Number.isFinite(Number(data['route_len'])) ? Number(data['route_len']) : undefined,
+      durationSeconds: Number.isFinite(Number(data['mCostTime'])) ? Number(data['mCostTime']) : undefined,
+      routeType: String(data['route_type'] ?? '') || undefined,
+    },
+    source: {
+      provider: 'amap',
+      crs: 'amap_pixel',
+      original: { crs: 'amap_pixel', lng: Number((data['from_poi'] as AmapLegacyRoutePoi).mx), lat: Number((data['from_poi'] as AmapLegacyRoutePoi).my) },
+      recordId: String(record['id'] ?? data['id'] ?? '') || undefined,
+    },
+    metadata: { createdAt: data['create_time'] == null ? undefined : String(data['create_time']) },
+  };
+  route.identity = routeIdentity(route);
+  return route;
 }
 
 /** 高德收藏 id：基于归一化坐标指纹生成，跨来源稳定（见 buildImportPayload 说明）。 */
@@ -330,7 +395,7 @@ export const amapAdapter: ProviderAdapter = {
     const seenIds = new Set<string>();
 
     raw.records.forEach((record, index) => {
-      const route = normalizeAmapRoute(record);
+      const route = normalizeAmapRoute(record) ?? normalizeAmapLegacyRoute(record);
       if (route) {
         items.push(route);
         return;
@@ -345,7 +410,7 @@ export const amapAdapter: ProviderAdapter = {
           : '';
         skipped.push({
           index,
-          reason: ['102', '103', '104'].includes(type) ? '高德旧版路线暂不支持解析' : '缺少名称或高德像素坐标',
+          reason: ['102', '103', '104'].includes(type) ? '高德路线记录缺少起点、终点或坐标' : '缺少名称或高德像素坐标',
           label: amapRecordLabel(record),
         });
         return;
