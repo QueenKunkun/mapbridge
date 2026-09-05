@@ -13,6 +13,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
+    "check:workflows": "node scripts/check-workflows.mjs --",
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest"
