@@ -202,6 +202,75 @@ export function buildAmapRoutePayload(route: CanonicalRoute, createdAt = Math.fl
   };
 }
 
+export type AmapLegacyRouteMode = 'driving' | 'bus' | 'walking';
+
+const AMAP_LEGACY_ROUTE_TYPES: Record<AmapLegacyRouteMode, { type: number; routeType: string }> = {
+  driving: { type: 102, routeType: '1' },
+  bus: { type: 103, routeType: '2' },
+  walking: { type: 104, routeType: '3' },
+};
+
+function amapLegacyFavoriteId(start: Record<string, unknown>, end: Record<string, unknown>, type: number): string {
+  const value = `${start.mx}-${start.my}-${end.mx}-${end.my}-${type}`;
+  return btoa(value).replace(/[+/=]/g, '');
+}
+
+function buildAmapLegacyPoi(stop: RouteStop): Record<string, unknown> {
+  const gcj02 = fromWgs84(stop.point, 'gcj02');
+  const pixel = gcj02ToAmapPixel(gcj02.lng, gcj02.lat);
+  return {
+    mId: stop.sourceRecordId ?? '',
+    mName: stop.name,
+    mAddr: '',
+    mCityCode: '',
+    mCityName: '',
+    mx: String(pixel.x),
+    my: String(pixel.y),
+    mType: '',
+    mEntranceList: '',
+  };
+}
+
+/** Build the legacy Amap route shape for an explicitly selected mode. */
+export function buildAmapLegacyRoutePayload(
+  route: CanonicalRoute,
+  mode: AmapLegacyRouteMode,
+  createdAt = Math.floor(Date.now() / 1000),
+): Record<string, unknown> {
+  const config = AMAP_LEGACY_ROUTE_TYPES[mode];
+  const points = route.stops.map(buildAmapLegacyPoi);
+  const start = points[0]!;
+  const end = points[points.length - 1]!;
+  const id = amapLegacyFavoriteId(start, end, config.type);
+  const data: Record<string, unknown> = {
+    id,
+    version: '1',
+    route_type: config.routeType,
+    route_name: `${route.stops[0]!.name} 到 ${route.stops[route.stops.length - 1]!.name}`,
+    method: String(route.routing.pathType ?? 0),
+    from_poi: start,
+    to_poi: end,
+    start_x: String(start.mx),
+    start_y: String(start.my),
+    end_x: String(end.mx),
+    end_y: String(end.my),
+    route_len: String(route.routing.distanceMeters ?? 0),
+    mCostTime: String(route.routing.durationSeconds ?? 0),
+    has_mid_poi: route.stops.length > 2 ? 'true' : 'false',
+    create_time: String(createdAt),
+  };
+  if (route.stops.length > 2) data.mid_pois = points.slice(1, -1);
+  if (mode === 'bus') {
+    data.mSectionNum = '0';
+    data.taxi_price = '0';
+    data.expense = '0';
+    data.allfootlength = '0';
+    data.totaldriverlength = '0';
+    data.mDataLength = '0';
+  }
+  return { id, type: config.type, act: 'c', data, ts: createdAt };
+}
+
 export const amapAdapter: ProviderAdapter = {
   id: 'amap',
   name: '高德地图',

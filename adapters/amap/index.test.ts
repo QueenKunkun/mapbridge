@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload } from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
 import { toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
@@ -150,6 +150,41 @@ describe('amap adapter', () => {
       },
     })!;
     expect(() => buildAmapRoutePayload(route)).toThrow(/confirmed ride routeType/);
+  });
+
+  it('builds the verified legacy Amap driving route shape', () => {
+    const route = normalizeBaiduRoute({
+      type: '20',
+      extdata: {
+        sfavnode: { name: 'Start', geoptx: 13448418.38, geopty: 2489245.42, uid: 'start' },
+        efavnode: { name: 'End', geoptx: 13444994.28, geopty: 2490860.06, uid: 'end' },
+        pathname: 'Driving route',
+        pathtype: 1,
+      },
+    })!;
+    const item = buildAmapLegacyRoutePayload(route, 'driving', 1788574307);
+    const data = item.data as Record<string, unknown>;
+    expect(item.type).toBe(102);
+    expect(item.id).toBe(btoa(`${data.start_x}-${data.start_y}-${data.end_x}-${data.end_y}-102`).replace(/[+/=]/g, ''));
+    expect(data).toMatchObject({ version: '1', route_type: '1', method: '1', has_mid_poi: 'false', create_time: '1788574307' });
+    expect(data.from_poi).toMatchObject({ mId: 'start', mName: 'Start' });
+    expect(data.to_poi).toMatchObject({ mId: 'end', mName: 'End' });
+  });
+
+  it('adds the legacy bus-only fields and ordered intermediate points', () => {
+    const route = normalizeAmapRoute({
+      type: 117,
+      data: {
+        startPoi: { name: 'A', lon: 120.1, lat: 30.1 },
+        endPoi: { name: 'C', lon: 120.3, lat: 30.3 },
+        midPois: [{ name: 'B', lon: 120.2, lat: 30.2 }],
+        routeType: '13',
+      },
+    })!;
+    const data = buildAmapLegacyRoutePayload(route, 'bus').data as Record<string, unknown>;
+    expect(data.has_mid_poi).toBe('true');
+    expect(data.mid_pois).toHaveLength(1);
+    expect(data).toMatchObject({ mSectionNum: '0', taxi_price: '0', expense: '0', mDataLength: '0' });
   });
 
   it('normalizes a getFav item (pixel coords)', () => {
