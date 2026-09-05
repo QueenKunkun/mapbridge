@@ -4,20 +4,21 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
-### Fixed
-- Fixed import history to record the number of favorites removed by undo and any undo failures.
-- Fixed undo on newer Amap pages to remove both POI and Route favorites through the SSR sync endpoint.
-- Fixed Amap undo to use the actual SSR `DELETE /ssr/api/cloudSync` favorite deletion API.
-- Fixed import reports to distinguish deleted source records from unrecognized or incomplete records.
-- Fixed undo to delete Amap Route favorites through the SSR route deletion protocol.
-- Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling route types.
-- Fixed Baidu cycling Route import by mapping it to Amap's verified ride favorite payload.
-- Improved KML file import to recognize places nested inside folders.
-- Improved Amap login detection for successful favorites responses without a conventional status field.
+## [0.4.0] - 2026-09-05
 
 ### Added
-- Added extraction and read-only preview support for Amap SSR Route favorites.
-- Added Amap Route import for explicitly recognized driving, bus, walking, and riding modes.
+- Added Amap Route import for recognized driving, bus, walking, and cycling routes.
+- Added Route extraction and read-only previews for Amap SSR favorites.
+
+### Changed
+- Improved import reports with clearer success, duplicate, failure, and post-import total statistics.
+- Improved export and import workflows with clearer labels and less crowded form layouts.
+
+### Fixed
+- Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling routes.
+- Fixed cycling Route migration by mapping it to Amap's verified riding favorite format.
+- Fixed import undo for Amap's newer SSR pages, including accurate partial-failure reporting.
+- Improved Amap login detection and KML folder import behavior.
 
 ## [0.3.0] - 2026-09-04
 
