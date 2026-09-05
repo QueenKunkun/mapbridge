@@ -623,20 +623,26 @@ export default function App() {
           </div>
           <div className="report-section">
             <h3>导入结果</h3>
-            <dl>
-              <dt>成功导入</dt>
-              <dd>{job.report?.imported ?? '—'} 条</dd>
-              <dt>重复跳过</dt>
-              <dd>{job.report?.skippedDuplicates ?? '—'} 条</dd>
-              <dt>导入失败</dt>
-              <dd>{job.report?.failed ?? '—'} 条</dd>
-              {job.report?.targetCount !== undefined && (
-                <>
-                  <dt>目标端收藏</dt>
-                  <dd>{job.report.targetCount} 条（导入后总数）</dd>
-                </>
-              )}
-            </dl>
+            <div className="report-stats" aria-label="导入统计">
+              <div className="report-stat success">
+                <span>成功导入</span>
+                <strong>{job.report?.imported ?? '—'} <small>条</small></strong>
+              </div>
+              <div className="report-stat duplicate">
+                <span>重复跳过</span>
+                <strong>{job.report?.skippedDuplicates ?? '—'} <small>条</small></strong>
+              </div>
+              <div className="report-stat failure">
+                <span>导入失败</span>
+                <strong>{job.report?.failed ?? '—'} <small>条</small></strong>
+              </div>
+            </div>
+            {job.report?.targetCount !== undefined && (
+              <div className="report-target-total">
+                <span>目标地图导入后总数</span>
+                <strong>{job.report.targetCount} 条</strong>
+              </div>
+            )}
           </div>
           {(reportRoutes > 0 || reportSkipped > 0) && (
             <div className="report-section report-excluded">
