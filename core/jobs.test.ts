@@ -31,18 +31,30 @@ describe('core/jobs unified items', () => {
   });
 
   it('persists extraction and file warnings with the job', () => {
-    const job = applyExtractionItems(createJob('baidu', 'amap'), [route], [], 3, ['GPX 中跳过 1 条 Route']);
-    expect(job.warnings).toEqual(['GPX 中跳过 1 条 Route']);
+    const job = applyExtractionItems(
+      createJob('baidu', 'amap'),
+      [route],
+      [],
+      3,
+      ['第 1 条：源地图已标记为删除，已跳过', '第 2 条：缺少名称或坐标'],
+      [
+        { index: 0, reason: '源地图已标记为删除，已跳过' },
+        { index: 1, reason: '缺少名称或坐标' },
+      ],
+    );
+    expect(job.warnings).toEqual(['第 1 条：源地图已标记为删除，已跳过', '第 2 条：缺少名称或坐标']);
     expect(job.rawCount).toBe(3);
+    expect(job.extractionSkipped).toHaveLength(2);
   });
 
   it('hydrates legacy jobs without items or warnings', () => {
     const current = createJob('baidu', 'amap');
-    const { items: _items, warnings: _warnings, rawCount: _rawCount, ...legacy } = { ...current, places: [place] };
+    const { items: _items, warnings: _warnings, extractionSkipped: _extractionSkipped, rawCount: _rawCount, ...legacy } = { ...current, places: [place] };
     const hydrated = hydrateJob(legacy);
     expect(hydrated.items).toHaveLength(1);
     expect(hydrated.items[0]!.kind).toBe('poi');
     expect(hydrated.warnings).toEqual([]);
+    expect(hydrated.extractionSkipped).toEqual([]);
     expect(hydrated.rawCount).toBe(1);
   });
 

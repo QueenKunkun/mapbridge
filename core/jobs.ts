@@ -31,6 +31,11 @@ export interface ImportReport {
   raw?: unknown;
 }
 
+export interface ExtractionSkip {
+  index: number;
+  reason: string;
+}
+
 export interface Job {
   id: string;
   createdAt: string;
@@ -44,6 +49,8 @@ export interface Job {
   items: CanonicalItem[];
   /** 提取或文件解析阶段产生的可恢复提示。 */
   warnings: string[];
+  /** 提取阶段明确跳过的原始记录，供结果分类展示。 */
+  extractionSkipped: ExtractionSkip[];
   /** 提取阶段收到的原始记录数。 */
   rawCount: number;
   /** 目标导入 payload（幂等构建一次，重试复用）。 */
@@ -55,7 +62,8 @@ export interface Job {
   error?: string;
 }
 
-type PersistedJob = Omit<Job, 'items' | 'warnings' | 'rawCount'> & Partial<Pick<Job, 'items' | 'warnings' | 'rawCount'>>;
+type PersistedJob = Omit<Job, 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>
+  & Partial<Pick<Job, 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
 
 /** Fill fields introduced after the first persisted Job format. */
 export function hydrateJob(job: PersistedJob): Job {
@@ -63,6 +71,7 @@ export function hydrateJob(job: PersistedJob): Job {
     ...job,
     items: job.items ?? job.places.map(migratePlaceToPoi),
     warnings: job.warnings ?? [],
+    extractionSkipped: job.extractionSkipped ?? [],
     rawCount: job.rawCount ?? job.places.length,
   };
 }
@@ -79,6 +88,7 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     places: [],
     items: [],
     warnings: [],
+    extractionSkipped: [],
     rawCount: 0,
     progress: { processed: 0, total: 0 },
   };
@@ -88,12 +98,20 @@ export function applyExtraction(job: Job, places: CanonicalPlace[], rawCount: nu
   return applyExtractionItems(job, places.map(migratePlaceToPoi), places, rawCount);
 }
 
-export function applyExtractionItems(job: Job, items: CanonicalItem[], places: CanonicalPlace[], rawCount: number, warnings: string[] = []): Job {
+export function applyExtractionItems(
+  job: Job,
+  items: CanonicalItem[],
+  places: CanonicalPlace[],
+  rawCount: number,
+  warnings: string[] = [],
+  extractionSkipped: ExtractionSkip[] = [],
+): Job {
   return {
     ...job,
     items,
     places,
     warnings,
+    extractionSkipped,
     rawCount,
     status: 'preview',
     progress: { processed: 0, total: places.length },

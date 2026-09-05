@@ -5,6 +5,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Fixed import reports to distinguish deleted source records from unrecognized or incomplete records.
+- Fixed undo to delete Amap Route favorites through the SSR route deletion protocol.
 - Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling route types.
 - Fixed Baidu cycling Route import by mapping it to Amap's verified ride favorite payload.
 - Improved KML file import to recognize places nested inside folders.

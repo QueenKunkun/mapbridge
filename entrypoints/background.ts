@@ -53,7 +53,7 @@ async function applyExtractData(data: RawExtract): Promise<void> {
   }
   log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
   const warnings = result.skipped.map((item) => `第 ${item.index + 1} 条：${item.reason}`);
-  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings));
+  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings, result.skipped));
   await resolvePendingExtract(true);
 }
 

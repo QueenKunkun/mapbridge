@@ -102,7 +102,7 @@ export default function App() {
   const targetCapabilities = job ? getAdapter(job.targetProvider).capabilities : undefined;
   const reportRoutes = job?.items.filter((item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportImportable = job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
-  const reportSkipped = job ? Math.max(job.rawCount - job.items.length, 0) : 0;
+  const reportSkipped = job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ?? 0;
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({ type: 'new-job', source, target });
@@ -643,7 +643,7 @@ export default function App() {
               <h3>未导入项目</h3>
               <ul>
                 {reportRoutes > 0 && <li>{reportRoutes} 条路线（当前目标平台不支持路线导入）</li>}
-                {reportSkipped > 0 && <li>{reportSkipped} 条记录（无法识别或数据不完整）</li>}
+                {reportSkipped > 0 && <li>{reportSkipped} 条记录（无法识别、重复或数据不完整）</li>}
               </ul>
             </div>
           )}
