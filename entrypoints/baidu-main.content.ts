@@ -1,6 +1,7 @@
 import { installResponseCapture, extractRecordsFromJson, parseMaybeJsonp } from '@/utils/capture';
 import { isBaiduFavWriteSuccess } from '@/utils/baidu-fav';
 import { chooseBaiduPoiMatch, chooseBaiduSearchCity } from '@/utils/baidu-poi';
+import { filterDuplicateBaiduImportItems } from '@/core/baidu-import';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -169,8 +170,20 @@ export default defineContentScript({
       }
       const favUrl: string = base;
       const validate = readCookie('validate') ?? '';
-      emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${items.length} 条…` });
-      const results: { ok: boolean; info?: string }[] = [];
+      let currentRecords = capture.getRecords();
+      if (currentRecords.length === 0) {
+        try {
+          const syncUrl = new URL(favUrl);
+          syncUrl.searchParams.set('mode', 'sync');
+          const text = await (await fetch(syncUrl.toString(), { credentials: 'include' })).text();
+          currentRecords = extractRecordsFromJson(parseMaybeJsonp(text));
+        } catch {
+          /* continue without target-side duplicate detection */
+        }
+      }
+      const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items);
+      emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
+      const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(() => ({ ok: true, duplicate: true }));
 
       async function searchBaiduPoi(item: Record<string, unknown>): Promise<Record<string, unknown>> {
         const extdata = item['extdata'] as Record<string, unknown> | undefined;
@@ -209,8 +222,8 @@ export default defineContentScript({
           return item;
         }
       }
-      let processed = 0;
-      for (const it of items) {
+      let processed = deduped.duplicates.length;
+      for (const it of deduped.items) {
         const routeItem = ['20', '21', '22', '23'].includes(String(it['type'] ?? ''));
         const importItem = routeItem ? it : await searchBaiduPoi(it);
         const u = new URL(favUrl);
@@ -247,12 +260,13 @@ export default defineContentScript({
       } catch {
         /* ignore */
       }
-      const imported = results.filter((r) => r.ok).length;
-      const failed = results.length - imported;
+      const imported = results.filter((r) => r.ok && !r.duplicate).length;
+      const duplicates = results.filter((r) => r.duplicate).length;
+      const failed = results.filter((r) => !r.ok).length;
       postEvent({
         mb: BRIDGE_CHANNEL,
         type: 'import-result',
-        data: { provider: 'baidu', done: true, targetCount, raw: { imported, failed, results } },
+        data: { provider: 'baidu', done: true, targetCount, raw: { imported, duplicates, failed, results } },
       });
     }
 

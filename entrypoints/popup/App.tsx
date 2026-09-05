@@ -674,7 +674,7 @@ export default function App() {
             <div><span>已识别项目</span><strong>{job.items.length} 条</strong></div>
             <div><span>可导入项目</span><strong>{reportImportable} 条</strong></div>
           </div>
-          <div className="report-section">
+          {job.status !== 'importing' && <div className="report-section">
             <h3>导入结果</h3>
             <div className="report-stats" aria-label="导入统计">
               <div className="report-stat success">
@@ -696,7 +696,7 @@ export default function App() {
                 <strong>{job.report.targetCount} 条</strong>
               </div>
             )}
-          </div>
+          </div>}
           {(reportRoutes > 0 || reportSkipped > 0) && (
             <div className="report-section report-excluded">
               <h3>未导入项目</h3>

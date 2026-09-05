@@ -430,12 +430,12 @@ export const baiduAdapter: ProviderAdapter = {
   },
 
   summarizeImportResult(result: RawImportResult) {
-    const raw = result.raw as { imported?: number; failed?: number } | undefined;
+    const raw = result.raw as { imported?: number; duplicates?: number; failed?: number } | undefined;
     const imported = raw?.imported ?? (result.done ? 1 : 0);
     const failed = raw?.failed ?? (result.error ? 1 : 0);
     return {
       imported,
-      skippedDuplicates: 0,
+      skippedDuplicates: raw?.duplicates ?? 0,
       failed,
       failedItems: result.error ? [{ placeId: '', error: result.error }] : [],
       targetCount: result.targetCount,
