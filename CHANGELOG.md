@@ -4,17 +4,19 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-05
+
 ### Added
-- Added Amap-to-Baidu Route import for driving, bus, walking, and cycling favorites.
+- Added Route migration from Amap to Baidu for driving, bus, walking, and cycling favorites.
+- Added undo support for imports into Baidu Maps.
+
+### Changed
+- Import progress now shows the current stage, processed count, and total count.
+- Extraction warnings are grouped by reason, with expandable record details and a scrollable warning panel.
 
 ### Fixed
-- Grouped extraction warnings by reason on both the preview and result pages, limited the warning panel height, and added expandable source summaries to identify skipped records.
-- Parsed Amap `type:102/103/104` Route records returned by the current favorites page instead of treating them as unsupported legacy data.
-- Hid incomplete import-result statistics while an import is still running and added target-side duplicate detection for reverse Baidu migrations.
-- Added undo support for imports into Baidu Maps, including post-delete verification.
-- Fixed import progress transitions and repeated reverse migrations by refreshing Baidu favorites before duplicate detection.
-- Added visible import-stage progress with processed/total counts while reading, writing, and verifying.
-- Fixed repeated Baidu imports after POI matching by checking the transformed payload against the refreshed target list as well.
+- Fixed Amap Route extraction for historical Route record formats returned by the current favorites page.
+- Fixed repeated reverse migrations by refreshing the target favorites before duplicate detection and checking the final provider payload.
 
 ## [0.4.0] - 2026-09-05
 
