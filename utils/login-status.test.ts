@@ -5,6 +5,7 @@ describe('readAmapLoginStatus', () => {
   it('recognizes a successful favorites response', () => {
     expect(readAmapLoginStatus({ status: 1 })).toBe(true);
     expect(readAmapLoginStatus({ status: '1' })).toBe(true);
+    expect(readAmapLoginStatus({ status: undefined, data: { items: [] } })).toBe(true);
   });
 
   it('recognizes an unauthorized response', () => {

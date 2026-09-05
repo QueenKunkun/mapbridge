@@ -6,6 +6,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Fixed
 - Improved KML file import to recognize places nested inside folders.
+- Improved Amap login detection for successful favorites responses without a conventional status field.
 
 ## [0.3.0] - 2026-09-04
 

@@ -1,5 +1,6 @@
 import { BRIDGE_CHANNEL, isBridgeEvent } from '@/utils/bridge';
 import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
+import { parseMaybeJsonp } from '@/utils/capture';
 import { readAmapLoginStatus } from '@/utils/login-status';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...args);
@@ -21,7 +22,7 @@ async function detectLoginStatus(): Promise<boolean | undefined> {
       cache: 'no-store',
       headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
     });
-    const status = readAmapLoginStatus(await response.json(), response.status);
+    const status = readAmapLoginStatus(parseMaybeJsonp(await response.text()), response.status);
     if (status !== undefined) return status;
   } catch {
     // Network failures are inconclusive; use the best available DOM signal.
