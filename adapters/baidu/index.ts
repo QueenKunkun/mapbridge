@@ -227,8 +227,9 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
   const detail = record['detail'];
-  if (!detail || typeof detail !== 'object') return null;
-  const data = (detail as Record<string, unknown>)['data'];
+  const data = detail && typeof detail === 'object'
+    ? (detail as Record<string, unknown>)['data']
+    : record;
   if (!data || typeof data !== 'object') return null;
   const routeData = data as Record<string, unknown>;
   if (String(routeData['type'] ?? '') !== '20') return null;

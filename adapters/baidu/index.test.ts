@@ -74,6 +74,26 @@ const routeFavorite = {
   },
 };
 
+const routeAddPayload = {
+  type: '20',
+  plateform: 3,
+  fromapp: '百度地图',
+  extdata: {
+    sfavnode: { cityid: 1, geoptx: 11582672.01, geopty: 3564275.74, uid: 'start-add', name: '起点测试', type: 1 },
+    efavnode: { cityid: 1, geoptx: 11583000.01, geopty: 3564500.74, uid: 'end-add', name: '终点测试', type: 1 },
+    pathname: '自驾路线：起点测试-终点测试',
+    pathtype: 0,
+    plankind: 0,
+    transkind: '',
+    pagenumber: 0,
+    wp: [],
+    curcityid: 1,
+    busidx: 0,
+    type: 1,
+    routeIndex: 0,
+  },
+};
+
 describe('baidu adapter', () => {
   it('declares Route extraction but POI-only provider import', () => {
     expect(baiduAdapter.capabilities.extractKinds).toEqual(['poi', 'route']);
@@ -191,6 +211,14 @@ describe('baidu adapter', () => {
     expect(route!.routing).toMatchObject({ pathType: 1, planKind: 2, transitKind: 'driving' });
     expect(route!.source.recordId).toBe('20_route-1');
     expect(route!.identity).toContain('自驾路线|起点@');
+  });
+
+  it('normalizes the direct type 20 payload used when saving a route', () => {
+    const route = normalizeBaiduRoute(routeAddPayload);
+    expect(route).not.toBeNull();
+    expect(route!.name).toBe('自驾路线：起点测试-终点测试');
+    expect(route!.stops.map((stop) => stop.name)).toEqual(['起点测试', '终点测试']);
+    expect(route!.source.recordId).toBeUndefined();
   });
 
   it('includes confirmed routes in unified extraction items while keeping POI places compatible', () => {
