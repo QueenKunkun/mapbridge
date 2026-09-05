@@ -522,7 +522,7 @@ button.remove {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 560px;
+  height: 420px;
   overflow: hidden;
 }
 
