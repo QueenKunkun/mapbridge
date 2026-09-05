@@ -527,9 +527,14 @@ button.remove {
 }
 
 .preview-panel {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
+}
+
+.preview-actions {
+  flex: none;
 }
 
 .place-table {
@@ -574,9 +579,7 @@ button.remove {
 }
 
 .table-body {
-  overflow-y: auto;
   min-height: 0;
-  max-height: 400px;
 }
 
 .coords {
@@ -597,10 +600,6 @@ button.remove {
   align-items: center;
   font-size: 12px;
   color: #6b7280;
-}
-
-.save-note {
-  font-size: 11px;
 }
 
 .report-meta {

@@ -46,6 +46,7 @@ export default function App() {
   const [undoMsg, setUndoMsg] = useState('');
   const [selectionReady, setSelectionReady] = useState(false);
   const [previewTab, setPreviewTab] = useState<'places' | 'routes'>('places');
+  const [previewPlaces, setPreviewPlaces] = useState<Job['places']>([]);
 
   // 记住上次的选择（来源 / 目标 / 模式）
   useEffect(() => {
@@ -64,6 +65,7 @@ export default function App() {
   useEffect(() => {
     if (step !== 'preview' || !job) return;
     setPreviewTab(job.places.length > 0 ? 'places' : 'routes');
+    setPreviewPlaces(job.places);
   }, [step, job?.id]);
 
   async function refreshDetection(): Promise<void> {
@@ -554,25 +556,20 @@ export default function App() {
           </div>
           <div className="preview-panel">
             {activePreviewTab === 'places' ? (
-              <PlaceTable
-                places={job.places}
-                onSave={savePreview}
-                onNext={async (places) => { await savePreview(places); setStep('import'); }}
-              />
+              <PlaceTable places={previewPlaces} onChange={setPreviewPlaces} />
             ) : (
               <>
-                <p className="hint">Route 会保留在当前任务中；目标平台支持且交通方式明确时，会随任务参与导入。</p>
                 <div className="route-list">
                   {previewRoutes.map((route) => <RouteSummary key={route.id} route={route} />)}
                 </div>
-                <div className="actions">
-                  <NextImportButton
-                    disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && job.places.length === 0}
-                    onClick={() => setStep('import')}
-                  />
-                </div>
               </>
             )}
+          </div>
+          <div className="preview-actions">
+            <NextImportButton
+              disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
+              onClick={async () => { await savePreview(previewPlaces); setStep('import'); }}
+            />
           </div>
         </section>
       )}
@@ -699,33 +696,21 @@ function RouteSummary({ route }: { route: Extract<Job['items'][number], { kind: 
           </li>
         ))}
       </ol>
-      <small>Route 当前只读；目标平台支持且交通方式明确时，会参与导入。</small>
     </article>
   );
 }
 
-function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave: (p: Job['places']) => Promise<void>; onNext: (p: Job['places']) => void | Promise<void> }) {
-  const [rows, setRows] = useState<Job['places']>(places);
+function PlaceTable({ places, onChange }: { places: Job['places']; onChange: (places: Job['places']) => void }) {
   const [filter, setFilter] = useState('');
-  const [saving, setSaving] = useState(false);
 
-  const shown = rows.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
+  const shown = places.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
 
   function update(id: string, patch: Partial<Job['places'][number]>) {
-    setRows((prev) => prev.map((p) => (p.id === id ? updatePreviewPlace(p, patch) : p)));
+    onChange(places.map((p) => (p.id === id ? updatePreviewPlace(p, patch) : p)));
   }
 
   function remove(id: string) {
-    setRows((prev) => prev.filter((p) => p.id !== id));
-  }
-
-  async function save() {
-    setSaving(true);
-    try {
-      await onSave(rows);
-    } finally {
-      setSaving(false);
-    }
+    onChange(places.filter((p) => p.id !== id));
   }
 
   return (
@@ -754,16 +739,9 @@ function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave:
       </div>
       <div className="table-foot">
         <span>
-          共 {rows.length} 条，显示 {shown.length}
+          共 {places.length} 条，显示 {shown.length}
         </span>
-        <div className="actions">
-          <button className="ghost" disabled={saving} onClick={() => void save()}>
-            {saving ? '保存中…' : '保存到当前任务'}
-          </button>
-          <NextImportButton onClick={() => onNext(rows)} />
-        </div>
       </div>
-      <div className="hint save-note">修改会保存到当前任务；点击“下一步”也会自动保存。只有开始导入后，才会写入目标地图。</div>
     </div>
   );
 }
