@@ -34,6 +34,42 @@ function formatSkipIndices(items: Job['extractionSkipped']): string {
   return items.map((item) => item.index + 1).join('、');
 }
 
+function ExtractionWarningPanel({ skips, warnings }: { skips: Job['extractionSkipped']; warnings: string[] }) {
+  const groups = groupExtractionSkips(skips);
+  const otherWarnings = warnings.filter((warning) => skips.length === 0 || !/^第 \d+ 条：/.test(warning));
+  if (groups.length === 0 && otherWarnings.length === 0) return null;
+
+  return (
+    <div className="export-warning">
+      <strong>提取/解析提示</strong>
+      <div className="warning-scroll">
+        {groups.length > 0 && (
+          <ul>
+            {groups.map((group) => (
+              <li key={group.reason}>
+                第 {formatSkipIndices(group.items)} 条：{group.reason}
+                {group.items.some((item) => item.label) && (
+                  <details>
+                    <summary>查看记录</summary>
+                    <ul>
+                      {group.items.map((item) => <li key={item.index}>第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}</li>)}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {otherWarnings.length > 0 && (
+          <ul>
+            {otherWarnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
 }
@@ -117,10 +153,6 @@ export default function App() {
   const reportRoutes = job?.items.filter((item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportImportable = job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportSkipped = job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ?? 0;
-  const skipGroups = job ? groupExtractionSkips(job.extractionSkipped) : [];
-  const otherWarnings = job?.warnings.filter((warning) =>
-    job.extractionSkipped.length === 0 || !/^第 \d+ 条：/.test(warning),
-  ) ?? [];
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({ type: 'new-job', source, target });
@@ -554,7 +586,7 @@ export default function App() {
       {step === 'preview' && job && (
         <section className="migration-content preview">
           <h2>预览与编辑</h2>
-          {job.warnings.length > 0 && <div className="export-warning">⚠ {job.warnings.join('；')}</div>}
+          <ExtractionWarningPanel skips={job.extractionSkipped} warnings={job.warnings} />
           <div className="preview-tabs" role="tablist" aria-label="导入项目类型">
             <button
               className={`preview-tab${activePreviewTab === 'places' ? ' active' : ''}`}
@@ -675,35 +707,7 @@ export default function App() {
             </div>
           )}
           {job.error && <div className="error">{job.error}</div>}
-          {(skipGroups.length > 0 || otherWarnings.length > 0) && (
-            <div className="export-warning">
-              <strong>提取/解析提示</strong>
-              <div className="warning-scroll">
-                {skipGroups.length > 0 && (
-                  <ul>
-                    {skipGroups.map((group) => (
-                      <li key={group.reason}>
-                        第 {formatSkipIndices(group.items)} 条：{group.reason}
-                        {group.items.some((item) => item.label) && (
-                          <details>
-                            <summary>查看对应记录</summary>
-                            <ul>
-                              {group.items.map((item) => <li key={item.index}>第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}</li>)}
-                            </ul>
-                          </details>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {otherWarnings.length > 0 && (
-                  <ul>
-                    {otherWarnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
+          <ExtractionWarningPanel skips={job.extractionSkipped} warnings={job.warnings} />
           {undoMsg && <div className="count ok-tag">✓ {undoMsg}</div>}
           <div className="actions">
             <button className="ghost" onClick={() => void openPage(targetPage)}>
