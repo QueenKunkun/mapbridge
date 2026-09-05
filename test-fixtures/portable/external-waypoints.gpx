@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="External GPS Tool" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 https://www.topografix.com/GPX/1/1/gpx.xsd">
+  <wpt lat="30.637464" lon="104.038905">
+    <ele>512.4</ele>
+    <time>2026-09-05T00:00:00Z</time>
+    <name>External Cafe</name>
+    <desc>Example address</desc>
+    <sym>Cafe</sym>
+  </wpt>
+</gpx>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>External Places</name>
+    <Folder>
+      <name>Favorites</name>
+      <Placemark>
+        <name>External Park</name>
+        <description>Example park</description>
+        <Style><IconStyle><color>ff00ff00</color></IconStyle></Style>
+        <Point><coordinates>104.038905,30.637464,0</coordinates></Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

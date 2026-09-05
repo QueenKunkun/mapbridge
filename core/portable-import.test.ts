@@ -1,9 +1,34 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parsePortableFile, parsePortableImport } from '@/core/portable-import';
 import { parseMapBridgeDocument, serializeItems, serializePlaces } from '@/core/export';
 import type { CanonicalPlace } from '@/core/model';
 
 describe('portable import', () => {
+  it('imports a representative external GPX waypoint without MapBridge extensions', () => {
+    const source = readFileSync(new URL('../test-fixtures/portable/external-waypoints.gpx', import.meta.url), 'utf8');
+    const result = parsePortableImport(source, 'amap');
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      name: 'External Cafe',
+      address: 'Example address',
+      geometry: { point: { lng: 104.038905, lat: 30.637464 } },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('imports a representative external KML Point nested in a Folder', () => {
+    const source = readFileSync(new URL('../test-fixtures/portable/external-folder.kml', import.meta.url), 'utf8');
+    const result = parsePortableImport(source, 'baidu');
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      name: 'External Park',
+      address: 'Example park',
+      geometry: { point: { lng: 104.038905, lat: 30.637464 } },
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
   it('imports GPX waypoints and preserves MapBridge extensions', () => {
     const result = parsePortableImport(`<?xml version="1.0"?><gpx><wpt lat="30" lon="104"><name>Cafe</name><desc>Road</desc><extensions><mapbridge:tags xmlns:mapbridge="https://mapbridge.app/ns/gpx">food;成都</mapbridge:tags><mapbridge:phone xmlns:mapbridge="https://mapbridge.app/ns/gpx">123</mapbridge:phone><mapbridge:identity xmlns:mapbridge="https://mapbridge.app/ns/gpx">cafe|104.00000|30.00000</mapbridge:identity><mapbridge:sourceRecordId xmlns:mapbridge="https://mapbridge.app/ns/gpx">source-1</mapbridge:sourceRecordId></extensions></wpt><rte><name>Route</name><rtept lat="30" lon="104" /></rte></gpx>`, 'amap');
     expect(result.items).toHaveLength(1);

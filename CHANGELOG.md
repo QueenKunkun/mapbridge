@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- Improved KML file import to recognize places nested inside folders.
+
 ## [0.3.0] - 2026-09-04
 
 ### Added

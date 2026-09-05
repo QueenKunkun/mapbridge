@@ -32,6 +32,23 @@ function coordinates(value: unknown): { lng: number; lat: number } | null {
   return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
 }
 
+function collectKmlPlacemarks(value: unknown, result: Record<string, unknown>[] = []): Record<string, unknown>[] {
+  if (Array.isArray(value)) {
+    for (const entry of value) collectKmlPlacemarks(entry, result);
+  } else if (value && typeof value === 'object') {
+    for (const [key, entry] of Object.entries(value)) {
+      if (key === 'Placemark') {
+        for (const placemark of asArray(entry as Record<string, unknown> | Record<string, unknown>[])) {
+          if (placemark && typeof placemark === 'object') result.push(placemark);
+        }
+      } else {
+        collectKmlPlacemarks(entry, result);
+      }
+    }
+  }
+  return result;
+}
+
 function createPoi(
   name: string,
   point: { lng: number; lat: number },
@@ -92,7 +109,7 @@ function parseKml(raw: Record<string, unknown>, provider: ProviderId): PortableI
   const document = kml?.Document as Record<string, unknown> | undefined;
   const items: CanonicalPoi[] = [];
   const warnings: string[] = [];
-  for (const placemark of asArray(document?.Placemark as Record<string, unknown> | Record<string, unknown>[] | undefined)) {
+  for (const placemark of collectKmlPlacemarks(document)) {
     const pointNode = placemark.Point as Record<string, unknown> | undefined;
     const point = coordinates(pointNode?.coordinates);
     if (!point) {
