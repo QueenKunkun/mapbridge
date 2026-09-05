@@ -174,32 +174,28 @@ export default defineContentScript({
     }
 
     async function deleteFavIds(ids: string[]): Promise<{ deleted: number; failed: number; remaining: number }> {
-      const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
+      const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[]; ver?: string } };
       const currentItems = current.data?.items ?? [];
-      const ver = current.data && typeof current.data === 'object' && 'ver' in current.data
-        ? String((current.data as { ver?: unknown }).ver ?? '')
-        : '';
+      const ver = current.data?.ver ?? '';
       const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
       const del = favapi?.deletefav;
       const found = currentItems.filter((item) => item.id && ids.includes(item.id));
       const routeItems = found.filter((item) => [102, 103, 104, 117].includes(Number(item.type)));
       const poiItems = found.filter((item) => ![102, 103, 104, 117].includes(Number(item.type)));
-      const before = currentItems.length;
-      let failed = 0;
       if (routeItems.length > 0) {
         try {
           const response = await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', {
             data: routeItems.map((item) => ({ ...item, act: 'd' })),
             ver,
           }) as { code?: number };
-          if (Number(response.code) !== 1) failed += routeItems.length;
+          log('cloudSync route delete: code=', response.code, 'items=', routeItems.length);
         } catch {
-          failed += routeItems.length;
+          log('cloudSync route delete request failed');
         }
       }
       if (poiItems.length > 0) {
         if (!del) {
-          failed += poiItems.length;
+          log('poi delete unavailable: count=', poiItems.length);
         } else {
           for (const rec of poiItems) {
             await deleteOne(del, rec);
@@ -208,7 +204,12 @@ export default defineContentScript({
       }
       const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
       const remaining = after.data?.items?.length ?? 0;
-      return { deleted: Math.max(0, before - remaining), failed, remaining };
+      const remainingIds = new Set((after.data?.items ?? []).map((item) => item.id).filter(Boolean));
+      const deleted = found.filter((item) => item.id && !remainingIds.has(item.id)).length;
+      const failed = found.length - deleted;
+      const amap = (window as unknown as { amap?: { favesStore?: { update?: (d: unknown) => void } } }).amap;
+      if (amap?.favesStore?.update && after.data) amap.favesStore.update(after.data);
+      return { deleted, failed, remaining };
     }
 
     // ---- 撤销导入：删除本次写入的目标收藏（复用串行删除，避免挂起）----
@@ -220,7 +221,11 @@ export default defineContentScript({
         }
         const res = await deleteFavIds(ids);
         log('delete-fav-ids done', res);
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: { ...res, ok: res.failed === 0 } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'fav-ids-deleted',
+          data: { ...res, ok: res.failed === 0, error: res.failed > 0 ? `撤销后仍有 ${res.failed} 条收藏未删除` : undefined },
+        });
       } catch (e) {
         postEvent({
           mb: BRIDGE_CHANNEL,
