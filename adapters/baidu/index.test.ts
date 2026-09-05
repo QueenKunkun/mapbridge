@@ -233,4 +233,19 @@ describe('baidu adapter', () => {
     (((invalid.detail as Record<string, unknown>).data as Record<string, unknown>).extdata as Record<string, unknown>).efavnode = {};
     expect(normalizeBaiduRoute(invalid)).toBeNull();
   });
+
+  it('normalizes the Baidu type 22 walking route even without transkind', () => {
+    const route = normalizeBaiduRoute({
+      type: '22',
+      extdata: {
+        sfavnode: { name: 'Walk start', geoptx: 13448418.38, geopty: 2489245.42 },
+        efavnode: { name: 'Walk end', geoptx: 13444994.28, geopty: 2490860.06 },
+        pathname: '步行：Walk start-Walk end',
+        transkind: '',
+      },
+    });
+    expect(route).not.toBeNull();
+    expect(route!.travelMode).toBe('walking');
+    expect(route!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
+  });
 });

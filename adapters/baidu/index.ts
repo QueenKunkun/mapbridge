@@ -222,7 +222,7 @@ function readOptionalNumber(record: Record<string, unknown>, key: string): numbe
   return Number.isFinite(value) ? value : undefined;
 }
 
-/** 将百度 type 20 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
+/** 将百度 type 20/22 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
 export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
@@ -232,7 +232,8 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
     : record;
   if (!data || typeof data !== 'object') return null;
   const routeData = data as Record<string, unknown>;
-  if (String(routeData['type'] ?? '') !== '20') return null;
+  const routeType = String(routeData['type'] ?? '');
+  if (routeType !== '20' && routeType !== '22') return null;
   const extdata = routeData['extdata'];
   if (!extdata || typeof extdata !== 'object') return null;
   const ext = extdata as Record<string, unknown>;
@@ -259,7 +260,8 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
     id: randomUUID(),
     name: pathname,
     stops: [toStop(start, 'start'), toStop(end, 'end')],
-    travelMode: routing.transitKind,
+    // Baidu's walking favorite uses type 22 even when transkind is empty.
+    travelMode: routeType === '22' ? 'walking' : routing.transitKind,
     routing,
     source: {
       provider: 'baidu',
