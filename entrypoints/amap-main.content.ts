@@ -180,27 +180,29 @@ export default defineContentScript({
       const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
       const del = favapi?.deletefav;
       const found = currentItems.filter((item) => item.id && ids.includes(item.id));
-      const routeItems = found.filter((item) => [102, 103, 104, 117].includes(Number(item.type)));
-      const poiItems = found.filter((item) => ![102, 103, 104, 117].includes(Number(item.type)));
-      if (routeItems.length > 0) {
+      if (found.length > 0) {
         try {
           const response = await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', {
-            data: routeItems.map((item) => ({ ...item, act: 'd' })),
+            data: found.map((item) => ({ ...item, act: 'd' })),
             ver,
           }) as { code?: number };
-          log('cloudSync route delete: code=', response.code, 'items=', routeItems.length);
+          log('cloudSync delete: code=', response.code, 'items=', found.length);
         } catch {
-          log('cloudSync route delete request failed');
+          log('cloudSync delete request failed');
         }
       }
-      if (poiItems.length > 0) {
-        if (!del) {
-          log('poi delete unavailable: count=', poiItems.length);
-        } else {
-          for (const rec of poiItems) {
-            await deleteOne(del, rec);
-          }
+      // Older Amap pages may not support cloudSync for every favorite type.
+      // Retry only records still present, so a successful cloudSync deletion is
+      // never duplicated through the legacy API.
+      const afterCloudSync = (await getJson('/service/fav/getFav?')) as { data?: { items?: AmapItem[] } };
+      const remainingAfterCloudSync = new Set((afterCloudSync.data?.items ?? []).map((item) => item.id).filter(Boolean));
+      const fallbackItems = found.filter((item) => item.id && remainingAfterCloudSync.has(item.id));
+      if (fallbackItems.length > 0 && del) {
+        for (const rec of fallbackItems) {
+          await deleteOne(del, rec);
         }
+      } else if (fallbackItems.length > 0) {
+        log('legacy delete unavailable: count=', fallbackItems.length);
       }
       const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
       const remaining = after.data?.items?.length ?? 0;
