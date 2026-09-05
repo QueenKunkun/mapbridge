@@ -2,7 +2,7 @@ import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
 import { placeFingerprint, placeIdentity } from '@/core/dedup';
-import type { CanonicalPlace, Collection } from '@/core/model';
+import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
@@ -70,6 +70,75 @@ export function normalizeAmap(raw: unknown): CanonicalPlace | null {
   return place;
 }
 
+interface AmapRoutePoi {
+  name?: string;
+  lon?: number | string;
+  lat?: number | string;
+  x?: number | string;
+  y?: number | string;
+  poiid?: string;
+}
+
+function routePoint(poi: AmapRoutePoi): { point: { lng: number; lat: number }; crs: 'amap_pixel' | 'gcj02'; original: { crs: 'amap_pixel' | 'gcj02'; lng: number; lat: number } } | null {
+  const x = Number(poi.x);
+  const y = Number(poi.y);
+  if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
+    return { point: toWgs84({ crs: 'amap_pixel', lng: x, lat: y }), crs: 'amap_pixel', original: { crs: 'amap_pixel', lng: x, lat: y } };
+  }
+  const lng = Number(poi.lon);
+  const lat = Number(poi.lat);
+  if (Number.isFinite(lng) && Number.isFinite(lat) && (lng !== 0 || lat !== 0)) {
+    return { point: toWgs84({ crs: 'gcj02', lng, lat }), crs: 'gcj02', original: { crs: 'gcj02', lng, lat } };
+  }
+  return null;
+}
+
+/** 高德新版 SSR type 117 路线收藏：保存起点/途经点/终点，不代表真实道路几何。 */
+export function normalizeAmapRoute(raw: unknown): CanonicalRoute | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const data = (record['data'] ?? record) as Record<string, unknown> | undefined;
+  if (!data || String(record['type'] ?? '') !== '117' && String(data['type'] ?? '') !== '117') return null;
+
+  const start = data['startPoi'] as AmapRoutePoi | undefined;
+  const end = data['endPoi'] as AmapRoutePoi | undefined;
+  const middle = Array.isArray(data['midPois']) ? data['midPois'] as AmapRoutePoi[] : [];
+  if (!start || !end) return null;
+  const startPoint = routePoint(start);
+  const endPoint = routePoint(end);
+  if (!startPoint || !endPoint) return null;
+
+  const stops: RouteStop[] = [{ role: 'start', name: String(start.name ?? '').trim(), point: startPoint.point, sourceRecordId: start.poiid }];
+  for (const poi of middle) {
+    const point = routePoint(poi);
+    const name = String(poi.name ?? '').trim();
+    if (point && name) stops.push({ role: 'waypoint', name, point: point.point, sourceRecordId: poi.poiid });
+  }
+  stops.push({ role: 'end', name: String(end.name ?? '').trim(), point: endPoint.point, sourceRecordId: end.poiid });
+  if (stops.some((stop) => !stop.name)) return null;
+
+  return {
+    kind: 'route',
+    id: crypto.randomUUID(),
+    name: String(data['name'] ?? `${start.name ?? '起点'} → ${end.name ?? '终点'}`).trim(),
+    stops,
+    travelMode: String(data['routeType'] ?? '') || undefined,
+    routing: {
+      routeType: String(data['routeType'] ?? '') || undefined,
+      rideType: Number.isFinite(Number(data['rideType'])) ? Number(data['rideType']) : undefined,
+      distanceMeters: Number.isFinite(Number(data['length'])) ? Number(data['length']) : undefined,
+      durationSeconds: Number.isFinite(Number(data['time'])) ? Number(data['time']) : undefined,
+    },
+    source: {
+      provider: 'amap',
+      crs: startPoint.crs,
+      original: startPoint.original,
+      recordId: String(record['id'] ?? data['id'] ?? '') || undefined,
+    },
+    metadata: {},
+  };
+}
+
 /** 高德收藏 id：基于归一化坐标指纹生成，跨来源稳定（见 buildImportPayload 说明）。 */
 export function amapFavoriteId(place: CanonicalPlace): string {
   return md5(placeFingerprint(place));
@@ -82,16 +151,22 @@ export const amapAdapter: ProviderAdapter = {
   extractPage: 'https://ditu.amap.com/faves',
   importPage: 'https://ditu.amap.com/faves',
   crs: 'amap_pixel',
-  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi'], importKinds: ['poi'] },
+  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi'] },
 
   normalize: normalizeAmap,
 
   buildExtractResult(raw: RawExtract) {
+    const items: CanonicalItem[] = [];
     const places: CanonicalPlace[] = [];
     const skipped: { index: number; reason: string }[] = [];
     const seenIds = new Set<string>();
 
     raw.records.forEach((record, index) => {
+      const route = normalizeAmapRoute(record);
+      if (route) {
+        items.push(route);
+        return;
+      }
       const place = normalizeAmap(record);
       if (!place) {
         skipped.push({ index, reason: '缺少名称或高德像素坐标' });
@@ -104,17 +179,18 @@ export const amapAdapter: ProviderAdapter = {
       }
       seenIds.add(dedupKey);
       places.push(place);
+      items.push(migratePlaceToPoi(place));
     });
 
     const collection: Collection = {
       id: randomUUID(),
       name: '高德地图收藏夹',
       provider: 'amap',
-      placeCount: places.length,
+      placeCount: items.length,
       createdAt: new Date().toISOString(),
     };
 
-    return { collection, items: places.map(migratePlaceToPoi), places, skipped, rawCount: raw.records.length };
+    return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
   buildImportPayload(places: CanonicalPlace[]): unknown[] {

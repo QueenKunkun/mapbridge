@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, amapAdapter, amapFavoriteId } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId } from '@/adapters/amap';
 import { md5 } from '@/utils/md5';
 import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace } from '@/core/model';
@@ -50,9 +50,41 @@ const amapGetFav = {
 const PX_TOLERANCE = 8;
 
 describe('amap adapter', () => {
-  it('declares POI-only extraction and import capabilities', () => {
-    expect(amapAdapter.capabilities.extractKinds).toEqual(['poi']);
+  it('declares POI and Route extraction with POI-only provider import', () => {
+    expect(amapAdapter.capabilities.extractKinds).toEqual(['poi', 'route']);
     expect(amapAdapter.capabilities.importKinds).toEqual(['poi']);
+  });
+
+  it('normalizes the SSR type 117 route payload into ordered stops', () => {
+    const route = normalizeAmapRoute({
+      id: 'route-117',
+      type: 117,
+      data: {
+        rideType: 0,
+        startPoi: { name: 'Start', poiid: 'start-1', lon: 120.741393, lat: 21.919339, x: 224249036, y: 117459570 },
+        endPoi: { name: 'End', poiid: '', lon: 120.741353, lat: 21.917311, x: 224249006, y: 117461198 },
+        midPois: [],
+        length: 523,
+        time: 167,
+        routeType: '13',
+      },
+    });
+    expect(route).not.toBeNull();
+    expect(route!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
+    expect(route!.stops[0]!.sourceRecordId).toBe('start-1');
+    expect(route!.routing).toMatchObject({ routeType: '13', rideType: 0, distanceMeters: 523, durationSeconds: 167 });
+    expect(route!.source.recordId).toBe('route-117');
+    expect(route!.source.crs).toBe('amap_pixel');
+  });
+
+  it('includes type 117 routes in items without adding them to POI places', () => {
+    const result = amapAdapter.buildExtractResult({
+      provider: 'amap',
+      records: [{ type: 117, data: { startPoi: { name: 'A', lon: 120.1, lat: 30.1 }, endPoi: { name: 'B', lon: 120.2, lat: 30.2 }, midPois: [], routeType: '13' } }],
+      exhausted: true,
+    });
+    expect(result.items.map((item) => item.kind)).toEqual(['route']);
+    expect(result.places).toHaveLength(0);
   });
 
   it('normalizes a getFav item (pixel coords)', () => {

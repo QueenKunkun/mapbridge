@@ -513,7 +513,7 @@ export default function App() {
               刷新状态
             </button>
           </div>
-          {job.places.length > 0 && (
+          {job.items.length > 0 && (
             <div className="count">
               已提取 <b>{job.items.length}</b> 条，其中可导入 POI <b>{job.places.length}</b> 条
               {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route，但当前仅支持导出，暂不能导入到地图。</div>}
