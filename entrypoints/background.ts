@@ -215,6 +215,8 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
     report.importedIds = detail
       .filter((d) => d.status === 'imported' && d.id)
       .map((d) => d.id as string);
+  } else if (data.raw && typeof data.raw === 'object' && Array.isArray((data.raw as { importedIds?: unknown }).importedIds)) {
+    report.importedIds = (data.raw as { importedIds: unknown[] }).importedIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
   }
   await saveJob(finalizeImport(job, data, report));
 }
@@ -268,7 +270,7 @@ async function handleUndoImport(jobId: string, tabId: number): Promise<BgRespons
       resolve,
       timer: setTimeout(() => {
         log('undo-import timeout');
-        resolve({ ok: false, error: '撤销超时：请确认高德页面已打开并登录' });
+        resolve({ ok: false, error: '撤销超时：请确认目标地图收藏页已打开并登录' });
       }, 600000),
     };
     sendCommandToTab(tabId, { type: 'delete-fav-ids', ids }).catch((e) => {
