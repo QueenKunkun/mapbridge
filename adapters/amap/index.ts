@@ -271,6 +271,24 @@ export function buildAmapLegacyRoutePayload(
   return { id, type: config.type, act: 'c', data, ts: createdAt };
 }
 
+/** Select a verified Amap route shape without inferring an unknown source mode. */
+export function buildAmapRoutePayloadForImport(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
+  const mode = route.travelMode?.toLowerCase();
+  if (mode === '13' || mode === '14' || mode === 'ride' || mode === 'cycling') {
+    return buildAmapRoutePayload(route, createdAt);
+  }
+  if (mode === 'driving' || mode === 'drive' || mode === 'car') {
+    return buildAmapLegacyRoutePayload(route, 'driving', createdAt);
+  }
+  if (mode === 'bus' || mode === 'transit') {
+    return buildAmapLegacyRoutePayload(route, 'bus', createdAt);
+  }
+  if (mode === 'walking' || mode === 'walk' || mode === 'foot') {
+    return buildAmapLegacyRoutePayload(route, 'walking', createdAt);
+  }
+  throw new Error('Amap Route import requires an explicit supported travel mode');
+}
+
 export const amapAdapter: ProviderAdapter = {
   id: 'amap',
   name: '高德地图',

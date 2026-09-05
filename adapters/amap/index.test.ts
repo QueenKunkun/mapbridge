@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload, buildAmapRoutePayloadForImport } from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
 import { toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
@@ -185,6 +185,21 @@ describe('amap adapter', () => {
     expect(data.has_mid_poi).toBe('true');
     expect(data.mid_pois).toHaveLength(1);
     expect(data).toMatchObject({ mSectionNum: '0', taxi_price: '0', expense: '0', mDataLength: '0' });
+  });
+
+  it('dispatches only explicit travel modes to verified Amap payloads', () => {
+    const route = normalizeBaiduRoute({
+      type: '20',
+      extdata: {
+        sfavnode: { name: 'Start', geoptx: 13448418.38, geopty: 2489245.42 },
+        efavnode: { name: 'End', geoptx: 13444994.28, geopty: 2490860.06 },
+        pathname: 'Explicit driving route',
+        transkind: 'driving',
+      },
+    })!;
+    const item = buildAmapRoutePayloadForImport(route, 1788574307);
+    expect(item.type).toBe(102);
+    expect(() => buildAmapRoutePayloadForImport({ ...route, travelMode: undefined })).toThrow(/explicit supported travel mode/);
   });
 
   it('normalizes a getFav item (pixel coords)', () => {
