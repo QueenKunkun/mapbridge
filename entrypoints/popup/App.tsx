@@ -24,6 +24,10 @@ function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
 }
 
+function NextImportButton({ disabled, onClick }: { disabled?: boolean; onClick: () => void | Promise<void> }) {
+  return <button className="primary" disabled={disabled} onClick={() => void onClick()}>下一步：导入 →</button>;
+}
+
 export default function App() {
   const [source, setSource] = useState<ProviderId>('baidu');
   const [target, setTarget] = useState<ProviderId>('amap');
@@ -517,8 +521,8 @@ export default function App() {
           </div>
           {job.items.length > 0 && (
             <div className="count">
-              已提取 <b>{job.items.length}</b> 条，其中可导入 POI <b>{job.places.length}</b> 条
-              {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route，但当前仅支持导出，暂不能导入到地图。</div>}
+              已提取 <b>{job.items.length}</b> 条，其中可导入项目 <b>{job.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length}</b> 条
+              {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route；目标平台支持且交通方式明确时可参与导入。</div>}
             </div>
           )}
         </section>
@@ -548,21 +552,28 @@ export default function App() {
               路线 <span>({previewRoutes.length}条)</span>
             </button>
           </div>
-          {activePreviewTab === 'places' ? (
-            <PlaceTable places={job.places} onSave={savePreview} onNext={() => setStep('import')} />
-          ) : (
-            <>
-              <p className="hint">Route 当前保留在任务中，但不会进入 POI 导入。</p>
-              <div className="route-list">
-                {previewRoutes.map((route) => <RouteSummary key={route.id} route={route} />)}
-              </div>
-              <div className="actions">
-                <button className="ghost" disabled={job.places.length === 0} onClick={() => setStep('import')}>
-                  {job.places.length === 0 ? '没有可导入的地点' : '下一步：导入地点 →'}
-                </button>
-              </div>
-            </>
-          )}
+          <div className="preview-panel">
+            {activePreviewTab === 'places' ? (
+              <PlaceTable
+                places={job.places}
+                onSave={savePreview}
+                onNext={async (places) => { await savePreview(places); setStep('import'); }}
+              />
+            ) : (
+              <>
+                <p className="hint">Route 会保留在当前任务中；目标平台支持且交通方式明确时，会随任务参与导入。</p>
+                <div className="route-list">
+                  {previewRoutes.map((route) => <RouteSummary key={route.id} route={route} />)}
+                </div>
+                <div className="actions">
+                  <NextImportButton
+                    disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && job.places.length === 0}
+                    onClick={() => setStep('import')}
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </section>
       )}
 
@@ -581,13 +592,13 @@ export default function App() {
               </button>
             </>
           )}
-          <div className="count">待导入 {job.places.length} 条</div>
-          {job.items.some((item) => item.kind === 'route') && (
-            <p className="hint warning">另有 {job.items.filter((item) => item.kind === 'route').length} 条 Route 不会导入；如需保留，请使用 GPX/KML 或 MapBridge JSON 导出。</p>
+          <div className="count">待导入 {reportImportable} 条</div>
+          {reportRoutes > 0 && (
+            <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}
           <div className="actions">
-            <button className="primary" disabled={busy || job.places.length === 0} onClick={() => void startImport()}>
-              {busy ? '导入中…' : job.places.length === 0 ? '没有可导入的 POI' : '开始导入'}
+            <button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
+              {busy ? '导入中…' : reportImportable === 0 ? '没有可导入的项目' : '开始导入'}
             </button>
             <button className="ghost" onClick={() => setStep('preview')}>
               返回编辑
@@ -688,12 +699,12 @@ function RouteSummary({ route }: { route: Extract<Job['items'][number], { kind: 
           </li>
         ))}
       </ol>
-      <small>Route 目前只读，暂不参与地图导入。</small>
+      <small>Route 当前只读；目标平台支持且交通方式明确时，会参与导入。</small>
     </article>
   );
 }
 
-function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave: (p: Job['places']) => Promise<void>; onNext: () => void }) {
+function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave: (p: Job['places']) => Promise<void>; onNext: (p: Job['places']) => void | Promise<void> }) {
   const [rows, setRows] = useState<Job['places']>(places);
   const [filter, setFilter] = useState('');
   const [saving, setSaving] = useState(false);
@@ -747,13 +758,12 @@ function PlaceTable({ places, onSave, onNext }: { places: Job['places']; onSave:
         </span>
         <div className="actions">
           <button className="ghost" disabled={saving} onClick={() => void save()}>
-            {saving ? '保存中…' : '保存修改'}
+            {saving ? '保存中…' : '保存到当前任务'}
           </button>
-          <button className="primary" onClick={onNext}>
-            下一步：导入 →
-          </button>
+          <NextImportButton onClick={() => onNext(rows)} />
         </div>
       </div>
+      <div className="hint save-note">修改会保存到当前任务；点击“下一步”也会自动保存。只有开始导入后，才会写入目标地图。</div>
     </div>
   );
 }
