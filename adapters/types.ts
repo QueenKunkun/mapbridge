@@ -79,6 +79,9 @@ export interface ProviderAdapter {
    */
   buildImportPayload(places: CanonicalPlace[]): unknown;
 
+  /** Optional item-aware payload builder for providers that support non-POI imports. */
+  buildImportItemsPayload?(items: CanonicalItem[], places: CanonicalPlace[]): unknown;
+
   /** 将 MAIN world 返回的导入结果规整为统一报告。 */
   summarizeImportResult(result: RawImportResult): ImportReport;
 }

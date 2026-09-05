@@ -296,7 +296,7 @@ export const amapAdapter: ProviderAdapter = {
   extractPage: 'https://ditu.amap.com/faves',
   importPage: 'https://ditu.amap.com/faves',
   crs: 'amap_pixel',
-  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi'] },
+  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi', 'route'] },
 
   normalize: normalizeAmap,
 
@@ -380,6 +380,14 @@ export const amapAdapter: ProviderAdapter = {
           gcj_lat: gcj02.lat,
         },
       });
+    }
+    return payload;
+  },
+
+  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[]): unknown[] {
+    const payload = this.buildImportPayload(places) as unknown[];
+    for (const item of items) {
+      if (item.kind === 'route') payload.push(buildAmapRoutePayloadForImport(item));
     }
     return payload;
   },

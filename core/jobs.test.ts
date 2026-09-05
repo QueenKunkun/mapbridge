@@ -60,9 +60,15 @@ describe('core/jobs unified items', () => {
       imported: 1, skippedDuplicates: 0, failed: 0, failedItems: [], targetCount: 1,
     });
     expect(started.status).toBe('importing');
+    expect(started.progress.total).toBe(1);
     expect(progressing.progress).toMatchObject({ processed: 1, phase: 'verify' });
     expect(done.status).toBe('done');
     expect(done.error).toBeUndefined();
+  });
+
+  it('counts Route items in import progress for Route-only jobs', () => {
+    const job = applyExtractionItems(createJob('baidu', 'amap'), [route], [], 1);
+    expect(startImport(job, []).progress.total).toBe(1);
   });
 
   it('marks a provider import failure as failed', () => {

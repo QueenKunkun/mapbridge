@@ -99,6 +99,13 @@ export default defineContentScript({
       });
     }
 
+    function postJson(url: string, body: Record<string, unknown>): Promise<unknown> {
+      const headers: Record<string, string> = { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' };
+      const csrf = getCsrfToken();
+      if (csrf) headers['x-csrf-token'] = csrf;
+      return fetch(url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(body) }).then((r) => r.json());
+    }
+
     async function runImport(payload: unknown): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
@@ -124,14 +131,30 @@ export default defineContentScript({
       const detail = merge.detail;
       const imported = merge.imported;
       const duplicates = merge.duplicates;
+      const routeFavorites = favorites.filter((item) => [102, 103, 104, 117].includes(Number(item.type)));
+      const poiFavorites = favorites.filter((item) => ![102, 103, 104, 117].includes(Number(item.type)));
+      const importedRouteIds = new Set(
+        detail.filter((item) => item.status === 'imported' && routeFavorites.some((route) => route.id === item.id)).map((item) => item.id),
+      );
+      const importedRoutes = routeFavorites.filter((item) => item.id && importedRouteIds.has(item.id));
+      let poiSyncData: unknown;
 
       emit({ phase: 'sync', processed: imported, total: favorites.length, message: `合并 ${imported} 条，跳过重复 ${duplicates} 条…` });
-      const syncResult = (await postForm('/service/fav/syncFaves?', { data: merge.merged, ver })) as { status?: string | number; data?: unknown };
-      log('syncFaves: status=', syncResult.status);
-      if (String(syncResult.status) !== '1') {
-        throw new Error('高德同步失败：' + JSON.stringify(syncResult).slice(0, 500));
+      if (importedRoutes.length > 0) {
+        const routeSync = (await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', { data: importedRoutes, ver })) as { code?: number };
+        log('cloudSync routes: code=', routeSync.code, 'items=', importedRoutes.length);
+        if (routeSync.code !== 1) throw new Error('高德路线同步失败');
       }
-      if (amap?.favesStore?.update) amap.favesStore.update(syncResult.data);
+      if (poiFavorites.length > 0) {
+        const poiMerge = mergeImportItems(currentItems, poiFavorites);
+        const syncResult = (await postForm('/service/fav/syncFaves?', { data: poiMerge.merged, ver })) as { status?: string | number; data?: unknown };
+        poiSyncData = syncResult.data;
+        log('syncFaves POI: status=', syncResult.status);
+        if (String(syncResult.status) !== '1') {
+          throw new Error('高德地点同步失败：' + JSON.stringify(syncResult).slice(0, 500));
+        }
+      }
+      if (poiSyncData !== undefined && amap?.favesStore?.update) amap.favesStore.update(poiSyncData);
 
       emit({ phase: 'verify', message: '验证结果…' });
       const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };

@@ -52,9 +52,9 @@ const amapGetFav = {
 const PX_TOLERANCE = 8;
 
 describe('amap adapter', () => {
-  it('declares POI and Route extraction with POI-only provider import', () => {
+  it('declares POI and Route extraction and import', () => {
     expect(amapAdapter.capabilities.extractKinds).toEqual(['poi', 'route']);
-    expect(amapAdapter.capabilities.importKinds).toEqual(['poi']);
+    expect(amapAdapter.capabilities.importKinds).toEqual(['poi', 'route']);
   });
 
   it('normalizes the SSR type 117 route payload into ordered stops', () => {
@@ -200,6 +200,21 @@ describe('amap adapter', () => {
     const item = buildAmapRoutePayloadForImport(route, 1788574307);
     expect(item.type).toBe(102);
     expect(() => buildAmapRoutePayloadForImport({ ...route, travelMode: undefined })).toThrow(/explicit supported travel mode/);
+  });
+
+  it('builds item-aware payloads for mixed POI and Route jobs', () => {
+    const route = normalizeAmapRoute({
+      type: 117,
+      data: {
+        startPoi: { name: 'Start', lon: 120.1, lat: 30.1 },
+        endPoi: { name: 'End', lon: 120.2, lat: 30.2 },
+        midPois: [],
+        routeType: '13',
+      },
+    })!;
+    const payload = amapAdapter.buildImportItemsPayload!([route], []) as Array<Record<string, unknown>>;
+    expect(payload).toHaveLength(1);
+    expect((payload[0] as Record<string, unknown>).type).toBe(117);
   });
 
   it('normalizes a getFav item (pixel coords)', () => {

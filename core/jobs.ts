@@ -126,7 +126,7 @@ export function startImport(job: Job, payload: unknown): Job {
     ...job,
     importPayload: payload,
     status: 'importing',
-    progress: { processed: 0, total: job.places.length },
+    progress: { processed: 0, total: job.items.length },
     updatedAt: new Date().toISOString(),
   };
 }

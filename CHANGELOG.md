@@ -10,6 +10,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Added
 - Added extraction and read-only preview support for Amap SSR Route favorites.
+- Added Amap Route import for explicitly recognized driving, bus, walking, and riding modes.
 
 ## [0.3.0] - 2026-09-04
 
