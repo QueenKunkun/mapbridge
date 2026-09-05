@@ -106,6 +106,22 @@ export default defineContentScript({
       return fetch(url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(body) }).then((r) => r.json());
     }
 
+    function deleteCloudFavorite(item: AmapItem, ver: string): Promise<void> {
+      if (!item.id) return Promise.reject(new Error('收藏缺少 id'));
+      const params = new URLSearchParams({ id: item.id, type: String(item.type ?? 101), ver });
+      const headers: Record<string, string> = { Accept: 'application/json, text/plain, */*' };
+      const csrf = getCsrfToken();
+      if (csrf) headers['x-csrf-token'] = csrf;
+      return fetch(`https://amap-pc-ssr.amap.com/ssr/api/cloudSync?${params.toString()}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers,
+      }).then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        await response.json().catch(() => undefined);
+      });
+    }
+
     async function runImport(payload: unknown): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
@@ -181,14 +197,13 @@ export default defineContentScript({
       const del = favapi?.deletefav;
       const found = currentItems.filter((item) => item.id && ids.includes(item.id));
       if (found.length > 0) {
-        try {
-          const response = await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', {
-            data: found.map((item) => ({ ...item, act: 'd' })),
-            ver,
-          }) as { code?: number };
-          log('cloudSync delete: code=', response.code, 'items=', found.length);
-        } catch {
-          log('cloudSync delete request failed');
+        for (const item of found) {
+          try {
+            await deleteCloudFavorite(item, ver);
+            log('cloudSync DELETE sent: type=', item.type);
+          } catch (e) {
+            log('cloudSync DELETE failed: type=', item.type, String(e));
+          }
         }
       }
       // Older Amap pages may not support cloudSync for every favorite type.
