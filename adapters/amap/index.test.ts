@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, buildAmapRoutePayload } from '@/adapters/amap';
+import { normalizeBaiduRoute } from '@/adapters/baidu';
+import { toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
 import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace } from '@/core/model';
@@ -112,6 +114,29 @@ describe('amap adapter', () => {
     expect(data.midPois).toEqual([]);
     expect(Number((data.startPoi as Record<string, unknown>).x)).toBeGreaterThan(0);
     expect(Number((data.startPoi as Record<string, unknown>).y)).toBeGreaterThan(0);
+  });
+
+  it('converts normalized Baidu route stops into Amap coordinates', () => {
+    const route = normalizeBaiduRoute({
+      type: '20',
+      extdata: {
+        sfavnode: { name: 'Baidu start', geoptx: 13448418.38, geopty: 2489245.42, uid: 'start' },
+        efavnode: { name: 'Baidu end', geoptx: 13444994.28, geopty: 2490860.06, uid: 'end' },
+        pathname: 'Baidu route',
+        pathtype: 0,
+        plankind: 0,
+        transkind: '',
+      },
+    });
+    expect(route).not.toBeNull();
+    const item = buildAmapRoutePayload(route!, 1788574307);
+    const data = item.data as Record<string, unknown>;
+    const startPoi = data.startPoi as Record<string, unknown>;
+    const converted = toWgs84({ crs: 'gcj02', lng: Number(startPoi.lon), lat: Number(startPoi.lat) });
+    expect(Math.abs(converted.lng - route!.stops[0]!.point.lng)).toBeLessThan(1e-5);
+    expect(Math.abs(converted.lat - route!.stops[0]!.point.lat)).toBeLessThan(1e-5);
+    expect(startPoi.poiid).toBe('start');
+    expect((data.endPoi as Record<string, unknown>).poiid).toBe('end');
   });
 
   it('normalizes a getFav item (pixel coords)', () => {
