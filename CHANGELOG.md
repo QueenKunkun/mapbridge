@@ -11,6 +11,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Grouped extraction warnings by reason on both the preview and result pages, limited the warning panel height, and added expandable source summaries to identify skipped records.
 - Parsed Amap `type:102/103/104` Route records returned by the current favorites page instead of treating them as unsupported legacy data.
 - Hid incomplete import-result statistics while an import is still running and added target-side duplicate detection for reverse Baidu migrations.
+- Added undo support for imports into Baidu Maps, including post-delete verification.
+- Fixed import progress transitions and repeated reverse migrations by refreshing Baidu favorites before duplicate detection.
 
 ## [0.4.0] - 2026-09-05
 

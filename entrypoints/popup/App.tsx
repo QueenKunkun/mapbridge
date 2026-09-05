@@ -333,6 +333,8 @@ export default function App() {
       }
       const res = await sendBg({ type: 'import', jobId: job.id, tabId });
       if (res.type === 'ok') {
+        // 先在本地切换到明确的导入中状态，避免轮询拿到后台状态前短暂显示旧结果。
+        setJob({ ...job, status: 'importing', report: undefined, error: undefined });
         setStep('report');
         const done = setInterval(async () => {
           const r = await sendBg({ type: 'get-job', id: job.id });

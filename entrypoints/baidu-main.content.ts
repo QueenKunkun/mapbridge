@@ -2,6 +2,7 @@ import { installResponseCapture, extractRecordsFromJson, parseMaybeJsonp } from 
 import { isBaiduFavWriteSuccess } from '@/utils/baidu-fav';
 import { chooseBaiduPoiMatch, chooseBaiduSearchCity } from '@/utils/baidu-poi';
 import { filterDuplicateBaiduImportItems } from '@/core/baidu-import';
+import { baiduImportKey, type BaiduImportRecord } from '@/core/baidu-import';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -59,17 +60,19 @@ export default defineContentScript({
 
     // ---- 开发版工具：备份 + 清空百度收藏（仅 DEV 构建注册）----
     function baiduFavSid(record: unknown): string | undefined {
+      if (!record || typeof record !== 'object') return undefined;
       const r = record as Record<string, unknown>;
-      const at = (obj: unknown, key: string): unknown =>
-        obj && typeof obj === 'object' && key in (obj as Record<string, unknown>)
-          ? (obj as Record<string, unknown>)[key]
-          : undefined;
-      const sid =
-        (at(r, 'sid') as string | undefined) ??
-        (at(at(r, 'detail'), 'data') as string | undefined) ??
-        (at(r, 'sourcedata') as string | undefined) ??
-        (at(r, 'extdata') as string | undefined);
-      return typeof sid === 'string' && sid ? sid : undefined;
+      const detail = r.detail && typeof r.detail === 'object' ? r.detail as Record<string, unknown> : undefined;
+      const data = detail?.data && typeof detail.data === 'object' ? detail.data as Record<string, unknown> : undefined;
+      const id = r.sid ?? r.cid ?? r.id ?? data?.sid ?? data?.cid ?? data?.id;
+      return id == null || id === '' ? undefined : String(id);
+    }
+
+    async function fetchBaiduRecords(baseUrl: string): Promise<unknown[]> {
+      const syncUrl = new URL(baseUrl);
+      syncUrl.searchParams.set('mode', 'sync');
+      const text = await (await fetch(syncUrl.toString(), { credentials: 'include' })).text();
+      return extractRecordsFromJson(parseMaybeJsonp(text));
     }
 
     function readCookie(name: string): string | undefined {
@@ -134,8 +137,8 @@ export default defineContentScript({
         let remaining = -1;
         try {
           const r2 = await fetch(syncUrl.toString(), { method: 'GET', credentials: 'include' });
-          const json = parseMaybeJsonp(await r2.text());
-          remaining = extractRecordsFromJson(json).length;
+            const json = parseMaybeJsonp(await r2.text());
+            remaining = extractRecordsFromJson(json).length;
         } catch {
           /* ignore */
         }
@@ -156,6 +159,35 @@ export default defineContentScript({
       }
     }
 
+    async function runDeleteFavIds(ids: string[]): Promise<void> {
+      log('delete-fav-ids', ids.length);
+      try {
+        if (!location.hostname.includes('map.baidu.com')) throw new Error('请在已登录的百度收藏页执行撤销');
+        const base = capture.lastUrl;
+        if (!base) throw new Error('未捕获到百度收藏列表请求');
+        const deleteUrl = new URL(base);
+        deleteUrl.searchParams.set('mode', 'delete');
+        const body = 'data=' + encodeURIComponent(JSON.stringify(ids.map((sid) => ({ sid, action: 'del' })))) +
+          '&validate=' + encodeURIComponent(readCookie('validate') ?? '');
+        await fetch(deleteUrl.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body,
+          credentials: 'include',
+        });
+        const remainingRecords = await fetchBaiduRecords(base);
+        const remainingIds = new Set(remainingRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
+        const deleted = ids.filter((id) => !remainingIds.has(id)).length;
+        const failed = ids.length - deleted;
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: {
+          deleted, failed, remaining: remainingRecords.length, ok: failed === 0,
+          error: failed > 0 ? `撤销后仍有 ${failed} 条收藏未删除` : undefined,
+        } });
+      } catch (e) {
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: { deleted: 0, failed: ids.length, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) } });
+      }
+    }
+
     async function runImport(payload: unknown): Promise<void> {
       const items = (payload ?? []) as Array<Record<string, unknown>>;
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
@@ -170,18 +202,15 @@ export default defineContentScript({
       }
       const favUrl: string = base;
       const validate = readCookie('validate') ?? '';
-      let currentRecords = capture.getRecords();
-      if (currentRecords.length === 0) {
-        try {
-          const syncUrl = new URL(favUrl);
-          syncUrl.searchParams.set('mode', 'sync');
-          const text = await (await fetch(syncUrl.toString(), { credentials: 'include' })).text();
-          currentRecords = extractRecordsFromJson(parseMaybeJsonp(text));
-        } catch {
-          /* continue without target-side duplicate detection */
-        }
+      let currentRecords: unknown[];
+      try {
+        // 必须每次从服务端读取最新列表；页面捕获缓存不会包含上一次导入刚写入的记录。
+        currentRecords = await fetchBaiduRecords(favUrl);
+      } catch {
+        currentRecords = capture.getRecords();
       }
       const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items);
+      const beforeIds = new Set(currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
       emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
       const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(() => ({ ok: true, duplicate: true }));
 
@@ -252,11 +281,18 @@ export default defineContentScript({
       }
       emit({ phase: 'verify', message: '验证结果…' });
       let targetCount: number | undefined;
+      let importedIds: string[] = [];
       try {
-        const v = new URL(favUrl);
-        v.searchParams.set('mode', 'sync');
-        const txt = await (await fetch(v.toString(), { credentials: 'include' })).text();
-        targetCount = extractRecordsFromJson(parseMaybeJsonp(txt)).length;
+        const afterRecords = await fetchBaiduRecords(favUrl);
+        targetCount = afterRecords.length;
+        const writtenKeys = new Set(deduped.items.map((item) => baiduImportKey(item)).filter((key): key is string => Boolean(key)));
+        importedIds = afterRecords
+          .filter((record) => {
+            const id = baiduFavSid(record);
+            return id && !beforeIds.has(id) && writtenKeys.has(baiduImportKey(record as BaiduImportRecord) ?? '');
+          })
+          .map((record) => baiduFavSid(record))
+          .filter((id): id is string => Boolean(id));
       } catch {
         /* ignore */
       }
@@ -266,7 +302,7 @@ export default defineContentScript({
       postEvent({
         mb: BRIDGE_CHANNEL,
         type: 'import-result',
-        data: { provider: 'baidu', done: true, targetCount, raw: { imported, duplicates, failed, results } },
+        data: { provider: 'baidu', done: true, targetCount, raw: { imported, duplicates, failed, results, importedIds } },
       });
     }
 
@@ -314,6 +350,8 @@ export default defineContentScript({
             data: { provider: 'baidu', done: false, error: String(error?.message ?? error) },
           });
         });
+      } else if (cmd.type === 'delete-fav-ids') {
+        void runDeleteFavIds(Array.isArray(cmd.ids) ? cmd.ids : []);
       } else if (cmd.type === 'ping') {
         log('pong');
         postEvent({ mb: BRIDGE_CHANNEL, type: 'pong' });
