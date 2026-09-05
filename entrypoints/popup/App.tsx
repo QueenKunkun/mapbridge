@@ -93,7 +93,9 @@ export default function App() {
   const canStart = source !== target;
   const previewRoutes = job?.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route') ?? [];
   const activePreviewTab = previewTab === 'routes' && previewRoutes.length === 0 ? 'places' : previewTab;
-  const reportRoutes = job?.items.filter((item) => item.kind === 'route').length ?? 0;
+  const targetCapabilities = job ? getAdapter(job.targetProvider).capabilities : undefined;
+  const reportRoutes = job?.items.filter((item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
+  const reportImportable = job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportSkipped = job ? Math.max(job.rawCount - job.items.length, 0) : 0;
 
   async function newJob(): Promise<Job | undefined> {
@@ -609,7 +611,7 @@ export default function App() {
           <div className="report-overview" aria-label="导入概览">
             <div><span>原始记录</span><strong>{job.rawCount} 条</strong></div>
             <div><span>已识别项目</span><strong>{job.items.length} 条</strong></div>
-            <div><span>可导入地点</span><strong>{job.places.length} 条</strong></div>
+            <div><span>可导入项目</span><strong>{reportImportable} 条</strong></div>
           </div>
           <div className="report-section">
             <h3>导入结果</h3>
