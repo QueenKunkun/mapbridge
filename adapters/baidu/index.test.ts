@@ -248,4 +248,20 @@ describe('baidu adapter', () => {
     expect(route!.travelMode).toBe('walking');
     expect(route!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
   });
+
+  it.each([
+    ['21', 'transit'],
+    ['23', 'cycling'],
+  ])('maps Baidu type %s to %s without using the route name', (type, travelMode) => {
+    const route = normalizeBaiduRoute({
+      type,
+      extdata: {
+        sfavnode: { name: 'Start', geoptx: 13448418.38, geopty: 2489245.42 },
+        efavnode: { name: 'End', geoptx: 13444994.28, geopty: 2490860.06 },
+        pathname: '无关的路线名称',
+        transkind: '',
+      },
+    });
+    expect(route?.travelMode).toBe(travelMode);
+  });
 });

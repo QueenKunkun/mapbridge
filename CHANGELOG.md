@@ -5,7 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
-- Fixed Baidu Route extraction to recognize walking favorites returned as `type:22`.
+- Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling route types.
 - Improved KML file import to recognize places nested inside folders.
 - Improved Amap login detection for successful favorites responses without a conventional status field.
 

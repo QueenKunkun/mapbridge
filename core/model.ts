@@ -102,7 +102,7 @@ export const RouteStop = z.object({
 });
 export type RouteStop = z.infer<typeof RouteStop>;
 
-/** 百度 type 20/22 / 高德 type 117 当前确认能表达的路线收藏：有序 stops，不代表真实道路几何。 */
+/** 百度 type 20/21/22/23 / 高德 type 117 当前确认能表达的路线收藏：有序 stops，不代表真实道路几何。 */
 export const CanonicalRoute = z.object({
   kind: z.literal('route'),
   id: z.string(),

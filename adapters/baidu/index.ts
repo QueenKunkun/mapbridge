@@ -222,7 +222,7 @@ function readOptionalNumber(record: Record<string, unknown>, key: string): numbe
   return Number.isFinite(value) ? value : undefined;
 }
 
-/** 将百度 type 20/22 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
+/** 将百度 type 20/21/22/23 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
 export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
@@ -233,7 +233,7 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!data || typeof data !== 'object') return null;
   const routeData = data as Record<string, unknown>;
   const routeType = String(routeData['type'] ?? '');
-  if (routeType !== '20' && routeType !== '22') return null;
+  if (!['20', '21', '22', '23'].includes(routeType)) return null;
   const extdata = routeData['extdata'];
   if (!extdata || typeof extdata !== 'object') return null;
   const ext = extdata as Record<string, unknown>;
@@ -260,8 +260,8 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
     id: randomUUID(),
     name: pathname,
     stops: [toStop(start, 'start'), toStop(end, 'end')],
-    // Baidu's walking favorite uses type 22 even when transkind is empty.
-    travelMode: routeType === '22' ? 'walking' : routing.transitKind,
+    // Baidu route favorite types identify the mode even when transkind is empty.
+    travelMode: ({ '20': 'driving', '21': 'transit', '22': 'walking', '23': 'cycling' } as Record<string, string>)[routeType] ?? routing.transitKind,
     routing,
     source: {
       provider: 'baidu',
