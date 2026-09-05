@@ -14,13 +14,14 @@ Data stays local: the extension reads and writes favorites using the map site's 
 - **Coordinate conversion** across BD-09 (mercator) → GCJ-02 → WGS-84 so places land correctly on the other map.
 - **Login-state detection**: the popup probes whether a favorites tab is open and logged in, showing a yellow "not logged in" warning when the session is missing (selectors verified against real logged-in/logged-out sessions).
 - **Portable import/export**: import or export POI favorites as GPX 1.1 or KML 2.2; Routes can also be exported as GPX routes or KML line strings. These standard formats may lose some MapBridge fields, so use MapBridge JSON for lossless recovery.
-- **Route migration**: preview recognized Routes and import driving, bus, walking, and cycling Routes between Baidu Maps and Amap.
+- **Route migration**: preview recognized Routes and migrate driving, bus, walking, and cycling Routes in both directions between Baidu Maps and Amap.
+- **Undo imports**: remove the favorites added by the latest import from the report page or job history without touching existing favorites.
 - **Dev tool** (dev build only): one-click backup + wipe of Amap favorites, for resetting test data.
 
 ## How it works
 
 1. An ISOLATED content script bridges the extension to a MAIN-world executor on the map page.
-2. Extraction: the MAIN executor captures the site's own favorites API responses (e.g. `getFav`/`favdata`) and normalizes them to a canonical `CanonicalPlace`.
+2. Extraction: the MAIN executor captures the site's own favorites API responses (e.g. `getFav`/`favdata`) and normalizes them to MapBridge's canonical item model.
 3. Import: it reads the target's current favorites, merges the new places (keyed by `md5(point_x + "+" + point_y + "+" + name)`), and submits a single batch through the site's own sync endpoint.
 
 Everything runs inside the page with the session you're already logged into.
