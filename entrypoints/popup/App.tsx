@@ -676,6 +676,18 @@ export default function App() {
             <div><span>已识别项目</span><strong>{job.items.length} 条</strong></div>
             <div><span>可导入项目</span><strong>{reportImportable} 条</strong></div>
           </div>
+          {job.status === 'importing' && (
+            <div className="import-progress" aria-live="polite">
+              <div className="import-progress-header">
+                <strong>{job.progress.phase === 'read-existing' ? '读取目标收藏' : job.progress.phase === 'verify' ? '验证导入结果' : '写入目标地图'}</strong>
+                <span>{job.progress.processed} / {job.progress.total}</span>
+              </div>
+              <div className="import-progress-track">
+                <div className="import-progress-bar" style={{ width: `${job.progress.total > 0 ? Math.min(100, Math.round((job.progress.processed / job.progress.total) * 100)) : 0}%` }} />
+              </div>
+              <div className="import-progress-message">{job.progress.message ?? '正在处理…'}</div>
+            </div>
+          )}
           {job.status !== 'importing' && <div className="report-section">
             <h3>导入结果</h3>
             <div className="report-stats" aria-label="导入统计">

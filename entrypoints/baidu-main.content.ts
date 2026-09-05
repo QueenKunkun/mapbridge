@@ -202,10 +202,13 @@ export default defineContentScript({
       }
       const favUrl: string = base;
       const validate = readCookie('validate') ?? '';
+      emit({ phase: 'read-existing', processed: 0, total: items.length, message: '读取百度现有收藏…' });
       let currentRecords: unknown[];
       try {
         // 必须每次从服务端读取最新列表；页面捕获缓存不会包含上一次导入刚写入的记录。
-        currentRecords = await fetchBaiduRecords(favUrl);
+        const freshRecords = await fetchBaiduRecords(favUrl);
+        const capturedRecords = capture.getRecords();
+        currentRecords = [...freshRecords, ...capturedRecords];
       } catch {
         currentRecords = capture.getRecords();
       }
@@ -255,6 +258,14 @@ export default defineContentScript({
       for (const it of deduped.items) {
         const routeItem = ['20', '21', '22', '23'].includes(String(it['type'] ?? ''));
         const importItem = routeItem ? it : await searchBaiduPoi(it);
+        const importKey = baiduImportKey(importItem);
+        if (importKey && currentRecords.some((record) => baiduImportKey(record as BaiduImportRecord) === importKey)) {
+          results.push({ ok: true, duplicate: true });
+          processed++;
+          emit({ phase: 'sync', processed, total: items.length, message: `已处理 ${processed}/${items.length}，跳过重复…` });
+          continue;
+        }
+        if (importKey) currentRecords.push(importItem);
         const u = new URL(favUrl);
         u.searchParams.set('mode', 'add');
         u.searchParams.set('type', 'favdata');

@@ -13,6 +13,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Hid incomplete import-result statistics while an import is still running and added target-side duplicate detection for reverse Baidu migrations.
 - Added undo support for imports into Baidu Maps, including post-delete verification.
 - Fixed import progress transitions and repeated reverse migrations by refreshing Baidu favorites before duplicate detection.
+- Added visible import-stage progress with processed/total counts while reading, writing, and verifying.
+- Fixed repeated Baidu imports after POI matching by checking the transformed payload against the refreshed target list as well.
 
 ## [0.4.0] - 2026-09-05
 

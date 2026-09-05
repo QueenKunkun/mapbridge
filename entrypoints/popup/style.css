@@ -549,6 +549,40 @@ button.remove {
   animation: mb-blink 1.2s ease-in-out infinite;
 }
 
+.import-progress {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.import-progress-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #1e3a8a;
+}
+
+.import-progress-track {
+  height: 6px;
+  margin: 8px 0 6px;
+  overflow: hidden;
+  background: #dbeafe;
+  border-radius: 999px;
+}
+
+.import-progress-bar {
+  height: 100%;
+  background: #2563eb;
+  transition: width 0.3s;
+}
+
+.import-progress-message {
+  color: #475569;
+}
+
 @keyframes mb-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
