@@ -89,6 +89,19 @@ describe('amap adapter', () => {
     expect(result.places).toHaveLength(0);
   });
 
+  it('classifies unsupported legacy route records with bounded labels', () => {
+    const result = amapAdapter.buildExtractResult({
+      provider: 'amap',
+      records: [{ id: 'legacy-route-1', type: 104, data: { name: '旧版自驾路线' } }],
+      exhausted: true,
+    });
+    expect(result.skipped).toEqual([{
+      index: 0,
+      reason: '高德旧版路线暂不支持解析',
+      label: 'type:104 · 旧版自驾路线 · ID:legacy-route-1',
+    }]);
+  });
+
   it('builds a deterministic SSR type 117 route payload with converted points', () => {
     const route = normalizeAmapRoute({
       id: 'route-117',

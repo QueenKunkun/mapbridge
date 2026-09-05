@@ -20,6 +20,20 @@ const SELECTABLE_PROVIDERS = PROVIDERS.filter((p) => p.id !== 'tencent');
 type Step = 'setup' | 'extract' | 'preview' | 'import' | 'report';
 type ExportFormat = 'mapbridge' | 'gpx' | 'kml';
 
+function groupExtractionSkips(skips: Job['extractionSkipped']): { reason: string; items: typeof skips }[] {
+  const groups = new Map<string, typeof skips>();
+  for (const skip of skips) {
+    const items = groups.get(skip.reason) ?? [];
+    items.push(skip);
+    groups.set(skip.reason, items);
+  }
+  return Array.from(groups, ([reason, items]) => ({ reason, items }));
+}
+
+function formatSkipIndices(items: Job['extractionSkipped']): string {
+  return items.map((item) => item.index + 1).join('、');
+}
+
 function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
 }
@@ -103,6 +117,10 @@ export default function App() {
   const reportRoutes = job?.items.filter((item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportImportable = job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
   const reportSkipped = job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ?? 0;
+  const skipGroups = job ? groupExtractionSkips(job.extractionSkipped) : [];
+  const otherWarnings = job?.warnings.filter((warning) =>
+    job.extractionSkipped.length === 0 || !/^第 \d+ 条：/.test(warning),
+  ) ?? [];
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({ type: 'new-job', source, target });
@@ -652,17 +670,38 @@ export default function App() {
               <h3>未导入项目</h3>
               <ul>
                 {reportRoutes > 0 && <li>{reportRoutes} 条路线（当前目标平台不支持路线导入）</li>}
-                {reportSkipped > 0 && <li>{reportSkipped} 条记录（无法识别、重复或数据不完整）</li>}
+                {reportSkipped > 0 && <li>{reportSkipped} 条记录（提取阶段未纳入导入）</li>}
               </ul>
             </div>
           )}
           {job.error && <div className="error">{job.error}</div>}
-          {job.warnings.length > 0 && (
+          {(skipGroups.length > 0 || otherWarnings.length > 0) && (
             <div className="export-warning">
               <strong>提取/解析提示</strong>
-              <ul>
-                {job.warnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
-              </ul>
+              <div className="warning-scroll">
+                {skipGroups.length > 0 && (
+                  <ul>
+                    {skipGroups.map((group) => (
+                      <li key={group.reason}>
+                        第 {formatSkipIndices(group.items)} 条：{group.reason}
+                        {group.items.some((item) => item.label) && (
+                          <details>
+                            <summary>查看对应记录</summary>
+                            <ul>
+                              {group.items.map((item) => <li key={item.index}>第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}</li>)}
+                            </ul>
+                          </details>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {otherWarnings.length > 0 && (
+                  <ul>
+                    {otherWarnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
           {undoMsg && <div className="count ok-tag">✓ {undoMsg}</div>}

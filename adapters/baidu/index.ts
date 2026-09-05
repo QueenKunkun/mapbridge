@@ -222,6 +222,19 @@ function readOptionalNumber(record: Record<string, unknown>, key: string): numbe
   return Number.isFinite(value) ? value : undefined;
 }
 
+function baiduRecordLabel(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const record = raw as Record<string, unknown>;
+  const detail = record['detail'] && typeof record['detail'] === 'object' ? record['detail'] as Record<string, unknown> : undefined;
+  const data = detail?.['data'] && typeof detail['data'] === 'object' ? detail['data'] as Record<string, unknown> : record;
+  const ext = data['extdata'] && typeof data['extdata'] === 'object' ? data['extdata'] as Record<string, unknown> : undefined;
+  const type = data['type'];
+  const name = ext?.['pathname'] ?? ext?.['name'] ?? record['name'];
+  const id = record['sid'] ?? record['cid'] ?? data['fid'];
+  const parts = [type != null ? `type:${String(type)}` : '', name ? String(name).trim() : '', id ? `ID:${String(id)}` : ''].filter(Boolean);
+  return parts.join(' · ') || undefined;
+}
+
 /** 将百度 type 20/21/22/23 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
 export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -291,7 +304,7 @@ export const baiduAdapter: ProviderAdapter = {
   buildExtractResult(raw: RawExtract) {
     const items: CanonicalItem[] = [];
     const places: CanonicalPlace[] = [];
-    const skipped: { index: number; reason: string }[] = [];
+    const skipped: { index: number; reason: string; label?: string }[] = [];
     const seenIds = new Set<string>();
 
     raw.records.forEach((record, index) => {
@@ -302,7 +315,7 @@ export const baiduAdapter: ProviderAdapter = {
       const r = record as Record<string, unknown>;
       const detail = r['detail'] as Record<string, unknown> | undefined;
       if (r['action'] === 'del' || detail?.data === false) {
-        skipped.push({ index, reason: '源地图已标记为删除，已跳过' });
+        skipped.push({ index, reason: '源地图已标记为删除，已跳过', label: baiduRecordLabel(record) });
         return;
       }
       const route = normalizeBaiduRoute(record);
@@ -312,12 +325,12 @@ export const baiduAdapter: ProviderAdapter = {
       }
       const place = normalizeBaidu(record);
       if (!place) {
-        skipped.push({ index, reason: '缺少名称或百度墨卡托坐标' });
+        skipped.push({ index, reason: '缺少名称或百度墨卡托坐标', label: baiduRecordLabel(record) });
         return;
       }
       const dedupKey = `${place.name}|${place.wgs84.lng.toFixed(5)}|${place.wgs84.lat.toFixed(5)}`;
       if (seenIds.has(dedupKey)) {
-        skipped.push({ index, reason: '重复收藏' });
+        skipped.push({ index, reason: '重复收藏', label: baiduRecordLabel(record) });
         return;
       }
       seenIds.add(dedupKey);

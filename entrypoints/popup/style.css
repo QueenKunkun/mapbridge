@@ -507,6 +507,30 @@ button.remove {
   font-size: 12px;
 }
 
+.warning-scroll {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.warning-scroll ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.warning-scroll ul + ul {
+  margin-top: 6px;
+}
+
+.warning-scroll details {
+  margin-top: 3px;
+}
+
+.warning-scroll summary {
+  cursor: pointer;
+  color: #92400e;
+}
+
 .hint.warning {
   color: #92400e;
   background: #fffbeb;

@@ -7,6 +7,10 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ### Added
 - Added Amap-to-Baidu Route import for driving, bus, walking, and cycling favorites.
 
+### Fixed
+- Grouped extraction warnings by reason, limited the warning panel height, and added expandable source summaries to identify skipped records.
+- Classified unsupported Amap legacy Route records separately from incomplete POI records in extraction results.
+
 ## [0.4.0] - 2026-09-05
 
 ### Added

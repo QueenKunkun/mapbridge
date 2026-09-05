@@ -164,6 +164,7 @@ export const ExtractResult = z.object({
     z.object({
       index: z.number(),
       reason: z.string(),
+      label: z.string().optional(),
     }),
   ),
   rawCount: z.number(),

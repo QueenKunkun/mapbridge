@@ -69,7 +69,7 @@ export interface ProviderAdapter {
     collection: Collection;
     items: CanonicalItem[];
     places: CanonicalPlace[];
-    skipped: { index: number; reason: string }[];
+    skipped: { index: number; reason: string; label?: string }[];
     rawCount: number;
   };
 

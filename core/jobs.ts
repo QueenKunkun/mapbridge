@@ -38,6 +38,8 @@ export interface ImportReport {
 export interface ExtractionSkip {
   index: number;
   reason: string;
+  /** 可识别的来源摘要，不保存完整 provider payload。 */
+  label?: string;
 }
 
 export interface Job {

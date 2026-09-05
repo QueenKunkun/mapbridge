@@ -38,13 +38,14 @@ describe('core/jobs unified items', () => {
       3,
       ['第 1 条：源地图已标记为删除，已跳过', '第 2 条：缺少名称或坐标'],
       [
-        { index: 0, reason: '源地图已标记为删除，已跳过' },
+        { index: 0, reason: '源地图已标记为删除，已跳过', label: 'type:11 · Deleted' },
         { index: 1, reason: '缺少名称或坐标' },
       ],
     );
     expect(job.warnings).toEqual(['第 1 条：源地图已标记为删除，已跳过', '第 2 条：缺少名称或坐标']);
     expect(job.rawCount).toBe(3);
     expect(job.extractionSkipped).toHaveLength(2);
+    expect(job.extractionSkipped[0]!.label).toBe('type:11 · Deleted');
   });
 
   it('hydrates legacy jobs without items or warnings', () => {

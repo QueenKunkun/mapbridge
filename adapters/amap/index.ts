@@ -93,6 +93,20 @@ function routePoint(poi: AmapRoutePoi): { point: { lng: number; lat: number }; c
   return null;
 }
 
+function amapRecordLabel(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const record = raw as Record<string, unknown>;
+  const data = record['data'] && typeof record['data'] === 'object' ? record['data'] as Record<string, unknown> : record;
+  const type = record['type'] ?? data['type'];
+  const name = data['name'] ?? data['custom_name'] ?? data['route_name'];
+  const start = data['startPoi'] && typeof data['startPoi'] === 'object' ? (data['startPoi'] as Record<string, unknown>)['name'] : undefined;
+  const end = data['endPoi'] && typeof data['endPoi'] === 'object' ? (data['endPoi'] as Record<string, unknown>)['name'] : undefined;
+  const id = record['id'] ?? data['id'];
+  const route = start && end ? `${String(start)} → ${String(end)}` : undefined;
+  const parts = [type != null ? `type:${String(type)}` : '', name ? String(name).trim() : route ?? '', id ? `ID:${String(id)}` : ''].filter(Boolean);
+  return parts.join(' · ') || undefined;
+}
+
 /** 高德新版 SSR type 117 路线收藏：保存起点/途经点/终点，不代表真实道路几何。 */
 export function normalizeAmapRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -312,7 +326,7 @@ export const amapAdapter: ProviderAdapter = {
   buildExtractResult(raw: RawExtract) {
     const items: CanonicalItem[] = [];
     const places: CanonicalPlace[] = [];
-    const skipped: { index: number; reason: string }[] = [];
+    const skipped: { index: number; reason: string; label?: string }[] = [];
     const seenIds = new Set<string>();
 
     raw.records.forEach((record, index) => {
@@ -323,12 +337,22 @@ export const amapAdapter: ProviderAdapter = {
       }
       const place = normalizeAmap(record);
       if (!place) {
-        skipped.push({ index, reason: '缺少名称或高德像素坐标' });
+        const recordData = record && typeof record === 'object' && (record as Record<string, unknown>)['data'] && typeof (record as Record<string, unknown>)['data'] === 'object'
+          ? (record as Record<string, unknown>)['data'] as Record<string, unknown>
+          : undefined;
+        const type = record && typeof record === 'object'
+          ? String((record as Record<string, unknown>)['type'] ?? recordData?.['type'] ?? '')
+          : '';
+        skipped.push({
+          index,
+          reason: ['102', '103', '104'].includes(type) ? '高德旧版路线暂不支持解析' : '缺少名称或高德像素坐标',
+          label: amapRecordLabel(record),
+        });
         return;
       }
       const dedupKey = `${place.name}|${place.wgs84.lng.toFixed(5)}|${place.wgs84.lat.toFixed(5)}`;
       if (seenIds.has(dedupKey)) {
-        skipped.push({ index, reason: '重复收藏' });
+        skipped.push({ index, reason: '重复收藏', label: amapRecordLabel(record) });
         return;
       }
       seenIds.add(dedupKey);

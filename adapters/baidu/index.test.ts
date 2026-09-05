@@ -137,6 +137,7 @@ describe('baidu adapter', () => {
     });
     expect(result.places).toHaveLength(0);
     expect(result.skipped).toHaveLength(2);
+    expect(result.skipped[0]!.label).toBe('无名点');
   });
 
   it('deduplicates identical name+coords', () => {
