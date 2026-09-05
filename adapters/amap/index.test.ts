@@ -202,6 +202,21 @@ describe('amap adapter', () => {
     expect(() => buildAmapRoutePayloadForImport({ ...route, travelMode: undefined })).toThrow(/explicit supported travel mode/);
   });
 
+  it('maps Baidu cycling routes to the verified Amap ride payload', () => {
+    const route = normalizeBaiduRoute({
+      type: '23',
+      extdata: {
+        sfavnode: { name: 'Start', geoptx: 13448418.38, geopty: 2489245.42 },
+        efavnode: { name: 'End', geoptx: 13444994.28, geopty: 2490860.06 },
+        pathname: 'Cycling route',
+      },
+    })!;
+    const item = buildAmapRoutePayloadForImport(route, 1788574307);
+    expect(item.type).toBe(117);
+    expect((item.data as Record<string, unknown>).routeType).toBe('13');
+    expect((item.data as Record<string, unknown>).rideType).toBe(0);
+  });
+
   it('builds item-aware payloads for mixed POI and Route jobs', () => {
     const route = normalizeAmapRoute({
       type: 117,

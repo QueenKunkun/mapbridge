@@ -6,6 +6,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Fixed
 - Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling route types.
+- Fixed Baidu cycling Route import by mapping it to Amap's verified ride favorite payload.
 - Improved KML file import to recognize places nested inside folders.
 - Improved Amap login detection for successful favorites responses without a conventional status field.
 

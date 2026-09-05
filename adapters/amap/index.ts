@@ -274,8 +274,17 @@ export function buildAmapLegacyRoutePayload(
 /** Select a verified Amap route shape without inferring an unknown source mode. */
 export function buildAmapRoutePayloadForImport(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
   const mode = route.travelMode?.toLowerCase();
-  if (mode === '13' || mode === '14' || mode === 'ride' || mode === 'cycling') {
+  if (mode === '13' || mode === '14' || mode === 'ride') {
     return buildAmapRoutePayload(route, createdAt);
+  }
+  if (mode === 'cycling') {
+    // Amap's verified type 117 ride shape uses routeType 13 for the observed
+    // cycling favorite. Keep the provider-specific value out of the canonical model.
+    return buildAmapRoutePayload({
+      ...route,
+      travelMode: '13',
+      routing: { ...route.routing, routeType: '13', rideType: 0 },
+    }, createdAt);
   }
   if (mode === 'driving' || mode === 'drive' || mode === 'car') {
     return buildAmapLegacyRoutePayload(route, 'driving', createdAt);
