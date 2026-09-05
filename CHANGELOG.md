@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Added
+- Added Amap-to-Baidu Route import for driving, bus, walking, and cycling favorites.
+
 ## [0.4.0] - 2026-09-05
 
 ### Added

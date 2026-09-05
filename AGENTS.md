@@ -19,5 +19,5 @@ Conventions for working in this repo. Keep these in mind for every task.
 - Release tags are authoritative; do not infer the last released version from `package.json`.
 
 ## Status / roadmap
-- Supported: baidu → amap extraction & import (verified live). Tencent is **not** supported yet — hidden from the popup provider list (`SELECTABLE_PROVIDERS` filters `tencent`); un-hide when the adapter is done.
+- Supported: Baidu ↔ Amap extraction & import, including recognized Route modes. Tencent is **not** supported yet — hidden from the popup provider list (`SELECTABLE_PROVIDERS` filters `tencent`); un-hide when the adapter is done.
 - Amap clear/backup dev tool lives in options page (dev build only).

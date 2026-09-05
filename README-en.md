@@ -14,6 +14,7 @@ Data stays local: the extension reads and writes favorites using the map site's 
 - **Coordinate conversion** across BD-09 (mercator) → GCJ-02 → WGS-84 so places land correctly on the other map.
 - **Login-state detection**: the popup probes whether a favorites tab is open and logged in, showing a yellow "not logged in" warning when the session is missing (selectors verified against real logged-in/logged-out sessions).
 - **Portable import/export**: import or export POI favorites as GPX 1.1 or KML 2.2; Routes can also be exported as GPX routes or KML line strings. These standard formats may lose some MapBridge fields, so use MapBridge JSON for lossless recovery.
+- **Route migration**: preview recognized Routes and import driving, bus, walking, and cycling Routes between Baidu Maps and Amap.
 - **Dev tool** (dev build only): one-click backup + wipe of Amap favorites, for resetting test data.
 
 ## How it works
@@ -64,7 +65,6 @@ See `docs/01-architecture.md`–`docs/04-user-workflow.md` for design notes (int
 ## Roadmap
 
 - [ ] Tencent Maps adapter (extraction & import)
-- [ ] Route import (after confirming route-favorite APIs on target providers)
 
 ## License
 

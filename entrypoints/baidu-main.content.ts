@@ -211,7 +211,8 @@ export default defineContentScript({
       }
       let processed = 0;
       for (const it of items) {
-        const importItem = await searchBaiduPoi(it);
+        const routeItem = ['20', '21', '22', '23'].includes(String(it['type'] ?? ''));
+        const importItem = routeItem ? it : await searchBaiduPoi(it);
         const u = new URL(favUrl);
         u.searchParams.set('mode', 'add');
         u.searchParams.set('type', 'favdata');

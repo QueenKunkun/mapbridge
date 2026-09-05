@@ -284,7 +284,7 @@ export const baiduAdapter: ProviderAdapter = {
   extractPage: 'https://map.baidu.com/fav/',
   importPage: 'https://map.baidu.com/fav/',
   crs: 'bd09mc',
-  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi'] },
+  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi', 'route'] },
 
   normalize: normalizeBaidu,
 
@@ -358,6 +358,62 @@ export const baiduAdapter: ProviderAdapter = {
         extdata,
       };
     });
+  },
+
+  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[]): unknown[] {
+    const payload = this.buildImportPayload(places) as unknown[];
+    const routeTypes: Record<string, string> = {
+      driving: '20',
+      drive: '20',
+      car: '20',
+      transit: '21',
+      bus: '21',
+      walking: '22',
+      walk: '22',
+      foot: '22',
+      cycling: '23',
+      ride: '23',
+      '13': '23',
+      '14': '23',
+    };
+    for (const item of items) {
+      if (item.kind !== 'route') continue;
+      const type = routeTypes[item.travelMode?.toLowerCase() ?? ''];
+      if (!type) throw new Error('Baidu Route import requires an explicit supported travel mode');
+      const start = item.stops[0]!;
+      const end = item.stops[item.stops.length - 1]!;
+      const point = (stop: typeof start) => {
+        const mc = wgs84ToBd09mc(stop.point.lng, stop.point.lat);
+        return {
+          cityid: 0,
+          geoptx: Number(mc.x.toFixed(2)),
+          geopty: Number(mc.y.toFixed(2)),
+          uid: stop.sourceRecordId ?? '',
+          name: stop.name,
+          type: 1,
+        };
+      };
+      payload.push({
+        type,
+        plateform: 3,
+        fromapp: '百度地图',
+        extdata: {
+          sfavnode: point(start),
+          efavnode: point(end),
+          pathname: item.name,
+          pathtype: item.routing.pathType ?? 0,
+          plankind: item.routing.planKind ?? 0,
+          transkind: item.routing.transitKind ?? '',
+          pagenumber: item.routing.pageNumber ?? 0,
+          wp: item.stops.slice(1, -1).map(point),
+          curcityid: 0,
+          busidx: item.routing.busIndex ?? 0,
+          type: 1,
+          routeIndex: 0,
+        },
+      });
+    }
+    return payload;
   },
 
   summarizeImportResult(result: RawImportResult) {

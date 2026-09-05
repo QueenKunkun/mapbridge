@@ -95,9 +95,9 @@ const routeAddPayload = {
 };
 
 describe('baidu adapter', () => {
-  it('declares Route extraction but POI-only provider import', () => {
+  it('declares Route extraction and import', () => {
     expect(baiduAdapter.capabilities.extractKinds).toEqual(['poi', 'route']);
-    expect(baiduAdapter.capabilities.importKinds).toEqual(['poi']);
+    expect(baiduAdapter.capabilities.importKinds).toEqual(['poi', 'route']);
   });
 
   it('normalizes a share-item record (bd_mercator_x/y fields)', () => {
@@ -211,6 +211,21 @@ describe('baidu adapter', () => {
     expect(route!.routing).toMatchObject({ pathType: 1, planKind: 2, transitKind: 'driving' });
     expect(route!.source.recordId).toBe('20_route-1');
     expect(route!.identity).toContain('自驾路线|起点@');
+  });
+
+  it('builds Baidu route payloads from canonical routes for all supported modes', () => {
+    const sourceRoute = normalizeBaiduRoute(routeFavorite)!;
+    const modes = [
+      ['driving', '20'],
+      ['transit', '21'],
+      ['walking', '22'],
+      ['cycling', '23'],
+    ] as const;
+    const items = modes.map(([travelMode]) => ({ ...sourceRoute, travelMode, name: `${travelMode} route` }));
+    const payload = baiduAdapter.buildImportItemsPayload!(items, []) as Array<Record<string, unknown>>;
+    expect(payload).toHaveLength(4);
+    expect(payload.map((item) => (item as Record<string, unknown>).type)).toEqual(['20', '21', '22', '23']);
+    expect((payload[0] as Record<string, unknown>).extdata).toMatchObject({ pathname: 'driving route', wp: [] });
   });
 
   it('normalizes the direct type 20 payload used when saving a route', () => {
