@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
-import { placeFingerprint, placeIdentity, routeIdentity } from '@/core/dedup';
+import { placeFingerprint, placeIdentity } from '@/core/dedup';
 import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
@@ -144,30 +144,44 @@ export function amapFavoriteId(place: CanonicalPlace): string {
   return md5(placeFingerprint(place));
 }
 
+function amapRidePoint(stop: RouteStop): Record<string, unknown> {
+  const gcj02 = fromWgs84(stop.point, 'gcj02');
+  const pixel = gcj02ToAmapPixel(gcj02.lng, gcj02.lat);
+  return {
+    name: stop.name,
+    poiid: stop.sourceRecordId ?? '',
+    address: '',
+    lon: gcj02.lng,
+    lat: gcj02.lat,
+    x: pixel.x,
+    y: pixel.y,
+    ...(stop.role === 'end' ? { typeCode: '' } : {}),
+  };
+}
+
+/** The SSR type 117 ID scheme used by Amap for ride favorites. */
+export function amapRideFavoriteId(route: CanonicalRoute, rideType: number): string {
+  const start = amapRidePoint(route.stops[0]!);
+  const end = amapRidePoint(route.stops[route.stops.length - 1]!);
+  return md5(`3-${start.x}-${start.y}-${end.x}-${end.y}-${rideType}`);
+}
+
 /**
  * Build the item body accepted by the SSR Route favorite API.
  * This is intentionally separate from the provider import workflow until
  * cross-provider travel-mode mapping and coordinate validation are complete.
  */
 export function buildAmapRoutePayload(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
-  const points = route.stops.map((stop) => {
-    const gcj02 = fromWgs84(stop.point, 'gcj02');
-    const pixel = gcj02ToAmapPixel(gcj02.lng, gcj02.lat);
-    return {
-      name: stop.name,
-      poiid: stop.sourceRecordId ?? '',
-      address: '',
-      lon: gcj02.lng,
-      lat: gcj02.lat,
-      x: pixel.x,
-      y: pixel.y,
-      ...(stop.role === 'end' ? { typeCode: '' } : {}),
-    };
-  });
+  const routeType = route.routing.routeType ?? route.travelMode;
+  if (routeType !== '13' && routeType !== '14') {
+    throw new Error('Amap type 117 payloads require a confirmed ride routeType (13 or 14)');
+  }
+  const rideType = route.routing.rideType ?? (routeType === '14' ? 1 : 0);
+  const points = route.stops.map(amapRidePoint);
   const startPoi = points[0]!;
   const endPoi = points[points.length - 1]!;
   const midPois = points.slice(1, -1);
-  const id = md5(routeIdentity(route));
+  const id = amapRideFavoriteId(route, rideType);
 
   return {
     id,
@@ -175,14 +189,14 @@ export function buildAmapRoutePayload(route: CanonicalRoute, createdAt = Math.fl
     act: 'c',
     data: {
       id,
-      rideType: route.routing.rideType ?? 0,
+      rideType,
       startPoi,
       endPoi,
       midPois,
       createTime: createdAt,
       length: route.routing.distanceMeters ?? 0,
       time: route.routing.durationSeconds ?? 0,
-      routeType: route.routing.routeType ?? route.travelMode ?? '13',
+      routeType,
     },
     ts: createdAt,
   };

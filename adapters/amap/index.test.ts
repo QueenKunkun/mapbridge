@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, buildAmapRoutePayload } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload } from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
 import { toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
@@ -106,7 +106,7 @@ describe('amap adapter', () => {
     const item = buildAmapRoutePayload(route, 1788574307);
     const data = item.data as Record<string, unknown>;
     expect(item.type).toBe(117);
-    expect(item.id).toMatch(/^[a-f0-9]{32}$/);
+    expect(item.id).toBe(amapRideFavoriteId(route, 0));
     expect(item.id).toBe(buildAmapRoutePayload(route, 1788574307).id);
     expect(data).toMatchObject({ id: item.id, rideType: 0, length: 523, time: 167, routeType: '13' });
     expect(data.startPoi).toMatchObject({ name: 'Start', poiid: 'start-1' });
@@ -129,7 +129,8 @@ describe('amap adapter', () => {
       },
     });
     expect(route).not.toBeNull();
-    const item = buildAmapRoutePayload(route!, 1788574307);
+    const rideRoute = { ...route!, travelMode: '13', routing: { ...route!.routing, routeType: '13', rideType: 0 } };
+    const item = buildAmapRoutePayload(rideRoute, 1788574307);
     const data = item.data as Record<string, unknown>;
     const startPoi = data.startPoi as Record<string, unknown>;
     const converted = toWgs84({ crs: 'gcj02', lng: Number(startPoi.lon), lat: Number(startPoi.lat) });
@@ -137,6 +138,18 @@ describe('amap adapter', () => {
     expect(Math.abs(converted.lat - route!.stops[0]!.point.lat)).toBeLessThan(1e-5);
     expect(startPoi.poiid).toBe('start');
     expect((data.endPoi as Record<string, unknown>).poiid).toBe('end');
+  });
+
+  it('does not guess a type 117 payload for an unmapped route', () => {
+    const route = normalizeBaiduRoute({
+      type: '20',
+      extdata: {
+        sfavnode: { name: 'Start', geoptx: 13448418.38, geopty: 2489245.42 },
+        efavnode: { name: 'End', geoptx: 13444994.28, geopty: 2490860.06 },
+        pathname: 'Unmapped route',
+      },
+    })!;
+    expect(() => buildAmapRoutePayload(route)).toThrow(/confirmed ride routeType/);
   });
 
   it('normalizes a getFav item (pixel coords)', () => {
