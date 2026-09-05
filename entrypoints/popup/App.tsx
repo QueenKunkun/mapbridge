@@ -602,48 +602,42 @@ export default function App() {
       {step === 'report' && job && (
         <section className="migration-content report">
           <h2>{job.status === 'done' ? '导入完成 ✅' : job.status === 'failed' ? '导入失败 ❌' : '导入中…'}</h2>
-          <dl>
-            <dt>来源</dt>
-            <dd>{providerName(job.sourceProvider)}</dd>
-            <dt>目标</dt>
-            <dd>{providerName(job.targetProvider)}</dd>
-            <dt>源端记录</dt>
-            <dd>
-              {job.rawCount} 条
-            </dd>
-            <dt>已识别项目</dt>
-            <dd>{job.items.length} 条</dd>
-            <dt>可导入地点</dt>
-            <dd>{job.places.length} 条</dd>
-            <dt>导入结果</dt>
-            <dd>
-              成功 {job.report?.imported ?? '—'} 条 / 重复 {job.report?.skippedDuplicates ?? '—'} 条 / 失败 {job.report?.failed ?? '—'} 条
-            </dd>
-            {reportRoutes > 0 && (
-              <>
-                <dt>未导入 Route</dt>
-                <dd>{reportRoutes} 条（目标平台暂不支持 Route 导入）</dd>
-              </>
-            )}
-            {reportSkipped > 0 && (
-              <>
-                <dt>提取阶段跳过</dt>
-                <dd>{reportSkipped} 条（详见下方提示）</dd>
-              </>
-            )}
-            {job.report?.targetCount !== undefined && (
-              <>
-                <dt>目标端收藏总数</dt>
-                <dd>{job.report.targetCount} 条（导入后）</dd>
-              </>
-            )}
-            {job.error && (
-              <>
-                <dt>错误</dt>
-                <dd className="error">{job.error}</dd>
-              </>
-            )}
-          </dl>
+          <div className="report-meta">
+            <span>来源：{providerName(job.sourceProvider)}</span>
+            <span>目标：{providerName(job.targetProvider)}</span>
+          </div>
+          <div className="report-overview" aria-label="导入概览">
+            <div><span>原始记录</span><strong>{job.rawCount} 条</strong></div>
+            <div><span>已识别项目</span><strong>{job.items.length} 条</strong></div>
+            <div><span>可导入地点</span><strong>{job.places.length} 条</strong></div>
+          </div>
+          <div className="report-section">
+            <h3>导入结果</h3>
+            <dl>
+              <dt>成功导入</dt>
+              <dd>{job.report?.imported ?? '—'} 条</dd>
+              <dt>重复跳过</dt>
+              <dd>{job.report?.skippedDuplicates ?? '—'} 条</dd>
+              <dt>导入失败</dt>
+              <dd>{job.report?.failed ?? '—'} 条</dd>
+              {job.report?.targetCount !== undefined && (
+                <>
+                  <dt>目标端收藏</dt>
+                  <dd>{job.report.targetCount} 条（导入后总数）</dd>
+                </>
+              )}
+            </dl>
+          </div>
+          {(reportRoutes > 0 || reportSkipped > 0) && (
+            <div className="report-section report-excluded">
+              <h3>未导入项目</h3>
+              <ul>
+                {reportRoutes > 0 && <li>{reportRoutes} 条路线（当前目标平台不支持路线导入）</li>}
+                {reportSkipped > 0 && <li>{reportSkipped} 条记录（无法识别或数据不完整）</li>}
+              </ul>
+            </div>
+          )}
+          {job.error && <div className="error">{job.error}</div>}
           {job.warnings.length > 0 && (
             <div className="export-warning">
               <strong>提取/解析提示</strong>
