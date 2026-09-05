@@ -334,7 +334,7 @@ export default function App() {
 
       <nav className="mode-tabs" aria-label="操作模式">
         <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('migrate')}>迁移</button>
-        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('export')}>导出当前地图</button>
+        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('export')}>导出</button>
         <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('import-file')}>从文件导入</button>
       </nav>
 
@@ -425,26 +425,29 @@ export default function App() {
                   <span className="dot ok" />
                   当前页面：<b>{providerName(activeProvider)}</b>（将导出此地图收藏）
                 </div>
-              ) : (
+              ) : null}
+              <div className="export-options">
+                {!activeProvider && (
+                  <label className="field-inline">
+                    选择地图
+                    <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
+                      {SELECTABLE_PROVIDERS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label className="field-inline">
-                  选择地图
-                  <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
-                    {SELECTABLE_PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
+                  导出格式
+                  <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value as ExportFormat)}>
+                    <option value="mapbridge">MapBridge JSON（完整备份）</option>
+                    <option value="gpx">GPX 1.1（通用交换）</option>
+                    <option value="kml">KML 2.2（通用交换）</option>
                   </select>
                 </label>
-              )}
-              <label className="field-inline">
-                导出格式
-                <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value as ExportFormat)}>
-                  <option value="mapbridge">MapBridge JSON（完整备份）</option>
-                  <option value="gpx">GPX 1.1（通用交换）</option>
-                  <option value="kml">KML 2.2（通用交换）</option>
-                </select>
-              </label>
+              </div>
               <p className="hint">MapBridge JSON 可用于完整恢复；GPX/KML 适合在其他地图软件中交换，部分平台字段可能无法保留。</p>
               <button className="primary" disabled={busy} onClick={() => void startExport()}>
                 {busy ? '导出中…' : `导出${activeProvider ? providerName(activeProvider) : '当前地图'}收藏`}
