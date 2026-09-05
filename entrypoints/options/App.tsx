@@ -80,7 +80,7 @@ export default function App() {
     const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
     setUndoingId(null);
     if (res.type === 'undo-result') {
-      setMsg(`已撤销导入 ${res.data.deleted} 条`);
+      setMsg(`已撤销导入 ${res.data.deleted} 条${res.data.failed > 0 ? `，${res.data.failed} 条失败` : ''}`);
       await refresh();
     } else if (res.type === 'error') {
       setMsg(res.message);
@@ -268,7 +268,7 @@ export default function App() {
                     <td>{job.places.length}</td>
                     <td>
                       {job.report
-                        ? `${job.report.imported ?? 0} 成功 / ${job.report.skippedDuplicates ?? 0} 重复 / ${job.report.failed ?? 0} 失败`
+                        ? `${job.report.imported ?? 0} 成功 / ${job.report.skippedDuplicates ?? 0} 重复 / ${job.report.failed ?? 0} 失败${job.report.undoDeleted !== undefined ? ` / 撤销 ${job.report.undoDeleted} 条${job.report.undoFailed ? `（${job.report.undoFailed} 条失败）` : ''}` : ''}`
                         : '—'}
                     </td>
                     <td className="mono">{new Date(job.updatedAt).toLocaleString()}</td>

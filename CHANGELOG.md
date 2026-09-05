@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Fixed import history to record the number of favorites removed by undo and any undo failures.
 - Fixed import reports to distinguish deleted source records from unrecognized or incomplete records.
 - Fixed undo to delete Amap Route favorites through the SSR route deletion protocol.
 - Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling route types.

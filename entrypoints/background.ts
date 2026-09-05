@@ -278,7 +278,15 @@ async function handleUndoImport(jobId: string, tabId: number): Promise<BgRespons
   });
   if (!result.ok) return { type: 'error', message: result.error ?? '撤销失败' };
   const data = result.data as { deleted: number; failed: number; remaining: number; ok: boolean; error?: string };
-  const updated = { ...job, report: { ...job.report, undone: true } };
+  const updated = {
+    ...job,
+    report: {
+      ...job.report,
+      undone: data.failed === 0,
+      undoDeleted: data.deleted,
+      undoFailed: data.failed,
+    },
+  };
   await saveJob(updated);
   return { type: 'undo-result', data };
 }
@@ -318,9 +326,7 @@ export default defineBackground(() => {
         devClearProgress = event.data as { deleted: number; failed: number; total: number; done: number };
       } else if (event.type === 'fav-ids-deleted') {
         if (pendingUndo) {
-          const d = event.data as { ok?: boolean; error?: string };
-          if (d.ok === false) pendingUndo.resolve({ ok: false, error: d.error ?? '撤销失败' });
-          else pendingUndo.resolve({ ok: true, data: event.data });
+          pendingUndo.resolve({ ok: true, data: event.data });
         }
       }
       return undefined;

@@ -27,6 +27,10 @@ export interface ImportReport {
   importedIds?: string[];
   /** 本次导入是否已被撤销。 */
   undone?: boolean;
+  /** 撤销阶段实际删除的目标收藏数。 */
+  undoDeleted?: number;
+  /** 撤销阶段未能删除的目标收藏数。 */
+  undoFailed?: number;
   targetCount?: number;
   raw?: unknown;
 }

@@ -196,8 +196,8 @@ export default function App() {
       const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
       if (res.type === 'undo-result') {
         const data = res.data;
-        setJob({ ...job, report: { ...job.report!, undone: true } });
-        setUndoMsg(`已撤销导入 ${data.deleted} 条`);
+        setJob({ ...job, report: { ...job.report!, undone: data.failed === 0, undoDeleted: data.deleted, undoFailed: data.failed } });
+        setUndoMsg(`已撤销导入 ${data.deleted} 条${data.failed > 0 ? `，${data.failed} 条失败` : ''}`);
       } else if (res.type === 'error') {
         setError(res.message);
       }
