@@ -1,7 +1,7 @@
 import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
-import { placeFingerprint, placeIdentity } from '@/core/dedup';
+import { placeFingerprint, placeIdentity, routeIdentity } from '@/core/dedup';
 import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
@@ -142,6 +142,50 @@ export function normalizeAmapRoute(raw: unknown): CanonicalRoute | null {
 /** 高德收藏 id：基于归一化坐标指纹生成，跨来源稳定（见 buildImportPayload 说明）。 */
 export function amapFavoriteId(place: CanonicalPlace): string {
   return md5(placeFingerprint(place));
+}
+
+/**
+ * Build the item body accepted by the SSR Route favorite API.
+ * This is intentionally separate from the provider import workflow until
+ * cross-provider travel-mode mapping and coordinate validation are complete.
+ */
+export function buildAmapRoutePayload(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
+  const points = route.stops.map((stop) => {
+    const gcj02 = fromWgs84(stop.point, 'gcj02');
+    const pixel = gcj02ToAmapPixel(gcj02.lng, gcj02.lat);
+    return {
+      name: stop.name,
+      poiid: stop.sourceRecordId ?? '',
+      address: '',
+      lon: gcj02.lng,
+      lat: gcj02.lat,
+      x: pixel.x,
+      y: pixel.y,
+      ...(stop.role === 'end' ? { typeCode: '' } : {}),
+    };
+  });
+  const startPoi = points[0]!;
+  const endPoi = points[points.length - 1]!;
+  const midPois = points.slice(1, -1);
+  const id = md5(routeIdentity(route));
+
+  return {
+    id,
+    type: 117,
+    act: 'c',
+    data: {
+      id,
+      rideType: route.routing.rideType ?? 0,
+      startPoi,
+      endPoi,
+      midPois,
+      createTime: createdAt,
+      length: route.routing.distanceMeters ?? 0,
+      time: route.routing.durationSeconds ?? 0,
+      routeType: route.routing.routeType ?? route.travelMode ?? '13',
+    },
+    ts: createdAt,
+  };
 }
 
 export const amapAdapter: ProviderAdapter = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId } from '@/adapters/amap';
+import { normalizeAmap, normalizeAmapRoute, amapAdapter, amapFavoriteId, buildAmapRoutePayload } from '@/adapters/amap';
 import { md5 } from '@/utils/md5';
 import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace } from '@/core/model';
@@ -85,6 +85,33 @@ describe('amap adapter', () => {
     });
     expect(result.items.map((item) => item.kind)).toEqual(['route']);
     expect(result.places).toHaveLength(0);
+  });
+
+  it('builds a deterministic SSR type 117 route payload with converted points', () => {
+    const route = normalizeAmapRoute({
+      id: 'route-117',
+      type: 117,
+      data: {
+        startPoi: { name: 'Start', poiid: 'start-1', lon: 120.741393, lat: 21.919339, x: 224249036, y: 117459570 },
+        endPoi: { name: 'End', poiid: '', lon: 120.741353, lat: 21.917311, x: 224249006, y: 117461198 },
+        midPois: [],
+        routeType: '13',
+        rideType: 0,
+        length: 523,
+        time: 167,
+      },
+    })!;
+    const item = buildAmapRoutePayload(route, 1788574307);
+    const data = item.data as Record<string, unknown>;
+    expect(item.type).toBe(117);
+    expect(item.id).toMatch(/^[a-f0-9]{32}$/);
+    expect(item.id).toBe(buildAmapRoutePayload(route, 1788574307).id);
+    expect(data).toMatchObject({ id: item.id, rideType: 0, length: 523, time: 167, routeType: '13' });
+    expect(data.startPoi).toMatchObject({ name: 'Start', poiid: 'start-1' });
+    expect(data.endPoi).toMatchObject({ name: 'End', typeCode: '' });
+    expect(data.midPois).toEqual([]);
+    expect(Number((data.startPoi as Record<string, unknown>).x)).toBeGreaterThan(0);
+    expect(Number((data.startPoi as Record<string, unknown>).y)).toBeGreaterThan(0);
   });
 
   it('normalizes a getFav item (pixel coords)', () => {
