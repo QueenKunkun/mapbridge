@@ -78,7 +78,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[] },
+  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { amapSyncBatchSize?: number } },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -133,6 +133,7 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
   }
 
   try {
+    const settings = await getSettings();
     const hasRoutes = supportedItems.some((item) => item.kind === 'route');
     if (hasRoutes && !target.buildImportItemsPayload) {
       throw new Error(`${target.name} 暂不支持导入路线`);
@@ -149,7 +150,7 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     }
     const started = startImport(job, payload);
     await saveJob(started);
-    await sendCommandToTab(tabId, { type: 'import', payload });
+    await sendCommandToTab(tabId, { type: 'import', payload, options: { amapSyncBatchSize: settings.amapSyncBatchSize } });
     return { type: 'ok' };
   } catch (e) {
     await saveJob({ ...job, status: 'failed', error: String(e instanceof Error ? e.message : e), updatedAt: now() });

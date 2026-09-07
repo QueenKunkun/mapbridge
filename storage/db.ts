@@ -38,24 +38,41 @@ export interface AppSettings {
   defaultFolder: string;
   /** 是否在导入时跳过与目标已有收藏指纹重复的项。 */
   skipExisting: boolean;
+  /** 高德 POI 每批最多同步条数。 */
+  amapSyncBatchSize: number;
 }
+
+export const AMAP_SYNC_BATCH_SIZE_MIN = 1;
+export const AMAP_SYNC_BATCH_SIZE_MAX = 200;
+export const AMAP_SYNC_BATCH_SIZE_DEFAULT = 50;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   importDelayMs: 500,
   retryCount: 2,
   defaultFolder: '',
   skipExisting: true,
+  amapSyncBatchSize: AMAP_SYNC_BATCH_SIZE_DEFAULT,
 };
 
 const SETTINGS_KEY = 'settings';
 
 export async function getSettings(): Promise<AppSettings> {
   const stored = await get(SETTINGS_KEY, store);
-  return { ...DEFAULT_SETTINGS, ...(stored ?? {}) } as AppSettings;
+  return normalizeSettings({ ...DEFAULT_SETTINGS, ...(stored ?? {}) } as AppSettings);
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
-  await set(SETTINGS_KEY, settings, store);
+  await set(SETTINGS_KEY, normalizeSettings(settings), store);
+}
+
+function normalizeSettings(settings: AppSettings): AppSettings {
+  const value = Number(settings.amapSyncBatchSize);
+  return {
+    ...settings,
+    amapSyncBatchSize: Number.isFinite(value)
+      ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
+      : AMAP_SYNC_BATCH_SIZE_DEFAULT,
+  };
 }
 
 export type UiMode = 'migrate' | 'export' | 'import-file';

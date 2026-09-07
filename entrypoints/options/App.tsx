@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
-import { DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
+import { AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
 import SettingsBlock from '@/components/SettingsBlock/SettingsBlock';
@@ -212,6 +212,18 @@ export default function App() {
                 value={settings.retryCount}
                 onChange={(e) => setSettings({ ...settings, retryCount: Number(e.target.value) || 0 })}
               />
+            </label>
+            <label className="field">
+              <span>高德地点每批数量</span>
+              <input
+                type="number"
+                min={AMAP_SYNC_BATCH_SIZE_MIN}
+                max={AMAP_SYNC_BATCH_SIZE_MAX}
+                step={1}
+                value={settings.amapSyncBatchSize}
+                onChange={(e) => setSettings({ ...settings, amapSyncBatchSize: Number(e.target.value) || AMAP_SYNC_BATCH_SIZE_MIN })}
+              />
+              <small>范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条；仍受高德接口参数上限约束。</small>
             </label>
             <label className="field">
               <span>默认目标收藏夹名</span>

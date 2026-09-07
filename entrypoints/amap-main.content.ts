@@ -123,7 +123,7 @@ export default defineContentScript({
       });
     }
 
-    async function runImport(payload: unknown): Promise<void> {
+    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number }): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -168,9 +168,9 @@ export default defineContentScript({
         const newPoiItems = poiFavorites
           .filter((item) => item.id && newPoiIds.has(item.id))
           .map((item) => ({ id: item.id!, type: item.type || 101, act: 'c', data: item.data! }));
-        // Development builds intentionally use three items per batch so the
-        // multi-batch path can be smoke-tested with a small fixture.
-        const batches = batchAmapSyncItems(newPoiItems, 700, import.meta.env.DEV ? 3 : Number.POSITIVE_INFINITY);
+        const configuredBatchSize = Number(options?.amapSyncBatchSize);
+        const batchSize = Number.isFinite(configuredBatchSize) ? Math.min(200, Math.max(1, Math.floor(configuredBatchSize))) : 50;
+        const batches = batchAmapSyncItems(newPoiItems, 700, batchSize);
         let processed = 0;
         for (let index = 0; index < batches.length; index++) {
           const syncResult = (await postForm('/service/fav/syncFaves?', { data: batches[index], ver })) as { status?: string | number; ver?: string; data?: unknown };
@@ -389,7 +389,7 @@ export default defineContentScript({
         });
       } else if (cmd.type === 'import') {
         log('recv import command');
-        runImport(cmd.payload)
+        runImport(cmd.payload, cmd.options)
           .catch((error) => {
             postEvent({
               mb: BRIDGE_CHANNEL,

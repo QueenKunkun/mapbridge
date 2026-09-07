@@ -9,6 +9,8 @@ export interface BridgeCommand {
   ids?: string[];
   /** import 时为 provider 特有 payload。 */
   payload?: unknown;
+  /** import 时的可选 provider 参数。 */
+  options?: { amapSyncBatchSize?: number };
 }
 
 export interface BridgeReply {

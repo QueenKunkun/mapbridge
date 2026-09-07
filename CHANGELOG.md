@@ -7,6 +7,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ### Fixed
 - Avoided large Amap import requests by sending only new places in parameter-limited batches.
 
+### Changed
+- Added a configurable maximum number of Amap POIs per sync batch, with a safe upper bound.
+
 ## [0.5.0] - 2026-09-05
 
 ### Added
