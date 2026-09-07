@@ -1,4 +1,4 @@
-import type { CanonicalPlace, ProviderId } from '@/core/model';
+import type { CanonicalItem, CanonicalPlace, ProviderId } from '@/core/model';
 import type { Job } from '@/core/jobs';
 import type { AppSettings } from '@/storage/db';
 import type { BridgeCommand, BridgeEvent } from './bridge';
@@ -13,7 +13,7 @@ export type BgRequest =
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[] }
   | { type: 'import'; jobId: string; tabId: number }
-  | { type: 'import-file'; target: ProviderId; places: CanonicalPlace[]; warnings?: string[] }
+  | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[] }
   | { type: 'get-settings' }
   | { type: 'save-settings'; settings: AppSettings }
   | { type: 'open-tab'; url: string }

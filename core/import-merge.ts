@@ -34,14 +34,18 @@ export interface ImportMergeResult {
   failed: number;
 }
 
+export type ImportMergeKey = (item: ImportMergeInputItem) => string | undefined;
+
 export function mergeImportItems(
   currentItems: ImportMergeInputItem[],
   payloadItems: ImportMergeInputItem[],
+  getKey: ImportMergeKey = (item) => item.id,
 ): ImportMergeResult {
   const merged = new Map<string, ImportMergeItem>();
   for (const item of currentItems) {
-    if (item?.id && item.data) {
-      merged.set(item.id, { id: item.id, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
+    const key = getKey(item);
+    if (key && item.data) {
+      merged.set(key, { id: item.id ?? key, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
     }
   }
 
@@ -51,17 +55,18 @@ export function mergeImportItems(
   let failed = 0;
 
   for (const item of payloadItems) {
-    if (!item.id || !item.data) {
+    const key = getKey(item);
+    if (!item.id || !item.data || !key) {
       detail.push({ id: item.id ?? '', status: 'failed', error: '缺少 id/data' });
       failed += 1;
       continue;
     }
-    if (merged.has(item.id)) {
+    if (merged.has(key)) {
       duplicates += 1;
       detail.push({ id: item.id, status: 'duplicate' });
       continue;
     }
-    merged.set(item.id, { id: item.id, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
+    merged.set(key, { id: item.id, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
     imported += 1;
     detail.push({ id: item.id, status: 'imported' });
   }

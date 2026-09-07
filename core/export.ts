@@ -81,7 +81,7 @@ export function parseMapBridgeDocument(text: string): MapBridgeDocument {
   return result.data;
 }
 
-/** 解析 MapBridge 导出文件；逐条用 schema 校验，返回合法记录（跳过非法项但至少需 1 条）。 */
+/** 解析 MapBridge 导出文件；保留 v2 中所有受支持的项目类型。 */
 export function parsePlacesFile(text: string): PlacesExport {
   let raw: unknown;
   try {
@@ -112,18 +112,14 @@ export function parsePlacesFile(text: string): PlacesExport {
     const document = parseMapBridgeDocument(text);
     for (let i = 0; i < document.items.length; i++) {
       const item = document.items[i]!;
-      if (item.kind !== 'poi') {
-        errors.push(`第 ${i + 1} 条：项目类型 ${item.kind} 当前不支持 provider 导入，已跳过`);
-        continue;
-      }
       const r = CanonicalItemSchema.safeParse(item);
-      if (r.success && r.data.kind === 'poi') {
+      if (r.success) {
         items.push(r.data);
-        valid.push(migratePoiToPlace(r.data));
+        if (r.data.kind === 'poi') valid.push(migratePoiToPlace(r.data));
       } else errors.push(`第 ${i + 1} 条：${r.error?.issues[0]?.message ?? '字段缺失'}`);
     }
   }
-  if (valid.length === 0) {
+  if (items.length === 0) {
     throw new Error('没有有效的收藏记录：' + errors.slice(0, 3).join('；'));
   }
   return {

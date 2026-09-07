@@ -87,7 +87,10 @@ describe('core/export', () => {
     expect(parsed.items[0]!.kind).toBe('route');
     const parsedPlaces = parsePlacesFile(serializeItems([migratePlaceToPoi(place), route], 'baidu'));
     expect(parsedPlaces.places).toHaveLength(1);
-    expect(parsedPlaces.warnings).toEqual(['第 2 条：项目类型 route 当前不支持 provider 导入，已跳过']);
-    expect(() => parsePlacesFile(serializeItems([route], 'baidu'))).toThrow(/没有有效的收藏记录/);
+    expect(parsedPlaces.items.map((item) => item.kind)).toEqual(['poi', 'route']);
+    expect(parsedPlaces.warnings).toEqual([]);
+    const routeOnly = parsePlacesFile(serializeItems([route], 'baidu'));
+    expect(routeOnly.places).toEqual([]);
+    expect(routeOnly.items).toHaveLength(1);
   });
 });

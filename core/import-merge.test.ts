@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeImportItems } from '@/core/import-merge';
+import { mergeImportItems, type ImportMergeInputItem } from '@/core/import-merge';
 
 describe('mergeImportItems', () => {
   it('imports new items and reports them as imported', () => {
@@ -57,5 +57,16 @@ describe('mergeImportItems', () => {
     expect(result.imported).toBe(1);
     expect(result.duplicates).toBe(1);
     expect(result.merged).toHaveLength(1);
+  });
+
+  it('supports semantic keys when provider ids are not stable', () => {
+    const key = (item: ImportMergeInputItem) => String(item.data?.name ?? item.id ?? '');
+    const result = mergeImportItems(
+      [{ id: 'native-id', type: 101, data: { name: 'Same place' } }],
+      [{ id: 'rebuilt-id', type: 101, data: { name: 'Same place' } }],
+      key,
+    );
+    expect(result.imported).toBe(0);
+    expect(result.duplicates).toBe(1);
   });
 });

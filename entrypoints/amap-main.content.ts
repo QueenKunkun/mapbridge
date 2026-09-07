@@ -20,6 +20,41 @@ interface AmapItem {
   data?: Record<string, unknown>;
 }
 
+function normalizeAmapName(value: unknown): string {
+  return String(value ?? '').replace(/\s+/g, '').toLowerCase();
+}
+
+function coordinateKey(value: unknown): string {
+  const number = Number(value);
+  return Number.isFinite(number) ? String(Math.round(number)) : '';
+}
+
+/** Semantic key for old native Amap favorites whose id differs from a rebuilt payload id. */
+function amapImportKey(item: AmapItem): string | undefined {
+  const data = item.data;
+  if (!data) return item.id;
+  const type = Number(item.type ?? data['type']);
+  if ([102, 103, 104, 117].includes(type)) {
+    const start = data['startPoi'] as Record<string, unknown> | undefined;
+    const end = data['endPoi'] as Record<string, unknown> | undefined;
+    const legacyStart = data['from_poi'] as Record<string, unknown> | undefined;
+    const legacyEnd = data['to_poi'] as Record<string, unknown> | undefined;
+    const from = start ?? legacyStart;
+    const to = end ?? legacyEnd;
+    if (!from || !to) return item.id;
+    const startX = from['x'] ?? from['mx'] ?? from['lon'];
+    const startY = from['y'] ?? from['my'] ?? from['lat'];
+    const endX = to['x'] ?? to['mx'] ?? to['lon'];
+    const endY = to['y'] ?? to['my'] ?? to['lat'];
+    const rideType = type === 117 ? String(data['rideType'] ?? '') : '';
+    return `route|${type}|${rideType}|${coordinateKey(startX)}|${coordinateKey(startY)}|${coordinateKey(endX)}|${coordinateKey(endY)}`;
+  }
+  const name = normalizeAmapName(data['custom_name'] ?? data['name']);
+  const x = coordinateKey(data['point_x']);
+  const y = coordinateKey(data['point_y']);
+  return name && x && y ? `poi|${name}|${x}|${y}` : item.id;
+}
+
 /**
  * 高德收藏页 MAIN world 执行器。
  * - 提取：拦截 /service/fav/getFav 响应。
@@ -144,7 +179,7 @@ export default defineContentScript({
       const currentItems = current.data?.items ?? [];
       let ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
 
-      const merge = mergeImportItems(currentItems, favorites);
+      const merge = mergeImportItems(currentItems, favorites, amapImportKey);
       const detail = merge.detail;
       const imported = merge.imported;
       const duplicates = merge.duplicates;
@@ -163,7 +198,7 @@ export default defineContentScript({
         if (routeSync.code !== 1) throw new Error('高德路线同步失败');
       }
       if (poiFavorites.length > 0) {
-        const poiMerge = mergeImportItems(currentItems, poiFavorites);
+        const poiMerge = mergeImportItems(currentItems, poiFavorites, amapImportKey);
         const newPoiIds = new Set(poiMerge.detail.filter((item) => item.status === 'imported').map((item) => item.id));
         const newPoiItems = poiFavorites
           .filter((item) => item.id && newPoiIds.has(item.id))

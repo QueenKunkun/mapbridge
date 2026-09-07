@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- Preserved Routes when importing MapBridge JSON files, and prevented re-importing existing Amap favorites when provider IDs differ.
+
 ## [0.5.1] - 2026-09-07
 
 ### Fixed

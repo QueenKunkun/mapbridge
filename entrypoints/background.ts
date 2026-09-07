@@ -5,7 +5,6 @@ import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
-import { migratePlaceToPoi } from '@/core/export';
 import type { ProviderId } from '@/core/model';
 
 function now(): string {
@@ -370,11 +369,11 @@ export default defineBackground(() => {
         return await handleImport(req.jobId, req.tabId);
       }
       case 'import-file': {
-        // 从 MapBridge 导出文件导入：以文件声明来源（仅展示用），目标为选定地图。
-        const src = (req.places[0]?.source?.provider as ProviderId | undefined) ?? 'amap';
+        // 从 MapBridge/GPX/KML 导出文件导入；v2 文件的 Route 也必须进入任务。
+        const src = req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
         const job = createJob(src, req.target);
         await saveJob(job);
-        const applied = applyExtractionItems({ ...job }, req.places.map(migratePlaceToPoi), req.places, req.places.length, req.warnings ?? []);
+        const applied = applyExtractionItems({ ...job }, req.items, req.places, req.items.length, req.warnings ?? []);
         await saveJob(applied);
         return { type: 'job', job: applied };
       }
