@@ -20,4 +20,9 @@ describe('Amap incremental sync batching', () => {
     const oversized = { ...item('large'), data: { values: Array.from({ length: 20 }, (_, i) => i) } };
     expect(batchAmapSyncItems([oversized], 5)).toEqual([[oversized]]);
   });
+
+  it('supports a small item-count limit for development smoke tests', () => {
+    const batches = batchAmapSyncItems([item('a'), item('b'), item('c'), item('d')], 700, 3);
+    expect(batches.map((batch) => batch.length)).toEqual([3, 1]);
+  });
 });

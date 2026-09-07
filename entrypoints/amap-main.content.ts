@@ -168,7 +168,9 @@ export default defineContentScript({
         const newPoiItems = poiFavorites
           .filter((item) => item.id && newPoiIds.has(item.id))
           .map((item) => ({ id: item.id!, type: item.type || 101, act: 'c', data: item.data! }));
-        const batches = batchAmapSyncItems(newPoiItems);
+        // Development builds intentionally use three items per batch so the
+        // multi-batch path can be smoke-tested with a small fixture.
+        const batches = batchAmapSyncItems(newPoiItems, 700, import.meta.env.DEV ? 3 : Number.POSITIVE_INFINITY);
         let processed = 0;
         for (let index = 0; index < batches.length; index++) {
           const syncResult = (await postForm('/service/fav/syncFaves?', { data: batches[index], ver })) as { status?: string | number; ver?: string; data?: unknown };

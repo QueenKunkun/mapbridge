@@ -18,13 +18,13 @@ export function countFormParameters(value: unknown): number {
 }
 
 /** Split an incremental Amap sync into batches below the server parameter limit. */
-export function batchAmapSyncItems(items: AmapSyncItem[], maxParameters = 700): AmapSyncItem[][] {
+export function batchAmapSyncItems(items: AmapSyncItem[], maxParameters = 700, maxItems = Number.POSITIVE_INFINITY): AmapSyncItem[][] {
   const batches: AmapSyncItem[][] = [];
   let batch: AmapSyncItem[] = [];
   let parameters = 0;
   for (const item of items) {
     const itemParameters = countFormParameters(item);
-    if (batch.length > 0 && parameters + itemParameters > maxParameters) {
+    if (batch.length > 0 && (parameters + itemParameters > maxParameters || batch.length >= maxItems)) {
       batches.push(batch);
       batch = [];
       parameters = 0;
