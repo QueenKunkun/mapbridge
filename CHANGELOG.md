@@ -4,6 +4,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- Avoided large Amap import requests by sending only new places in parameter-limited batches.
+
 ## [0.5.0] - 2026-09-05
 
 ### Added

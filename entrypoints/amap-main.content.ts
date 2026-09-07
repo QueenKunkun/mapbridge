@@ -1,6 +1,7 @@
 import { installResponseCapture } from '@/utils/capture';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 import { mergeImportItems } from '@/core/import-merge';
+import { batchAmapSyncItems } from '@/core/amap-sync';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
 
@@ -22,7 +23,7 @@ interface AmapItem {
 /**
  * 高德收藏页 MAIN world 执行器。
  * - 提取：拦截 /service/fav/getFav 响应。
- * - 导入：读现有收藏 -> 合并 payload -> syncFaves 一次性提交 -> 验证。
+ * - 导入：读现有收藏 -> 增量分批提交 POI / cloudSync 提交 Route -> 验证。
  */
 export default defineContentScript({
   matches: ['*://ditu.amap.com/*', '*://www.amap.com/*'],
@@ -141,7 +142,7 @@ export default defineContentScript({
 
       const amap = (window as unknown as { amap?: { favesStore?: { getFave?: (k: string) => unknown; update?: (d: unknown) => void } } }).amap;
       const currentItems = current.data?.items ?? [];
-      const ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
+      let ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
 
       const merge = mergeImportItems(currentItems, favorites);
       const detail = merge.detail;
@@ -163,11 +164,30 @@ export default defineContentScript({
       }
       if (poiFavorites.length > 0) {
         const poiMerge = mergeImportItems(currentItems, poiFavorites);
-        const syncResult = (await postForm('/service/fav/syncFaves?', { data: poiMerge.merged, ver })) as { status?: string | number; data?: unknown };
-        poiSyncData = syncResult.data;
-        log('syncFaves POI: status=', syncResult.status);
-        if (String(syncResult.status) !== '1') {
-          throw new Error('高德地点同步失败：' + JSON.stringify(syncResult).slice(0, 500));
+        const newPoiIds = new Set(poiMerge.detail.filter((item) => item.status === 'imported').map((item) => item.id));
+        const newPoiItems = poiFavorites
+          .filter((item) => item.id && newPoiIds.has(item.id))
+          .map((item) => ({ id: item.id!, type: item.type || 101, act: 'c', data: item.data! }));
+        const batches = batchAmapSyncItems(newPoiItems);
+        let processed = 0;
+        for (let index = 0; index < batches.length; index++) {
+          const syncResult = (await postForm('/service/fav/syncFaves?', { data: batches[index], ver })) as { status?: string | number; ver?: string; data?: unknown };
+          log('syncFaves POI batch:', index + 1, '/', batches.length, 'status=', syncResult.status, 'items=', batches[index]?.length);
+          if (String(syncResult.status) !== '1') {
+            throw new Error(`高德地点同步失败（第 ${index + 1} 批）：` + JSON.stringify(syncResult).slice(0, 500));
+          }
+          poiSyncData = syncResult.data;
+          const responseData = syncResult.data && typeof syncResult.data === 'object' ? syncResult.data as Record<string, unknown> : undefined;
+          ver = String(syncResult.ver ?? responseData?.['ver'] ?? ver);
+          processed += batches[index]?.length ?? 0;
+          emit({ phase: 'sync', processed, total: newPoiItems.length, message: `分批同步中：${processed} / ${newPoiItems.length} 条` });
+          if (index === 0 && batches.length > 1) {
+            const check = (await getJson('/service/fav/getFav?')) as { data?: { items?: AmapItem[] } };
+            const checkIds = new Set((check.data?.items ?? []).map((item) => item.id).filter(Boolean));
+            const missing = currentItems.filter((item) => item.id && !checkIds.has(item.id));
+            if (missing.length > 0) throw new Error(`同步安全检查失败：目标端有 ${missing.length} 条原有收藏消失，已停止后续批次`);
+          }
+          if (index < batches.length - 1) await new Promise((resolve) => setTimeout(resolve, 300));
         }
       }
       if (poiSyncData !== undefined && amap?.favesStore?.update) amap.favesStore.update(poiSyncData);
