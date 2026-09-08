@@ -119,9 +119,9 @@ export default function App() {
         return;
       }
       const fav = read.data.fav as
-        | { raw?: unknown[]; store?: { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } }; savedAt?: number }
+        | { raw?: { data?: { items?: unknown[] } }; store?: { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } }; savedAt?: number }
         | undefined;
-      const poiCount = fav?.store?.poi?.items?.length ?? fav?.raw?.length ?? 0;
+      const poiCount = fav?.store?.poi?.items?.length ?? fav?.raw?.data?.items?.length ?? 0;
       const dirCount = fav?.store?.dir?.items?.length ?? 0;
       const now = new Date();
       const stamp = `${pad2(now.getFullYear())}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
@@ -149,7 +149,7 @@ export default function App() {
         logLine(`✗ 清空失败：${clear.type === 'error' ? clear.message : '未知响应'}`);
         return;
       }
-      logLine(`✓ 删除 ${clear.data.deleted} 条 / 失败 ${clear.data.failed} 条 / 剩余 ${clear.data.remaining} 条`);
+      logLine(`${clear.data.ok ? '✓' : '✗'} 删除 ${clear.data.deleted} 条 / 失败 ${clear.data.failed} 条 / 剩余 ${clear.data.remaining} 条`);
     } catch (e) {
       logLine(`✗ 出错：${String(e instanceof Error ? e.message : e)}`);
     } finally {

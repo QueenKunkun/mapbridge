@@ -256,7 +256,9 @@ async function handleDevFavClear(tabId: number): Promise<BgResponse> {
   });
   return result.ok
     ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
-    : { type: 'error', message: result.error ?? '清空失败' };
+    : result.data
+      ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
+      : { type: 'error', message: result.error ?? '清空失败' };
 }
 
 async function handleUndoImport(jobId: string, tabId: number): Promise<BgResponse> {
@@ -321,8 +323,10 @@ export default defineBackground(() => {
       } else if (event.type === 'dev-fav-cleared') {
         if (pendingDev?.kind === 'clear') {
           const d = event.data as { ok?: boolean; error?: string };
-          if (d.ok === false) resolvePendingDev(false, undefined, d.error ?? '清空失败');
-          else resolvePendingDev(true, event.data);
+          // Preserve partial-cleanup statistics even when some records remain;
+          // the options page should report deleted/failed/remaining instead of
+          // collapsing the result into a generic error.
+          resolvePendingDev(d.ok !== false, event.data, d.ok === false ? d.error : undefined);
         }
       } else if (event.type === 'dev-fav-progress') {
         devClearProgress = event.data as { deleted: number; failed: number; total: number; done: number };

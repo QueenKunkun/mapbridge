@@ -383,25 +383,33 @@ export default defineContentScript({
       try {
         const current = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
         const items = current.data?.items ?? [];
-        const favapi = (window as unknown as { amap?: { favapi?: { deletefav?: (p: unknown, cb: (r: unknown) => void) => void } } }).amap?.favapi;
-        const del = favapi?.deletefav;
         const total = items.length;
-        // 串行删除：同一 favapi 实例可能不支持并发请求，并发会丢失回调导致挂起
+        let deleted = 0;
+        let failed = 0;
+        let done = 0;
+        // 复用新版撤销的 cloudSync DELETE，并逐条执行；旧 favapi 回调可能返回但服务端并未删除。
         for (const [i, item] of items.entries()) {
-          if (del) await deleteOne(del, item);
-          postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted: i + 1, failed: 0, total, done: i + 1 } });
+          if (!item.id) {
+            failed++;
+          } else {
+            const result = await deleteFavIds([item.id]);
+            deleted += result.deleted;
+            failed += result.failed;
+          }
+          done = i + 1;
+          postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted, failed, total, done } });
           await new Promise((r) => setTimeout(r, 100));
         }
-        // 以清空后的真实剩余数量计算删除结果（不依赖回调 status）
+        // 以清空后的真实剩余数量计算结果，避免把请求返回当成删除成功。
         const after = (await getJson('/service/fav/getFav?')) as { status?: string | number; data?: { items?: AmapItem[] } };
         const remaining = after.data?.items?.length ?? 0;
-        const deleted = Math.max(0, total - remaining);
-        const failed = Math.max(0, remaining);
-        log('dev-clear-fav done', { deleted, failed, remaining });
+        const actualDeleted = Math.max(0, total - remaining);
+        const actualFailed = Math.max(failed, remaining);
+        log('dev-clear-fav done', { deleted: actualDeleted, failed: actualFailed, remaining });
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'dev-fav-cleared',
-          data: { provider: 'amap', deleted, failed, remaining, ok: remaining === 0 },
+          data: { provider: 'amap', deleted: actualDeleted, failed: actualFailed, remaining, ok: remaining === 0 },
         });
       } catch (e) {
         postEvent({

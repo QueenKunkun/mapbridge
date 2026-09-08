@@ -9,6 +9,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Routed legacy Amap driving, transit, and walking favorites through the compatible sync API during re-import.
 - Improved Amap duplicate matching for small coordinate conversion differences and exposed HTTP status details for Route sync failures.
 - Added a configurable distance tolerance in meters for duplicate detection on supported map providers, with a safe default and maximum.
+- Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ## [0.5.1] - 2026-09-07
 
