@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
@@ -78,6 +78,26 @@ function NextImportButton({ disabled, onClick }: { disabled?: boolean; onClick: 
   return <button className="primary" disabled={disabled} onClick={() => void onClick()}>下一步：导入 →</button>;
 }
 
+function WizardActions({
+  previous,
+  extra,
+  next,
+  cancel,
+}: {
+  previous?: ReactNode;
+  extra?: ReactNode;
+  next: ReactNode;
+  cancel?: ReactNode;
+}) {
+  return (
+    <div className="wizard-actions">
+      <div className="wizard-actions-previous">{previous}</div>
+      <div className="wizard-actions-next">{extra}{next}</div>
+      <div className="wizard-actions-cancel">{cancel}</div>
+    </div>
+  );
+}
+
 export default function App() {
   const [source, setSource] = useState<ProviderId>('baidu');
   const [target, setTarget] = useState<ProviderId>('amap');
@@ -120,7 +140,7 @@ export default function App() {
       const active = res.jobs.find((item) => item.status === 'importing' || item.status === 'extracting' || item.status === 'preview');
       if (!active) return;
       setJob(active);
-      setMode('migrate');
+      setMode(active.workflow === 'import-file' ? 'import-file' : 'migrate');
       setSource(active.sourceProvider);
       setTarget(active.targetProvider);
       setStep(active.status === 'importing' ? 'report' : active.status === 'preview' ? 'preview' : 'extract');
@@ -695,14 +715,14 @@ export default function App() {
               </>
             )}
           </div>
-          <div className="preview-actions">
-            <button className="ghost" onClick={() => setStep('extract')}>上一步：提取</button>
-            <button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>
-            <NextImportButton
+          <WizardActions
+            previous={<button className="ghost" onClick={() => setStep('extract')}>上一步：提取</button>}
+            next={<NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
               onClick={async () => { await savePreview(previewPlaces, previewTab); setStep('import'); }}
-            />
-          </div>
+            />}
+            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
+          />
         </section>
       )}
 
@@ -725,9 +745,6 @@ export default function App() {
           {job.targetProvider === 'amap' && job.places.length > 0 && (
             <div className="match-box">
               <p className="hint">导入地点可以先匹配高德原生 POI，以改善地图上的名称和详情展示。</p>
-              <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
-                {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
-              </button>
               {job.amapPoiResolutions !== undefined && !matching && (
                 <div className="match-result">
                   <span className="hint">
@@ -758,14 +775,18 @@ export default function App() {
           {reportRoutes > 0 && (
             <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}
-          <div className="actions">
-            <button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
+          <WizardActions
+            previous={<button className="ghost" onClick={() => setStep('preview')}>返回编辑</button>}
+            extra={job.targetProvider === 'amap' && job.places.length > 0 ? (
+              <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
+                {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
+              </button>
+            ) : undefined}
+            next={<button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
               {busy ? '导入中…' : reportImportable === 0 ? '没有可导入的项目' : '开始导入'}
-            </button>
-            <button className="ghost" onClick={() => setStep('preview')}>
-              返回编辑
-            </button>
-          </div>
+            </button>}
+            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
+          />
           {busy && (
             <div className="progress">
               <div className="progress-msg">{job.progress?.message ?? '正在导入…'}</div>

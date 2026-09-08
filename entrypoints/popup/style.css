@@ -475,6 +475,37 @@ button.small {
   flex-wrap: wrap;
 }
 
+.wizard-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.wizard-actions-previous,
+.wizard-actions-next,
+.wizard-actions-cancel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wizard-actions-previous {
+  justify-content: flex-start;
+}
+
+.wizard-actions-next {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.wizard-actions-cancel {
+  justify-content: flex-end;
+}
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -508,6 +539,16 @@ button.ghost {
 
 button.ghost:hover:not(:disabled) {
   background: #eff6ff;
+}
+
+button.secondary {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #f1f5f9;
 }
 
 button.remove {
@@ -632,10 +673,6 @@ button.remove {
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
-}
-
-.preview-actions {
-  flex: none;
 }
 
 .place-table {
