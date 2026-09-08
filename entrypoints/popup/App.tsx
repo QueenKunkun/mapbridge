@@ -1010,7 +1010,7 @@ function PoiMatchCell({
   }
   if (match?.status === 'not-found') return (
     <span className="match-status warning">
-      未找到
+      <span title={import.meta.env.DEV ? match.reason : undefined}>未找到</span>
       {import.meta.env.DEV && match.reason && <details className="match-diagnostic"><summary>原因</summary><small>{match.reason}</small></details>}
       <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
     </span>
