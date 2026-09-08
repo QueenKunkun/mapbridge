@@ -105,6 +105,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [matching, setMatching] = useState(false);
+  const [matchingPlaceIds, setMatchingPlaceIds] = useState<Set<string>>(new Set());
   const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean }[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
@@ -142,7 +143,11 @@ export default function App() {
       setSource(active.sourceProvider);
       setTarget(active.targetProvider);
       setStep(active.status === 'importing' ? 'report' : active.status === 'preview' ? 'preview' : 'extract');
-      setMatching(active.progress.phase === 'match-poi' && Object.keys(active.amapPoiResolutions ?? {}).length === 0);
+      const restoredMatchingIds = Object.entries(active.amapPoiMatches ?? {})
+        .filter(([, result]) => result.status === 'matching')
+        .map(([placeId]) => placeId);
+      setMatchingPlaceIds(new Set(restoredMatchingIds));
+      setMatching(restoredMatchingIds.length > 0);
     });
   }, []);
 
@@ -153,7 +158,11 @@ export default function App() {
         if (res.type !== 'job' || !res.job) return;
         setJob(res.job);
         if (res.job.status === 'done' || res.job.status === 'failed') setMatching(false);
-        if (matching && Object.keys(res.job.amapPoiResolutions ?? {}).length > 0) setMatching(false);
+        const activeMatchingIds = Object.entries(res.job.amapPoiMatches ?? {})
+          .filter(([, result]) => result.status === 'matching')
+          .map(([placeId]) => placeId);
+        setMatchingPlaceIds(new Set(activeMatchingIds));
+        setMatching(activeMatchingIds.length > 0);
       });
     }, 800);
     return () => clearInterval(timer);
@@ -218,6 +227,7 @@ export default function App() {
     if (res.type === 'job') {
       setJob(undefined);
       setMatching(false);
+      setMatchingPlaceIds(new Set());
       setStep('setup');
       setMode('migrate');
       setError('');
@@ -428,13 +438,18 @@ export default function App() {
     }
   }
 
-  async function startAmapMatch(): Promise<void> {
+  async function startAmapMatch(placeId: string): Promise<void> {
     if (!job || job.targetProvider !== 'amap' || job.places.length === 0) return;
+    if (matching) return;
     const tabId = detectedTab('amap') ?? (await currentTabId());
     if (tabId === undefined) {
       setError('未检测到高德收藏页，请打开后重试');
       return;
     }
+    const places = previewPlaces.filter((place) => place.id === placeId);
+    if (places.length === 0) return;
+    await savePreview(previewPlaces, previewTab);
+    setMatchingPlaceIds(new Set([placeId]));
     setMatching(true);
     setError('');
     const poll = setInterval(() => {
@@ -443,12 +458,13 @@ export default function App() {
       });
     }, 500);
     try {
-      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId });
+      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds: [placeId] });
       if (res.type === 'job' && res.job) setJob(res.job);
       else if (res.type === 'error') setError(res.message);
     } finally {
       clearInterval(poll);
       setMatching(false);
+      setMatchingPlaceIds(new Set());
     }
   }
 
@@ -704,7 +720,15 @@ export default function App() {
           </div>
           <div className="preview-panel">
             {activePreviewTab === 'places' ? (
-              <PlaceTable places={previewPlaces} onChange={setPreviewPlaces} />
+              <PlaceTable
+                places={previewPlaces}
+                onChange={setPreviewPlaces}
+                canMatchAmap={job.targetProvider === 'amap'}
+                amapPoiMatches={job.amapPoiMatches}
+                amapPoiResolutions={job.amapPoiResolutions}
+                matchingPlaceIds={matchingPlaceIds}
+                onMatchAmapPoi={(placeId) => void startAmapMatch(placeId)}
+              />
             ) : (
               <>
                 <div className="route-list">
@@ -740,44 +764,6 @@ export default function App() {
             </>
           )}
           <div className="count">待导入 {reportImportable} 条</div>
-          {job.targetProvider === 'amap' && job.places.length > 0 && (
-            <div className="match-box">
-              <p className="hint">导入地点可以先匹配高德原生 POI，以改善地图上的名称和详情展示。</p>
-              <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
-                {Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
-              </button>
-              {matching && (
-                <div className="match-progress" role="status">
-                  匹配中… {Math.min(job.progress.processed, job.progress.total)} / {job.progress.total}
-                </div>
-              )}
-              {job.amapPoiResolutions !== undefined && !matching && (
-                <div className="match-result">
-                  <span className="hint">
-                    匹配结果：成功 <b>{Object.keys(job.amapPoiResolutions).length}</b> 条，
-                    未匹配 <b>{Math.max(0, job.places.length - Object.keys(job.amapPoiResolutions).length)}</b> 条
-                  </span>
-                  <details>
-                    <summary>查看匹配详情</summary>
-                    <ul>
-                      {job.places.map((place) => {
-                        const resolution = job.amapPoiResolutions?.[place.id];
-                        return (
-                          <li key={place.id}>
-                            {resolution ? (
-                              <>✓ {place.name} → {resolution.name ?? '高德原生 POI'}{resolution.address ? `（${resolution.address}）` : ''}</>
-                            ) : (
-                              <>⚠ {place.name}：未找到可靠的高德 POI，将按自定义坐标导入</>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </details>
-                </div>
-              )}
-            </div>
-          )}
           {reportRoutes > 0 && (
             <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}
@@ -898,7 +884,23 @@ function RouteSummary({ route }: { route: Extract<Job['items'][number], { kind: 
   );
 }
 
-function PlaceTable({ places, onChange }: { places: Job['places']; onChange: (places: Job['places']) => void }) {
+function PlaceTable({
+  places,
+  onChange,
+  canMatchAmap,
+  amapPoiMatches,
+  amapPoiResolutions,
+  matchingPlaceIds,
+  onMatchAmapPoi,
+}: {
+  places: Job['places'];
+  onChange: (places: Job['places']) => void;
+  canMatchAmap?: boolean;
+  amapPoiMatches?: Job['amapPoiMatches'];
+  amapPoiResolutions?: Job['amapPoiResolutions'];
+  matchingPlaceIds?: Set<string>;
+  onMatchAmapPoi?: (placeId: string) => void;
+}) {
   const [filter, setFilter] = useState('');
 
   const shown = places.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
@@ -917,17 +919,28 @@ function PlaceTable({ places, onChange }: { places: Job['places']; onChange: (pl
       <div className="table-head">
         <span>名称</span>
         <span>地址</span>
-        <span>坐标(WGS-84)</span>
+        <span>{canMatchAmap ? 'POI 匹配' : '操作'}</span>
         <span></span>
       </div>
       <div className="table-body">
         {shown.map((p) => (
           <div key={p.id} className="row">
-            <input value={p.name} onChange={(e) => update(p.id, { name: e.target.value })} />
+            <input
+              value={p.name}
+              title={`WGS-84：${p.wgs84.lng.toFixed(6)}, ${p.wgs84.lat.toFixed(6)}`}
+              onChange={(e) => update(p.id, { name: e.target.value })}
+            />
             <input value={p.address ?? ''} onChange={(e) => update(p.id, { address: e.target.value })} />
-            <span className="coords">
-              {p.wgs84.lng.toFixed(5)}, {p.wgs84.lat.toFixed(5)}
-            </span>
+            {canMatchAmap ? (
+              <PoiMatchCell
+                place={p}
+                match={amapPoiMatches?.[p.id]}
+                resolution={amapPoiResolutions?.[p.id]}
+                matching={matchingPlaceIds?.has(p.id) ?? false}
+                disabled={matchingPlaceIds !== undefined && matchingPlaceIds.size > 0}
+                onMatch={onMatchAmapPoi}
+              />
+            ) : <span className="hint">—</span>}
             <button className="remove" onClick={() => remove(p.id)}>
               ✕
             </button>
@@ -942,4 +955,31 @@ function PlaceTable({ places, onChange }: { places: Job['places']; onChange: (pl
       </div>
     </div>
   );
+}
+
+function PoiMatchCell({
+  place,
+  match,
+  resolution,
+  matching,
+  disabled,
+  onMatch,
+}: {
+  place: Job['places'][number];
+  match?: NonNullable<Job['amapPoiMatches']>[string];
+  resolution?: NonNullable<Job['amapPoiResolutions']>[string];
+  matching: boolean;
+  disabled: boolean;
+  onMatch?: (placeId: string) => void;
+}) {
+  if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
+  if (resolution || match?.status === 'matched') {
+    return <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>;
+  }
+  if (match?.status === 'ambiguous') {
+    return <span className="match-status warning" title={match.candidateNames?.join('、')}>候选不明确</span>;
+  }
+  if (match?.status === 'not-found') return <span className="match-status warning">未找到 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
+  if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
+  return <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>匹配</button>;
 }

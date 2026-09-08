@@ -23,6 +23,15 @@ describe('core/jobs unified items', () => {
     expect(previewPreviousStep('export')).toBe('setup');
   });
 
+  it('keeps persisted POI matching records when hydrating a job', () => {
+    const job = createJob('baidu', 'amap');
+    const hydrated = hydrateJob({
+      ...job,
+      amapPoiMatches: { 'poi-1': { status: 'not-found' } },
+    });
+    expect(hydrated.amapPoiMatches?.['poi-1']?.status).toBe('not-found');
+  });
+
   it('persists Route items while keeping POI places as the import view', () => {
     const job = applyExtractionItems(createJob('baidu', 'amap'), [route, { kind: 'poi', ...place, geometry: { type: 'point', point: place.wgs84 } }], [place], 2);
     expect(job.items.map((item) => item.kind)).toEqual(['route', 'poi']);

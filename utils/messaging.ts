@@ -11,7 +11,7 @@ export type BgRequest =
   | { type: 'new-job'; source: ProviderId; target: ProviderId; workflow?: JobWorkflow }
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
-  | { type: 'match-poi'; jobId: string; tabId: number }
+  | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
   | { type: 'cancel-job'; jobId: string }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab'] }
   | { type: 'import'; jobId: string; tabId: number }

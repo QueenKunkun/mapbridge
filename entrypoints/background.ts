@@ -3,7 +3,7 @@ import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
-import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiResolution } from '@/core/jobs';
+import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
 
@@ -25,7 +25,7 @@ interface PendingExtract {
 }
 
 let pendingExtract: PendingExtract | undefined;
-let pendingAmapMatch: { jobId: string; resolve: (result: { ok: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | undefined;
+let pendingAmapMatch: { jobId: string; placeIds: string[]; resolve: (result: { ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | undefined;
 
 async function resolvePendingExtract(ok: boolean, error?: string): Promise<void> {
   const pending = pendingExtract;
@@ -210,27 +210,33 @@ async function handleExtractData(event: ContentEvent['event'], data: RawExtract)
   }
 }
 
-async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgResponse> {
+async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceIds?: string[]): Promise<BgResponse> {
   const job = await getJob(jobId);
   if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持匹配导入到高德的地点' };
   if (job.places.length === 0) return { type: 'error', message: '没有可匹配的地点' };
+  const placeIds = requestedPlaceIds?.length ? requestedPlaceIds.filter((id) => job.places.some((place) => place.id === id)) : job.places.map((place) => place.id);
+  if (placeIds.length === 0) return { type: 'error', message: '没有找到要匹配的地点' };
   const settings = await getSettings();
+  const currentMatches = { ...(job.amapPoiMatches ?? {}) };
+  for (const placeId of placeIds) currentMatches[placeId] = { status: 'matching' };
   await saveJob(progressImport(job, {
     phase: 'match-poi',
     processed: 0,
-    total: job.places.length,
+    total: placeIds.length,
     message: '正在连接高德页面…',
-  }));
-  const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string }>((resolve) => {
+  } as Partial<JobProgress>));
+  await saveJob({ ...(await getJob(jobId) ?? job), amapPoiMatches: currentMatches, updatedAt: now() });
+  const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }>((resolve) => {
     pendingAmapMatch = {
       jobId,
+      placeIds,
       resolve,
       timer: setTimeout(() => {
         pendingAmapMatch = undefined;
         resolve({ ok: false, error: '高德 POI 匹配超时' });
       }, 30000),
     };
-    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places, options: { poiMatchDelayMs: settings.poiMatchDelayMs } }).catch((e) => {
+    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs } }).catch((e) => {
       if (pendingAmapMatch) {
         clearTimeout(pendingAmapMatch.timer);
         pendingAmapMatch = undefined;
@@ -238,10 +244,23 @@ async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgRespo
       resolve({ ok: false, error: '无法连接高德页面：' + String(e instanceof Error ? e.message : e) });
     });
   });
-  if (!result.ok) return { type: 'error', message: result.error ?? '高德 POI 匹配失败' };
+  const latest = await getJob(jobId);
+  if (!result.ok) {
+    if (latest) {
+      const failed = { ...(latest.amapPoiMatches ?? {}) };
+      for (const placeId of placeIds) failed[placeId] = { status: 'failed', error: result.error ?? '高德 POI 匹配失败' };
+      await saveJob({ ...latest, amapPoiMatches: failed, progress: { ...latest.progress, processed: 0, total: placeIds.length, message: result.error ?? '高德 POI 匹配失败' }, updatedAt: now() });
+    }
+    return { type: 'error', message: result.error ?? '高德 POI 匹配失败' };
+  }
   const updated = await getJob(jobId);
   if (!updated) return { type: 'error', message: '任务不存在' };
-  await saveJob({ ...updated, amapPoiResolutions: result.resolutions ?? {}, updatedAt: now() });
+  await saveJob({
+    ...updated,
+    amapPoiResolutions: { ...(updated.amapPoiResolutions ?? {}), ...(result.resolutions ?? {}) },
+    amapPoiMatches: { ...(updated.amapPoiMatches ?? {}), ...(result.matches ?? {}) },
+    updatedAt: now(),
+  });
   return { type: 'job', job: await getJob(jobId) };
 }
 
@@ -290,12 +309,12 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
   }
   pendingAmapMatch = undefined;
   clearTimeout(pending.timer);
-  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string } : {};
+  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string } : {};
   if (value.error) {
-    pending.resolve({ ok: false, error: value.error });
+    pending.resolve({ ok: false, matches: value.matches, error: value.error });
     return;
   }
-  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {} } : { ok: false, error: '高德 POI 匹配未完成' });
+  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {}, matches: value.matches ?? {} } : { ok: false, matches: value.matches, error: '高德 POI 匹配未完成' });
 }
 
 async function handleDevFavRead(tabId: number): Promise<BgResponse> {
@@ -457,7 +476,7 @@ export default defineBackground(() => {
         return await handleExtract(req.jobId, req.tabId);
       }
       case 'match-poi': {
-        return await handleMatchAmapPoi(req.jobId, req.tabId);
+        return await handleMatchAmapPoi(req.jobId, req.tabId, req.placeIds);
       }
       case 'cancel-job': {
         return await handleCancelJob(req.jobId);

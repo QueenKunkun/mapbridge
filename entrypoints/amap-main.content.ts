@@ -163,6 +163,7 @@ export default defineContentScript({
       const configuredDelay = Number(options?.poiMatchDelayMs);
       const delayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 1_000;
       const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; name?: string; address?: string }> = {};
+      const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidateNames?: string[]; error?: string }> = {};
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
@@ -179,16 +180,22 @@ export default defineContentScript({
                 name: match.candidate.name,
                 address: match.candidate.address,
               };
+              matches[place.id] = { status: 'matched' };
               break;
             }
+            matches[place.id] = {
+              status: match.status,
+              candidateNames: match.candidates.slice(0, 5).map((candidate) => candidate.name),
+            };
           } catch (error) {
             log('Amap POI match strategy failed:', useSsrFirst ? 'ssr/sdk' : 'sdk/ssr', place.name, String(error));
           }
         }
+        if (!matches[place.id]) matches[place.id] = { status: 'failed', error: '高德 POI 搜索失败' };
         postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: index + 1, total: places.length, message: `匹配高德 POI：${index + 1} / ${places.length}` } });
         if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
-      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'amap', resolutions, done: true } });
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'amap', resolutions, matches, done: true } });
     }
 
     function postForm(url: string, body: Record<string, unknown>): Promise<unknown> {

@@ -142,6 +142,25 @@ section {
   font-size: 12px;
 }
 
+.match-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 150px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-status.matched {
+  color: #15803d;
+}
+
+.match-status.warning {
+  color: #b45309;
+}
+
 .match-result details {
   font-size: 12px;
 }

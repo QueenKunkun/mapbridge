@@ -50,6 +50,14 @@ export interface AmapPoiResolution {
   address?: string;
 }
 
+export type AmapPoiMatchStatus = 'idle' | 'matching' | 'matched' | 'not-found' | 'ambiguous' | 'failed';
+
+export interface AmapPoiMatchRecord {
+  status: AmapPoiMatchStatus;
+  error?: string;
+  candidateNames?: string[];
+}
+
 export interface ExtractionSkip {
   index: number;
   reason: string;
@@ -84,6 +92,8 @@ export interface Job {
   existingPlaces?: CanonicalPlace[];
   /** 导入前按地点 ID 保存的目标高德原生 POI 匹配结果。 */
   amapPoiResolutions?: Record<string, AmapPoiResolution>;
+  /** 每条地点的高德 POI 匹配状态，可在 Popup 重开后恢复。 */
+  amapPoiMatches?: Record<string, AmapPoiMatchRecord>;
   progress: JobProgress;
   report?: ImportReport;
   error?: string;
