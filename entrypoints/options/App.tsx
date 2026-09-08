@@ -203,7 +203,7 @@ export default function App() {
                 value={settings.importDelayMs}
                 onChange={(e) => setSettings({ ...settings, importDelayMs: Number(e.target.value) || IMPORT_DELAY_MS_DEFAULT })}
               />
-              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；影响逐条写入及高德分批同步之间的等待。</small>
+              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；影响百度和高德导入时的连续请求间隔。</small>
             </label>
             <label className="field">
               <span>高德 POI 匹配请求间隔（ms）</span>
@@ -215,7 +215,19 @@ export default function App() {
                 value={settings.poiMatchDelayMs}
                 onChange={(e) => setSettings({ ...settings, poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
               />
-              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；匹配功能启用后生效。请求越慢，对目标地图接口越温和。</small>
+              <small>仅影响导入到高德时的 POI 匹配；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。请求越慢，对目标地图接口越温和。</small>
+            </label>
+            <label className="field">
+              <span>百度 POI 匹配请求间隔（ms）</span>
+              <input
+                type="number"
+                min={REQUEST_DELAY_MS_MIN}
+                max={REQUEST_DELAY_MS_MAX}
+                step={100}
+                value={settings.baiduPoiMatchDelayMs}
+                onChange={(e) => setSettings({ ...settings, baiduPoiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
+              />
+              <small>仅影响导入到百度时的 POI 搜索；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。</small>
             </label>
             <label className="field">
               <span>高德 POI 最大匹配距离（米）</span>
@@ -227,20 +239,10 @@ export default function App() {
                 value={settings.poiMatchDistanceMeters}
                 onChange={(e) => setSettings({ ...settings, poiMatchDistanceMeters: Number(e.target.value) || POI_MATCH_DISTANCE_METERS_DEFAULT })}
               />
-              <small>默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围 {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX} 米；范围越大越容易误匹配。</small>
+              <small>仅影响导入到高德时的 POI 匹配。默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围 {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX} 米；范围越大越容易误匹配。</small>
             </label>
             <label className="field">
-              <span>失败重试次数</span>
-              <input
-                type="number"
-                min={0}
-                max={5}
-                value={settings.retryCount}
-                onChange={(e) => setSettings({ ...settings, retryCount: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <label className="field">
-              <span>高德地点每批数量</span>
+              <span>高德收藏同步批次大小</span>
               <input
                 type="number"
                 min={AMAP_SYNC_BATCH_SIZE_MIN}
@@ -249,7 +251,19 @@ export default function App() {
                 value={settings.amapSyncBatchSize}
                 onChange={(e) => setSettings({ ...settings, amapSyncBatchSize: Number(e.target.value) || AMAP_SYNC_BATCH_SIZE_MIN })}
               />
-              <small>范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条；仍受高德接口参数上限约束。</small>
+              <small>仅影响高德地点和兼容旧路线的批量同步；范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条，仍受高德接口参数上限约束。</small>
+            </label>
+            <label className="field">
+              <span>百度收藏同步批次大小</span>
+              <input
+                type="number"
+                min={1}
+                max={200}
+                step={1}
+                value={settings.baiduSyncBatchSize}
+                onChange={(e) => setSettings({ ...settings, baiduSyncBatchSize: Number(e.target.value) || 1 })}
+              />
+              <small>百度接口仍按单条请求提交；每完成此数量后额外等待一次导入间隔，范围 1–200 条。</small>
             </label>
             <label className="field">
               <span>重复判断距离容差（米）</span>
@@ -261,15 +275,7 @@ export default function App() {
                 value={settings.dedupDistanceMeters}
                 onChange={(e) => setSettings({ ...settings, dedupDistanceMeters: Number(e.target.value) || DEDUP_DISTANCE_METERS_DEFAULT })}
               />
-              <small>默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围 {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米；只影响重复判断，不改变导入坐标。</small>
-            </label>
-            <label className="field">
-              <span>默认目标收藏夹名</span>
-              <input
-                value={settings.defaultFolder}
-                onChange={(e) => setSettings({ ...settings, defaultFolder: e.target.value })}
-                placeholder="留空 = 并入默认收藏夹"
-              />
+              <small>影响百度和高德的跨地图重复判断；默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围 {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米，不改变导入坐标。</small>
             </label>
             <label className="check">
               <input

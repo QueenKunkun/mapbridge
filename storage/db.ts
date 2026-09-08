@@ -34,6 +34,8 @@ export interface AppSettings {
   importDelayMs: number;
   /** 高德 POI 匹配请求间隔毫秒（限速）。 */
   poiMatchDelayMs: number;
+  /** 百度 POI 匹配请求间隔毫秒（限速）。 */
+  baiduPoiMatchDelayMs: number;
   /** 高德 POI 匹配的最大直线距离（米）。 */
   poiMatchDistanceMeters: number;
   /** 失败重试次数。 */
@@ -44,6 +46,8 @@ export interface AppSettings {
   skipExisting: boolean;
   /** 高德 POI 每批最多同步条数。 */
   amapSyncBatchSize: number;
+  /** 百度逐条写入后的批次冷却大小；百度接口本身仍按单条请求提交。 */
+  baiduSyncBatchSize: number;
   /** 地图导入重复判断的距离容差（米）。 */
   dedupDistanceMeters: number;
 }
@@ -65,11 +69,13 @@ export const DEDUP_DISTANCE_METERS_DEFAULT = 1;
 export const DEFAULT_SETTINGS: AppSettings = {
   importDelayMs: IMPORT_DELAY_MS_DEFAULT,
   poiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
+  baiduPoiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
   poiMatchDistanceMeters: POI_MATCH_DISTANCE_METERS_DEFAULT,
   retryCount: 2,
   defaultFolder: '',
   skipExisting: true,
   amapSyncBatchSize: AMAP_SYNC_BATCH_SIZE_DEFAULT,
+  baiduSyncBatchSize: 20,
   dedupDistanceMeters: DEDUP_DISTANCE_METERS_DEFAULT,
 };
 
@@ -87,8 +93,10 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 function normalizeSettings(settings: AppSettings): AppSettings {
   const importDelay = Number(settings.importDelayMs);
   const poiMatchDelay = Number(settings.poiMatchDelayMs);
+  const baiduPoiMatchDelay = Number(settings.baiduPoiMatchDelayMs);
   const poiMatchDistance = Number(settings.poiMatchDistanceMeters);
   const value = Number(settings.amapSyncBatchSize);
+  const baiduBatch = Number(settings.baiduSyncBatchSize);
   const tolerance = Number(settings.dedupDistanceMeters);
   return {
     ...settings,
@@ -98,12 +106,18 @@ function normalizeSettings(settings: AppSettings): AppSettings {
     poiMatchDelayMs: Number.isFinite(poiMatchDelay)
       ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
       : POI_MATCH_DELAY_MS_DEFAULT,
+    baiduPoiMatchDelayMs: Number.isFinite(baiduPoiMatchDelay)
+      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)))
+      : POI_MATCH_DELAY_MS_DEFAULT,
     poiMatchDistanceMeters: Number.isFinite(poiMatchDistance)
       ? Math.min(POI_MATCH_DISTANCE_METERS_MAX, Math.max(POI_MATCH_DISTANCE_METERS_MIN, Math.floor(poiMatchDistance)))
       : POI_MATCH_DISTANCE_METERS_DEFAULT,
     amapSyncBatchSize: Number.isFinite(value)
       ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
       : AMAP_SYNC_BATCH_SIZE_DEFAULT,
+    baiduSyncBatchSize: Number.isFinite(baiduBatch)
+      ? Math.min(200, Math.max(1, Math.floor(baiduBatch)))
+      : 20,
     dedupDistanceMeters: Number.isFinite(tolerance)
       ? Math.min(DEDUP_DISTANCE_METERS_MAX, Math.max(DEDUP_DISTANCE_METERS_MIN, Math.floor(tolerance)))
       : DEDUP_DISTANCE_METERS_DEFAULT,

@@ -10,7 +10,7 @@ export interface BridgeCommand {
   /** import 时为 provider 特有 payload。 */
   payload?: unknown;
   /** import 时的可选 provider 参数。 */
-  options?: { importDelayMs?: number; poiMatchDelayMs?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number };
+  options?: { importDelayMs?: number; poiMatchDelayMs?: number; baiduPoiMatchDelayMs?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number };
 }
 
 export interface BridgeReply {
