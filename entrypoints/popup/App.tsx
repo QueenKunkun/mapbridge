@@ -1032,7 +1032,7 @@ function PlaceRow({
           />
         ) : <span className="hint">—</span>}
       </div>
-      {import.meta.env.DEV && diagnosticOpen && match?.status === 'not-found' && (
+      {import.meta.env.DEV && diagnosticOpen && match && (
         <PoiMatchDiagnostic place={place} match={match} />
       )}
     </div>
@@ -1087,8 +1087,10 @@ function PoiMatchCell({
       <div className="match-cell">
         <div className="match-controls">
           <button className="small icon-button" disabled={disabled} aria-label="刷新 POI 匹配" title="刷新 POI 匹配" onClick={() => onMatch?.(place.id)}>↻</button>
+          {import.meta.env.DEV && (
+            <button className="small icon-button" aria-label="查看匹配原因" title="查看匹配原因" aria-expanded={diagnosticOpen} onClick={onToggleDiagnostic}>ⓘ</button>
+          )}
           {selector}
-          <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>
         </div>
       </div>
     );
