@@ -86,6 +86,7 @@ export default function App() {
   const [tabId, setTabId] = useState<number | undefined>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [matching, setMatching] = useState(false);
   const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean }[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
@@ -364,6 +365,24 @@ export default function App() {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
       setBusy(false);
+    }
+  }
+
+  async function startAmapMatch(): Promise<void> {
+    if (!job || job.targetProvider !== 'amap' || job.places.length === 0) return;
+    const tabId = detectedTab('amap') ?? (await currentTabId());
+    if (tabId === undefined) {
+      setError('未检测到高德收藏页，请打开后重试');
+      return;
+    }
+    setMatching(true);
+    setError('');
+    try {
+      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId });
+      if (res.type === 'job' && res.job) setJob(res.job);
+      else if (res.type === 'error') setError(res.message);
+    } finally {
+      setMatching(false);
     }
   }
 
@@ -653,6 +672,15 @@ export default function App() {
             </>
           )}
           <div className="count">待导入 {reportImportable} 条</div>
+          {job.targetProvider === 'amap' && job.places.length > 0 && (
+            <div className="match-box">
+              <p className="hint">导入地点可以先匹配高德原生 POI，以改善地图上的名称和详情展示。</p>
+              <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
+                {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
+              </button>
+              {Object.keys(job.amapPoiResolutions ?? {}).length > 0 && <span className="hint">已匹配 {Object.keys(job.amapPoiResolutions ?? {}).length} 条，其余将按自定义坐标导入。</span>}
+            </div>
+          )}
           {reportRoutes > 0 && (
             <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}

@@ -6,7 +6,7 @@ import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteSt
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
-import type { ImportReport } from '@/core/jobs';
+import type { AmapPoiResolution, ImportReport } from '@/core/jobs';
 
 /** 高德收藏记录：getFav items[].data 的结构。 */
 interface AmapFavoriteData {
@@ -436,7 +436,7 @@ export const amapAdapter: ProviderAdapter = {
     return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
-  buildImportPayload(places: CanonicalPlace[]): unknown[] {
+  buildImportPayload(places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
     const payload: Array<Record<string, unknown>> = [];
     for (const place of places) {
       const gcj02 = fromWgs84(place.wgs84, 'gcj02');
@@ -447,6 +447,7 @@ export const amapAdapter: ProviderAdapter = {
       const address = place.address || '';
       const phone = place.metadata.phone ?? '';
       const tags = place.tags.join(';');
+      const resolution = options?.amapPoiResolutions?.[place.id];
 
       payload.push({
         id,
@@ -454,7 +455,7 @@ export const amapAdapter: ProviderAdapter = {
         data: {
           item_id: id,
           custom_address: address,
-          poiid: '',
+          poiid: resolution?.poiid ?? '',
           custom_name: place.name,
           type: '0',
           address,
@@ -464,9 +465,9 @@ export const amapAdapter: ProviderAdapter = {
           point_x: px.x,
           point_y: px.y,
           top_time: '',
-          city_code: '',
+          city_code: resolution?.cityCode ?? '',
           custom_phone_numbers: phone,
-          city_name: '',
+          city_name: resolution?.cityName ?? '',
           tag: tags,
         },
         source: {
@@ -482,8 +483,8 @@ export const amapAdapter: ProviderAdapter = {
     return payload;
   },
 
-  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[]): unknown[] {
-    const payload = this.buildImportPayload(places) as unknown[];
+  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
+    const payload = this.buildImportPayload(places, options) as unknown[];
     for (const item of items) {
       if (item.kind === 'route') payload.push(buildAmapRoutePayloadForImport(item));
     }

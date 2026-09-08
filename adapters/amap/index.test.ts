@@ -288,6 +288,17 @@ describe('amap adapter', () => {
     expect(data.phone_numbers).toBe('028-88886666');
   });
 
+  it('uses only an explicitly resolved Amap POI id for native favorite fields', () => {
+    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[0]!)!;
+    const payload = amapAdapter.buildImportPayload([place], {
+      amapPoiResolutions: { [place.id]: { poiid: 'B-RESOLVED', cityCode: '510100', cityName: '成都' } },
+    }) as Array<Record<string, unknown>>;
+    const data = payload[0]!.data as Record<string, unknown>;
+    expect(data.poiid).toBe('B-RESOLVED');
+    expect(data.city_code).toBe('510100');
+    expect(data.city_name).toBe('成都');
+  });
+
   it('amapFavoriteId is stable across conversion chains for the same place', () => {
     // 同一地点分别经 百度(bd09mc) 与 高德原生(amap_pixel) 两条转换链，
     // 得到的 wgs84 在 5 位小数（~1m）内一致 -> 指纹相同 -> amap id 相同 -> 不会被重复导入。

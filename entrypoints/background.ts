@@ -3,7 +3,7 @@ import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
-import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress } from '@/core/jobs';
+import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiResolution } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
 
@@ -25,6 +25,7 @@ interface PendingExtract {
 }
 
 let pendingExtract: PendingExtract | undefined;
+let pendingAmapMatch: { jobId: string; resolve: (result: { ok: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | undefined;
 
 async function resolvePendingExtract(ok: boolean, error?: string): Promise<void> {
   const pending = pendingExtract;
@@ -77,7 +78,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number } },
+  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number } },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -138,8 +139,8 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
       throw new Error(`${target.name} 暂不支持导入路线`);
     }
     const payload = hasRoutes
-      ? target.buildImportItemsPayload!(supportedItems, job.places)
-      : target.buildImportPayload(job.places);
+      ? target.buildImportItemsPayload!(supportedItems, job.places, { amapPoiResolutions: job.amapPoiResolutions })
+      : target.buildImportPayload(job.places, { amapPoiResolutions: job.amapPoiResolutions });
     // 取消此前卡住的导入任务，避免 import-result 关联到错误的 job
     const jobs = await listJobs();
     for (const j of jobs) {
@@ -209,6 +210,35 @@ async function handleExtractData(event: ContentEvent['event'], data: RawExtract)
   }
 }
 
+async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgResponse> {
+  const job = await getJob(jobId);
+  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持匹配导入到高德的地点' };
+  if (job.places.length === 0) return { type: 'error', message: '没有可匹配的地点' };
+  const settings = await getSettings();
+  const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string }>((resolve) => {
+    pendingAmapMatch = {
+      jobId,
+      resolve,
+      timer: setTimeout(() => {
+        pendingAmapMatch = undefined;
+        resolve({ ok: false, error: '高德 POI 匹配超时' });
+      }, 600000),
+    };
+    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places, options: { poiMatchDelayMs: settings.poiMatchDelayMs } }).catch((e) => {
+      if (pendingAmapMatch) {
+        clearTimeout(pendingAmapMatch.timer);
+        pendingAmapMatch = undefined;
+      }
+      resolve({ ok: false, error: '无法连接高德页面：' + String(e instanceof Error ? e.message : e) });
+    });
+  });
+  if (!result.ok) return { type: 'error', message: result.error ?? '高德 POI 匹配失败' };
+  const updated = await getJob(jobId);
+  if (!updated) return { type: 'error', message: '任务不存在' };
+  await saveJob({ ...updated, amapPoiResolutions: result.resolutions ?? {}, updatedAt: now() });
+  return { type: 'job', job: await getJob(jobId) };
+}
+
 async function handleImportEvent(data: RawImportResult): Promise<void> {
   const jobs = await listJobs();
   const job = jobs.find((j) => j.status === 'importing');
@@ -228,6 +258,15 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
     report.importedIds = (data.raw as { importedIds: unknown[] }).importedIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
   }
   await saveJob(finalizeImport(job, data, report));
+}
+
+async function handleAmapMatchResult(data: unknown): Promise<void> {
+  const pending = pendingAmapMatch;
+  if (!pending) return;
+  pendingAmapMatch = undefined;
+  clearTimeout(pending.timer);
+  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution> } : {};
+  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {} } : { ok: false, error: '高德 POI 匹配未完成' });
 }
 
 async function handleDevFavRead(tabId: number): Promise<BgResponse> {
@@ -314,6 +353,15 @@ export default defineBackground(() => {
       log('recv mb:event', event?.type);
       if (event.type === 'extract-data') {
         await handleExtractData(event as never, event.data as RawExtract);
+      } else if (event.type === 'poi-match-result') {
+        await handleAmapMatchResult(event.data);
+      } else if (event.type === 'poi-match-progress') {
+        const jobs = await listJobs();
+        const job = jobs.find((j) => j.id === pendingAmapMatch?.jobId);
+        if (job) {
+          const p = event.data as { processed?: number; total?: number; message?: string };
+          await saveJob(progressImport(job, { phase: 'match-poi', processed: p.processed, total: p.total, message: p.message }));
+        }
       } else if (event.type === 'import-progress') {
         const jobs = await listJobs();
         const job = jobs.find((j) => j.status === 'importing');
@@ -370,6 +418,9 @@ export default defineBackground(() => {
       }
       case 'extract': {
         return await handleExtract(req.jobId, req.tabId);
+      }
+      case 'match-poi': {
+        return await handleMatchAmapPoi(req.jobId, req.tabId);
       }
       case 'preview-update': {
         const job = await getJob(req.jobId);

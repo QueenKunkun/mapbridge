@@ -13,6 +13,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Changed
 - Added separate local settings for import request spacing and the upcoming Amap POI matching phase; import writes now honor the configured serial request interval with a safe bounded range.
+- Added the first Amap POI matching flow: matching is explicitly started before import, uses conservative name-and-distance scoring, and keeps unmatched places as custom-coordinate favorites.
 
 ## [0.5.1] - 2026-09-07
 

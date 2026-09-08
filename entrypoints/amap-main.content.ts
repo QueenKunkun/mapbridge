@@ -4,6 +4,8 @@ import { mergeImportItems } from '@/core/import-merge';
 import { batchAmapSyncItems } from '@/core/amap-sync';
 import { distancePointKey } from '@/core/dedup';
 import { toWgs84 } from '@/core/coords';
+import { chooseAmapPoiMatch, parseAmapPoiCandidates } from '@/utils/amap-poi';
+import type { CanonicalPlace } from '@/core/model';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
 
@@ -110,6 +112,38 @@ export default defineContentScript({
     function getCsrfToken(): string {
       const m = document.cookie.match(/x-csrf-token=([^;]+)/);
       return m?.[1] ? decodeURIComponent(m[1]) : '';
+    }
+
+    async function runMatchPoi(payload: unknown, options?: { poiMatchDelayMs?: number }): Promise<void> {
+      const places = Array.isArray(payload) ? payload as CanonicalPlace[] : [];
+      const configuredDelay = Number(options?.poiMatchDelayMs);
+      const delayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 1_000;
+      const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; name?: string; address?: string }> = {};
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
+      for (let index = 0; index < places.length; index++) {
+        const place = places[index]!;
+        try {
+          const url = `/ssr/api/searchPoi?type=keyword&keywords=${encodeURIComponent(place.name)}&pagesize=20&city=100000`;
+          const response = await fetch(url, { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } });
+          if (response.ok) {
+            const match = chooseAmapPoiMatch(parseAmapPoiCandidates(await response.json(), place));
+            if (match.status === 'matched') {
+              resolutions[place.id] = {
+                poiid: match.candidate.poiid,
+                cityCode: match.candidate.cityCode,
+                cityName: match.candidate.cityName,
+                name: match.candidate.name,
+                address: match.candidate.address,
+              };
+            }
+          }
+        } catch (error) {
+          log('Amap POI match failed:', place.name, String(error));
+        }
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: index + 1, total: places.length, message: `匹配高德 POI：${index + 1} / ${places.length}` } });
+        if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'amap', resolutions, done: true } });
     }
 
     function postForm(url: string, body: Record<string, unknown>): Promise<unknown> {
@@ -429,6 +463,11 @@ export default defineContentScript({
       if (event.source !== window) return;
       if (!isBridgeCommand(event.data)) return;
       const cmd = event.data;
+
+      if (cmd.type === 'match-poi') {
+        await runMatchPoi(cmd.payload, cmd.options);
+        return;
+      }
 
       if (cmd.type === 'extract') {
         let records: unknown[] = [];

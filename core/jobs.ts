@@ -14,7 +14,7 @@ export type JobStatus =
 export interface JobProgress {
   processed: number;
   total: number;
-  phase?: 'read-existing' | 'sync' | 'verify';
+  phase?: 'match-poi' | 'read-existing' | 'sync' | 'verify';
   message?: string;
 }
 
@@ -33,6 +33,14 @@ export interface ImportReport {
   undoFailed?: number;
   targetCount?: number;
   raw?: unknown;
+}
+
+export interface AmapPoiResolution {
+  poiid: string;
+  cityCode?: string;
+  cityName?: string;
+  name?: string;
+  address?: string;
 }
 
 export interface ExtractionSkip {
@@ -63,6 +71,8 @@ export interface Job {
   importPayload?: unknown;
   /** 目标地图已有的收藏（用于去重提示，可选）。 */
   existingPlaces?: CanonicalPlace[];
+  /** 导入前按地点 ID 保存的目标高德原生 POI 匹配结果。 */
+  amapPoiResolutions?: Record<string, AmapPoiResolution>;
   progress: JobProgress;
   report?: ImportReport;
   error?: string;

@@ -1,5 +1,5 @@
 import type { CanonicalItem, CanonicalItemKind, CanonicalPlace, Collection, Crs, ProviderId } from '@/core/model';
-import type { ImportReport } from '@/core/jobs';
+import type { AmapPoiResolution, ImportReport } from '@/core/jobs';
 
 /** 内容脚本运行所在页面的上下文（由 background 从 tab 信息构造）。 */
 export interface PageContext {
@@ -35,7 +35,7 @@ export interface RawImportResult {
 
 /** MAIN world 执行器在导入过程中上报的进度。 */
 export interface RawImportProgress {
-  phase: 'read-existing' | 'sync' | 'verify';
+  phase: 'match-poi' | 'read-existing' | 'sync' | 'verify';
   processed?: number;
   total?: number;
   message?: string;
@@ -77,10 +77,10 @@ export interface ProviderAdapter {
    * 将待导入的 CanonicalPlace 列表转为 provider 特有的可序列化 payload，
    * 传给 MAIN world 执行器。此处在 WGS-84 -> 目标 CRS 之间做坐标转换。
    */
-  buildImportPayload(places: CanonicalPlace[]): unknown;
+  buildImportPayload(places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown;
 
   /** Optional item-aware payload builder for providers that support non-POI imports. */
-  buildImportItemsPayload?(items: CanonicalItem[], places: CanonicalPlace[]): unknown;
+  buildImportItemsPayload?(items: CanonicalItem[], places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown;
 
   /** 将 MAIN world 返回的导入结果规整为统一报告。 */
   summarizeImportResult(result: RawImportResult): ImportReport;
