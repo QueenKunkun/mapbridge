@@ -476,7 +476,8 @@ button.small {
   color: #6b7280;
 }
 
-.actions {
+.actions,
+.page-actions {
   display: flex;
   gap: 8px;
   margin-top: 12px;
