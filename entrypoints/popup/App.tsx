@@ -377,11 +377,17 @@ export default function App() {
     }
     setMatching(true);
     setError('');
+    const poll = setInterval(() => {
+      void sendBg({ type: 'get-job', id: job.id }).then((res) => {
+        if (res.type === 'job' && res.job) setJob(res.job);
+      });
+    }, 500);
     try {
       const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId });
       if (res.type === 'job' && res.job) setJob(res.job);
       else if (res.type === 'error') setError(res.message);
     } finally {
+      clearInterval(poll);
       setMatching(false);
     }
   }
