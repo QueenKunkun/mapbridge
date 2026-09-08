@@ -46,6 +46,8 @@ export interface AmapPoiResolution {
   poiid: string;
   cityCode?: string;
   cityName?: string;
+  adcode?: string;
+  location?: { lng: number; lat: number };
   name?: string;
   address?: string;
 }

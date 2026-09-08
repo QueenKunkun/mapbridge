@@ -9,6 +9,7 @@ export interface AmapPoiCandidate {
   location: LngLat;
   cityCode?: string;
   cityName?: string;
+  adcode?: string;
   distanceMeters: number;
   nameScore: number;
 }
@@ -109,6 +110,7 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
       location,
       cityCode: readString(record, 'adcode', 'citycode', 'city_code') || undefined,
       cityName: city || undefined,
+      adcode: readString(record, 'adcode') || undefined,
       distanceMeters: distanceMeters(source.wgs84, location),
       nameScore: nameScore(source.name, name),
     }];

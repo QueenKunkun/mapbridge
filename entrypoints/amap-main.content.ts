@@ -178,7 +178,7 @@ export default defineContentScript({
       const maxDistanceMeters = Number.isFinite(Number(options?.poiMatchDistanceMeters))
         ? Math.min(1_000, Math.max(50, Math.floor(Number(options?.poiMatchDistanceMeters))))
         : 150;
-      const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; name?: string; address?: string }> = {};
+      const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; adcode?: string; location?: { lng: number; lat: number }; name?: string; address?: string }> = {};
       const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidates?: Array<{ poiid: string; name: string; address: string; distanceMeters: number; nameScore: number; cityCode?: string; cityName?: string }>; error?: string; reason?: string }> = {};
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
@@ -193,6 +193,8 @@ export default defineContentScript({
                 poiid: match.candidate.poiid,
                 cityCode: match.candidate.cityCode,
                 cityName: match.candidate.cityName,
+                adcode: match.candidate.adcode,
+                location: match.candidate.location,
                 name: match.candidate.name,
                 address: match.candidate.address,
               };

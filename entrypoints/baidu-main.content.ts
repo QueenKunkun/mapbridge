@@ -256,7 +256,15 @@ export default defineContentScript({
             sourceid: match.uid,
             plateform: 3,
             fromapp: '百度地图',
-            extdata: { name: match.name, geoptx: match.x, geopty: match.y },
+            extdata: {
+              name: match.name,
+              geoptx: match.x,
+              geopty: match.y,
+              ...(match.address ? { content: `地址:${match.address}` } : {}),
+              ...(match.cityCode ? { cityid: match.cityCode } : {}),
+              ...(match.cityName ? { cityname: match.cityName } : {}),
+              ...(match.category ? { tag: match.category } : {}),
+            },
           };
         } catch (error) {
           log('Baidu POI search failed; falling back to custom favorite', name, String(error));

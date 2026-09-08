@@ -297,6 +297,9 @@ describe('amap adapter', () => {
     expect(data.poiid).toBe('B-RESOLVED');
     expect(data.city_code).toBe('510100');
     expect(data.city_name).toBe('成都');
+    expect(data.x).toBe(data.point_x);
+    expect(data.y).toBe(data.point_y);
+    expect(data.classification).toBe('8');
   });
 
   it('amapFavoriteId is stable across conversion chains for the same place', () => {

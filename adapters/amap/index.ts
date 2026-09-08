@@ -448,6 +448,9 @@ export const amapAdapter: ProviderAdapter = {
       const phone = place.metadata.phone ?? '';
       const tags = place.tags.join(';');
       const resolution = options?.amapPoiResolutions?.[place.id];
+      const resolvedWgs84 = resolution?.location ?? place.wgs84;
+      const resolvedGcj02 = fromWgs84(resolvedWgs84, 'gcj02');
+      const resolvedPixel = gcj02ToAmapPixel(resolvedGcj02.lng, resolvedGcj02.lat);
 
       payload.push({
         id,
@@ -462,8 +465,12 @@ export const amapAdapter: ProviderAdapter = {
           phone_numbers: phone,
           comment: place.note,
           name: place.name,
-          point_x: px.x,
-          point_y: px.y,
+          point_x: resolvedPixel.x,
+          point_y: resolvedPixel.y,
+          x: resolvedPixel.x,
+          y: resolvedPixel.y,
+          adcode: resolution?.adcode ?? '',
+          classification: '8',
           top_time: '',
           city_code: resolution?.cityCode ?? '',
           custom_phone_numbers: phone,
