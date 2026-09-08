@@ -985,6 +985,7 @@ function PoiMatchCell({
   onMatch?: (placeId: string) => void;
   onSelect?: (placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]) => void;
 }) {
+  const [copied, setCopied] = useState(false);
   if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
   if (resolution || match?.status === 'matched') {
     return <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>;
@@ -1008,13 +1009,41 @@ function PoiMatchCell({
       </span>
     );
   }
-  if (match?.status === 'not-found') return (
-    <span className="match-status warning">
-      <span title={import.meta.env.DEV ? match.reason : undefined}>未找到</span>
-      {import.meta.env.DEV && match.reason && <details className="match-diagnostic"><summary>原因</summary><small>{match.reason}</small></details>}
-      <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
-    </span>
-  );
+  if (match?.status === 'not-found') {
+    const best = match.candidates?.[0];
+    const diagnostic = [
+      `地点：${place.name}`,
+      `地址：${place.address || '（无）'}`,
+      `坐标：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`,
+      `候选数量：${match.candidates?.length ?? 0}`,
+      best ? `最佳候选：${best.name}，距离 ${Math.round(best.distanceMeters)} 米` : '',
+      match.reason ? `原因：${match.reason}` : '',
+    ].filter(Boolean).join('\n');
+    async function copyDiagnostic(): Promise<void> {
+      try {
+        await navigator.clipboard.writeText(diagnostic);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      } catch {
+        setCopied(false);
+      }
+    }
+    return (
+      <div className="match-cell">
+        {import.meta.env.DEV && (
+          <details className="match-diagnostic">
+            <summary>未找到 <span aria-hidden="true">⌄</span></summary>
+            <div className="match-diagnostic-body">
+              <pre>{diagnostic}</pre>
+              <button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button>
+            </div>
+          </details>
+        )}
+        {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
+        <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
+      </div>
+    );
+  }
   if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
   return <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>匹配</button>;
 }

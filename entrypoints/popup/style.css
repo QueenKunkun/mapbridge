@@ -161,6 +161,54 @@ section {
   color: #b45309;
 }
 
+.match-cell {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.match-diagnostic {
+  min-width: 0;
+  color: #b45309;
+  font-size: 12px;
+}
+
+.match-diagnostic summary {
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.match-diagnostic summary::-webkit-details-marker {
+  display: none;
+}
+
+.match-diagnostic-body {
+  position: absolute;
+  z-index: 3;
+  width: 280px;
+  max-width: 280px;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid #dbe2ec;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 12%);
+}
+
+.match-diagnostic-body pre {
+  max-height: 140px;
+  margin: 0 0 7px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #475569;
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .match-candidates {
   position: relative;
   overflow: visible;
