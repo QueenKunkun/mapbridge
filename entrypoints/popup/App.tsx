@@ -136,13 +136,21 @@ export default function App() {
   useEffect(() => {
     void sendBg({ type: 'get-state' }).then((res) => {
       if (res.type !== 'state') return;
-      const active = res.jobs.find((item) => item.status === 'importing' || item.status === 'extracting' || item.status === 'preview');
+      const active = res.jobs
+        .filter((item) => item.status !== 'cancelled' && item.status !== 'draft')
+        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
       if (!active) return;
       setJob(active);
       setMode(active.workflow === 'import-file' ? 'import-file' : 'migrate');
       setSource(active.sourceProvider);
       setTarget(active.targetProvider);
-      setStep(active.status === 'importing' ? 'report' : active.status === 'preview' ? 'preview' : 'extract');
+      setStep(
+        active.status === 'importing' || active.status === 'done' || active.status === 'failed'
+          ? 'report'
+          : active.status === 'preview'
+            ? 'preview'
+            : 'extract',
+      );
       const restoredMatchingIds = Object.entries(active.amapPoiMatches ?? {})
         .filter(([, result]) => result.status === 'matching')
         .map(([placeId]) => placeId);
