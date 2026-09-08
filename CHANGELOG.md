@@ -7,6 +7,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ### Fixed
 - Preserved Routes when importing MapBridge JSON files, and prevented re-importing existing Amap favorites when provider IDs differ.
 - Routed legacy Amap driving, transit, and walking favorites through the compatible sync API during re-import.
+- Improved Amap duplicate matching for small coordinate conversion differences and exposed HTTP status details for Route sync failures.
 
 ## [0.5.1] - 2026-09-07
 

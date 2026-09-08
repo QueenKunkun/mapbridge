@@ -26,7 +26,10 @@ function normalizeAmapName(value: unknown): string {
 
 function coordinateKey(value: unknown): string {
   const number = Number(value);
-  return Number.isFinite(number) ? String(Math.round(number)) : '';
+  // A WGS-84 round trip can move an Amap zoom-20 pixel coordinate by a few
+  // pixels. Keep the key tolerant enough to match the same favorite after
+  // export/import, without collapsing nearby places at normal map scale.
+  return Number.isFinite(number) ? String(Math.round(number / 8)) : '';
 }
 
 /** Semantic key for old native Amap favorites whose id differs from a rebuilt payload id. */
@@ -139,7 +142,17 @@ export default defineContentScript({
       const headers: Record<string, string> = { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' };
       const csrf = getCsrfToken();
       if (csrf) headers['x-csrf-token'] = csrf;
-      return fetch(url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(body) }).then((r) => r.json());
+      return fetch(url, { method: 'POST', credentials: 'include', headers, body: JSON.stringify(body) }).then(async (response) => {
+        const bodyText = await response.text();
+        let result: unknown;
+        try {
+          result = bodyText ? JSON.parse(bodyText) : undefined;
+        } catch {
+          result = bodyText.slice(0, 300);
+        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${typeof result === 'string' ? result : JSON.stringify(result)}`);
+        return result;
+      });
     }
 
     function deleteCloudFavorite(item: AmapItem, ver: string): Promise<void> {
