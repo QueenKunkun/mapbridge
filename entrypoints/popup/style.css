@@ -187,16 +187,13 @@ section {
 }
 
 .match-diagnostic-body {
-  position: absolute;
-  z-index: 3;
-  width: 280px;
-  max-width: 280px;
+  width: 100%;
+  box-sizing: border-box;
   margin-top: 4px;
   padding: 8px;
   border: 1px solid #dbe2ec;
   border-radius: 6px;
   background: #fff;
-  box-shadow: 0 4px 12px rgb(15 23 42 / 12%);
 }
 
 .match-diagnostic-body pre {
