@@ -184,6 +184,7 @@ export default defineContentScript({
       const imported = merge.imported;
       const duplicates = merge.duplicates;
       const routeFavorites = favorites.filter((item) => [102, 103, 104, 117].includes(Number(item.type)));
+      const legacyRoutes = routeFavorites.filter((item) => [102, 103, 104].includes(Number(item.type)));
       const poiFavorites = favorites.filter((item) => ![102, 103, 104, 117].includes(Number(item.type)));
       const importedRouteIds = new Set(
         detail.filter((item) => item.status === 'imported' && routeFavorites.some((route) => route.id === item.id)).map((item) => item.id),
@@ -192,24 +193,28 @@ export default defineContentScript({
       let poiSyncData: unknown;
 
       emit({ phase: 'sync', processed: imported, total: favorites.length, message: `合并 ${imported} 条，跳过重复 ${duplicates} 条…` });
-      if (importedRoutes.length > 0) {
-        const routeSync = (await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', { data: importedRoutes, ver })) as { code?: number };
-        log('cloudSync routes: code=', routeSync.code, 'items=', importedRoutes.length);
-        if (routeSync.code !== 1) throw new Error('高德路线同步失败');
+      const importedRideRoutes = importedRoutes.filter((item) => Number(item.type) === 117);
+      if (importedRideRoutes.length > 0) {
+        const routeSync = (await postJson('https://amap-pc-ssr.amap.com/ssr/api/cloudSync', { data: importedRideRoutes, ver })) as { code?: number | string; message?: string; msg?: string };
+        log('cloudSync ride routes: code=', routeSync.code, 'items=', importedRideRoutes.length);
+        if (String(routeSync.code) !== '1') {
+          throw new Error(`高德骑行路线同步失败：${routeSync.message ?? routeSync.msg ?? JSON.stringify(routeSync).slice(0, 300)}`);
+        }
       }
-      if (poiFavorites.length > 0) {
-        const poiMerge = mergeImportItems(currentItems, poiFavorites, amapImportKey);
-        const newPoiIds = new Set(poiMerge.detail.filter((item) => item.status === 'imported').map((item) => item.id));
-        const newPoiItems = poiFavorites
-          .filter((item) => item.id && newPoiIds.has(item.id))
+      const syncFavorites = [...poiFavorites, ...legacyRoutes];
+      if (syncFavorites.length > 0) {
+        const syncMerge = mergeImportItems(currentItems, syncFavorites, amapImportKey);
+        const newSyncIds = new Set(syncMerge.detail.filter((item) => item.status === 'imported').map((item) => item.id));
+        const newSyncItems = syncFavorites
+          .filter((item) => item.id && newSyncIds.has(item.id))
           .map((item) => ({ id: item.id!, type: item.type || 101, act: 'c', data: item.data! }));
         const configuredBatchSize = Number(options?.amapSyncBatchSize);
         const batchSize = Number.isFinite(configuredBatchSize) ? Math.min(200, Math.max(1, Math.floor(configuredBatchSize))) : 50;
-        const batches = batchAmapSyncItems(newPoiItems, 700, batchSize);
+        const batches = batchAmapSyncItems(newSyncItems, 700, batchSize);
         let processed = 0;
         for (let index = 0; index < batches.length; index++) {
           const syncResult = (await postForm('/service/fav/syncFaves?', { data: batches[index], ver })) as { status?: string | number; ver?: string; data?: unknown };
-          log('syncFaves POI batch:', index + 1, '/', batches.length, 'status=', syncResult.status, 'items=', batches[index]?.length);
+          log('syncFaves POI/legacy-route batch:', index + 1, '/', batches.length, 'status=', syncResult.status, 'items=', batches[index]?.length);
           if (String(syncResult.status) !== '1') {
             throw new Error(`高德地点同步失败（第 ${index + 1} 批）：` + JSON.stringify(syncResult).slice(0, 500));
           }
@@ -217,7 +222,7 @@ export default defineContentScript({
           const responseData = syncResult.data && typeof syncResult.data === 'object' ? syncResult.data as Record<string, unknown> : undefined;
           ver = String(syncResult.ver ?? responseData?.['ver'] ?? ver);
           processed += batches[index]?.length ?? 0;
-          emit({ phase: 'sync', processed, total: newPoiItems.length, message: `分批同步中：${processed} / ${newPoiItems.length} 条` });
+          emit({ phase: 'sync', processed, total: newSyncItems.length, message: `分批同步中：${processed} / ${newSyncItems.length} 条` });
           if (index === 0 && batches.length > 1) {
             const check = (await getJson('/service/fav/getFav?')) as { data?: { items?: AmapItem[] } };
             const checkIds = new Set((check.data?.items ?? []).map((item) => item.id).filter(Boolean));
