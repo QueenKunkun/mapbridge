@@ -273,6 +273,15 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
 async function handleAmapMatchResult(data: unknown): Promise<void> {
   const pending = pendingAmapMatch;
   if (!pending) return;
+  const job = await getJob(pending.jobId);
+  if (job) {
+    await saveJob(progressImport(job, {
+      phase: 'match-poi',
+      processed: job.progress.total,
+      total: job.progress.total,
+      message: '高德 POI 匹配完成',
+    }));
+  }
   pendingAmapMatch = undefined;
   clearTimeout(pending.timer);
   const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution> } : {};
@@ -367,10 +376,18 @@ export default defineBackground(() => {
         await handleAmapMatchResult(event.data);
       } else if (event.type === 'poi-match-progress') {
         const jobs = await listJobs();
-        const job = jobs.find((j) => j.id === pendingAmapMatch?.jobId);
+        const matchJobId = pendingAmapMatch?.jobId;
+        const job = matchJobId ? jobs.find((j) => j.id === matchJobId) : undefined;
         if (job) {
+          // 完成事件可能与最后一次进度事件乱序到达；完成后丢弃迟到的旧进度。
+          if (!pendingAmapMatch || pendingAmapMatch.jobId !== job.id) return undefined;
           const p = event.data as { processed?: number; total?: number; message?: string };
-          await saveJob(progressImport(job, { phase: 'match-poi', processed: p.processed, total: p.total, message: p.message }));
+          await saveJob(progressImport(job, {
+            phase: 'match-poi',
+            processed: Math.max(job.progress.processed, p.processed ?? 0),
+            total: p.total ?? job.progress.total,
+            message: p.message,
+          }));
         }
       } else if (event.type === 'import-progress') {
         const jobs = await listJobs();
