@@ -188,7 +188,7 @@ export default defineContentScript({
       }
     }
 
-    async function runImport(payload: unknown, options?: { importDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
+    async function runImport(payload: unknown, options?: { importDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
       const items = (payload ?? []) as Array<Record<string, unknown>>;
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -220,6 +220,8 @@ export default defineContentScript({
       const poiMatchDelayMs = Number.isFinite(configuredPoiDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredPoiDelay))) : 1_000;
       const configuredBatch = Number(options?.baiduSyncBatchSize);
       const syncBatchSize = Number.isFinite(configuredBatch) ? Math.min(200, Math.max(1, Math.floor(configuredBatch))) : 20;
+      const configuredMatchDistance = Number(options?.baiduPoiMatchDistanceMeters);
+      const matchDistance = Number.isFinite(configuredMatchDistance) ? Math.min(10_000, Math.max(50, Math.floor(configuredMatchDistance))) : 3_000;
       const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items, dedupTolerance);
       const beforeIds = new Set(currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
       emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
@@ -248,7 +250,7 @@ export default defineContentScript({
           const city = chooseBaiduSearchCity(await request(0), { x, y });
           if (city === undefined) return item;
           await new Promise((resolve) => setTimeout(resolve, poiMatchDelayMs));
-          const match = chooseBaiduPoiMatch(await request(city), { name, x, y });
+          const match = chooseBaiduPoiMatch(await request(city), { name, x, y }, matchDistance);
           if (!match) return item;
           log('matched native Baidu POI', name, match.uid);
           return {

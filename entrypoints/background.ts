@@ -78,7 +78,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; baiduPoiMatchDelayMs?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number } },
+  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number } },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -157,6 +157,7 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
         importDelayMs: settings.importDelayMs,
         poiMatchDelayMs: settings.poiMatchDelayMs,
         baiduPoiMatchDelayMs: settings.baiduPoiMatchDelayMs,
+        baiduPoiMatchDistanceMeters: settings.baiduPoiMatchDistanceMeters,
         amapSyncBatchSize: settings.amapSyncBatchSize,
         baiduSyncBatchSize: settings.baiduSyncBatchSize,
         dedupDistanceMeters: settings.dedupDistanceMeters,
@@ -273,7 +274,10 @@ async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: Am
   await saveJob({
     ...job,
     amapPoiResolutions: { ...(job.amapPoiResolutions ?? {}), [placeId]: candidate },
-    amapPoiMatches: { ...(job.amapPoiMatches ?? {}), [placeId]: { status: 'matched' } },
+    amapPoiMatches: {
+      ...(job.amapPoiMatches ?? {}),
+      [placeId]: { ...(job.amapPoiMatches?.[placeId] ?? {}), status: 'matched' },
+    },
     updatedAt: now(),
   });
   return { type: 'job', job: await getJob(jobId) };

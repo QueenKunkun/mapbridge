@@ -162,10 +162,6 @@ section {
 }
 
 .match-cell {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
   min-width: 0;
 }
 
@@ -177,33 +173,20 @@ section {
   flex-wrap: nowrap;
 }
 
-.match-diagnostic {
+.place-row {
   min-width: 0;
-  color: #b45309;
-  font-size: 12px;
 }
 
-.match-diagnostic summary {
-  cursor: pointer;
-  list-style: none;
-  white-space: nowrap;
-}
-
-.match-diagnostic summary::-webkit-details-marker {
-  display: none;
-}
-
-.match-diagnostic-body {
-  width: 100%;
+.row-diagnostic {
+  margin: -1px 0 6px;
   box-sizing: border-box;
-  margin-top: 4px;
   padding: 8px;
   border: 1px solid #dbe2ec;
   border-radius: 6px;
   background: #fff;
 }
 
-.match-diagnostic-body pre {
+.row-diagnostic pre {
   max-height: 140px;
   margin: 0 0 7px;
   overflow: auto;

@@ -36,6 +36,8 @@ export interface AppSettings {
   poiMatchDelayMs: number;
   /** 百度 POI 匹配请求间隔毫秒（限速）。 */
   baiduPoiMatchDelayMs: number;
+  /** 百度 POI 匹配的最大直线距离（米）。 */
+  baiduPoiMatchDistanceMeters: number;
   /** 高德 POI 匹配的最大直线距离（米）。 */
   poiMatchDistanceMeters: number;
   /** 失败重试次数。 */
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   importDelayMs: IMPORT_DELAY_MS_DEFAULT,
   poiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
   baiduPoiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
+  baiduPoiMatchDistanceMeters: 3_000,
   poiMatchDistanceMeters: POI_MATCH_DISTANCE_METERS_DEFAULT,
   retryCount: 2,
   defaultFolder: '',
@@ -94,6 +97,7 @@ function normalizeSettings(settings: AppSettings): AppSettings {
   const importDelay = Number(settings.importDelayMs);
   const poiMatchDelay = Number(settings.poiMatchDelayMs);
   const baiduPoiMatchDelay = Number(settings.baiduPoiMatchDelayMs);
+  const baiduPoiMatchDistance = Number(settings.baiduPoiMatchDistanceMeters);
   const poiMatchDistance = Number(settings.poiMatchDistanceMeters);
   const value = Number(settings.amapSyncBatchSize);
   const baiduBatch = Number(settings.baiduSyncBatchSize);
@@ -109,6 +113,9 @@ function normalizeSettings(settings: AppSettings): AppSettings {
     baiduPoiMatchDelayMs: Number.isFinite(baiduPoiMatchDelay)
       ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)))
       : POI_MATCH_DELAY_MS_DEFAULT,
+    baiduPoiMatchDistanceMeters: Number.isFinite(baiduPoiMatchDistance)
+      ? Math.min(10_000, Math.max(50, Math.floor(baiduPoiMatchDistance)))
+      : 3_000,
     poiMatchDistanceMeters: Number.isFinite(poiMatchDistance)
       ? Math.min(POI_MATCH_DISTANCE_METERS_MAX, Math.max(POI_MATCH_DISTANCE_METERS_MIN, Math.floor(poiMatchDistance)))
       : POI_MATCH_DISTANCE_METERS_DEFAULT,

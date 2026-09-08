@@ -115,6 +115,31 @@ body {
   min-width: 0;
 }
 
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-overlay);
+}
+
+.settings-tabs button {
+  flex: 1;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.settings-tabs button.active {
+  background: var(--border-muted);
+  color: var(--text);
+}
+
 @media (max-width: 600px) {
   .options-body {
     flex-direction: column;

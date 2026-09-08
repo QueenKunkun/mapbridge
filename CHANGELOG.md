@@ -16,6 +16,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Placed POI diagnostics in a full-width expandable row and kept retry and candidate selection available after a match.
+- Clarified settings scope and renamed the Amap batch-size setting; hid settings that are not yet connected to an active import behavior.
 - Added in-place selection of a candidate when Amap POI matching finds multiple nearby results.
 - Added a bounded setting for the maximum Amap POI matching distance, defaulting to 150 meters.
 - Moved manual Amap POI matching into the Places preview table, with per-place status, retry actions, and coordinates available on hover.

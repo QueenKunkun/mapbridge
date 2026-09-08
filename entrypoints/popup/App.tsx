@@ -950,35 +950,26 @@ function PlaceTable({
     <div className="place-table">
       <input className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => setFilter(e.target.value)} />
       <div className="table-head">
+        <span></span>
         <span>名称</span>
         <span>地址</span>
         <span>{canMatchAmap ? 'POI 匹配' : '操作'}</span>
-        <span></span>
       </div>
       <div className="table-body">
         {shown.map((p) => (
-          <div key={p.id} className="row">
-            <input
-              value={p.name}
-              title={`WGS-84：${p.wgs84.lng.toFixed(6)}, ${p.wgs84.lat.toFixed(6)}`}
-              onChange={(e) => update(p.id, { name: e.target.value })}
-            />
-            <input value={p.address ?? ''} onChange={(e) => update(p.id, { address: e.target.value })} />
-            {canMatchAmap ? (
-              <PoiMatchCell
-                place={p}
-                match={amapPoiMatches?.[p.id]}
-                resolution={amapPoiResolutions?.[p.id]}
-                matching={matchingPlaceIds?.has(p.id) ?? false}
-                disabled={matchingPlaceIds !== undefined && matchingPlaceIds.size > 0}
-                onMatch={onMatchAmapPoi}
-                onSelect={onSelectAmapPoi}
-              />
-            ) : <span className="hint">—</span>}
-            <button className="remove" onClick={() => remove(p.id)}>
-              ✕
-            </button>
-          </div>
+          <PlaceRow
+            key={p.id}
+            place={p}
+            canMatchAmap={canMatchAmap}
+            match={amapPoiMatches?.[p.id]}
+            resolution={amapPoiResolutions?.[p.id]}
+            matching={matchingPlaceIds?.has(p.id) ?? false}
+            disabled={matchingPlaceIds !== undefined && matchingPlaceIds.size > 0}
+            onChange={update}
+            onRemove={remove}
+            onMatch={onMatchAmapPoi}
+            onSelect={onSelectAmapPoi}
+          />
         ))}
         {shown.length === 0 && <div className="empty">无匹配</div>}
       </div>
@@ -991,12 +982,71 @@ function PlaceTable({
   );
 }
 
+type PoiCandidate = NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number];
+
+function PlaceRow({
+  place,
+  canMatchAmap,
+  match,
+  resolution,
+  matching,
+  disabled,
+  onChange,
+  onRemove,
+  onMatch,
+  onSelect,
+}: {
+  place: Job['places'][number];
+  canMatchAmap?: boolean;
+  match?: NonNullable<Job['amapPoiMatches']>[string];
+  resolution?: NonNullable<Job['amapPoiResolutions']>[string];
+  matching: boolean;
+  disabled: boolean;
+  onChange: (id: string, patch: Partial<Job['places'][number]>) => void;
+  onRemove: (id: string) => void;
+  onMatch?: (placeId: string) => void;
+  onSelect?: (placeId: string, candidate: PoiCandidate) => void;
+}) {
+  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
+  return (
+    <div className="place-row">
+      <div className="row">
+        <button className="remove" aria-label={`删除${place.name}`} title="删除此记录" onClick={() => onRemove(place.id)}>✕</button>
+        <input
+          value={place.name}
+          title={`WGS-84：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`}
+          onChange={(e) => onChange(place.id, { name: e.target.value })}
+        />
+        <input value={place.address ?? ''} onChange={(e) => onChange(place.id, { address: e.target.value })} />
+        {canMatchAmap ? (
+          <PoiMatchCell
+            place={place}
+            match={match}
+            resolution={resolution}
+            matching={matching}
+            disabled={disabled}
+            diagnosticOpen={diagnosticOpen}
+            onToggleDiagnostic={() => setDiagnosticOpen((open) => !open)}
+            onMatch={onMatch}
+            onSelect={onSelect}
+          />
+        ) : <span className="hint">—</span>}
+      </div>
+      {import.meta.env.DEV && diagnosticOpen && match?.status === 'not-found' && (
+        <PoiMatchDiagnostic place={place} match={match} />
+      )}
+    </div>
+  );
+}
+
 function PoiMatchCell({
   place,
   match,
   resolution,
   matching,
   disabled,
+  diagnosticOpen,
+  onToggleDiagnostic,
   onMatch,
   onSelect,
 }: {
@@ -1005,13 +1055,43 @@ function PoiMatchCell({
   resolution?: NonNullable<Job['amapPoiResolutions']>[string];
   matching: boolean;
   disabled: boolean;
+  diagnosticOpen: boolean;
+  onToggleDiagnostic: () => void;
   onMatch?: (placeId: string) => void;
-  onSelect?: (placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]) => void;
+  onSelect?: (placeId: string, candidate: PoiCandidate) => void;
 }) {
-  const [copied, setCopied] = useState(false);
   if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
+  const candidates = match?.candidates ?? [];
+  const canChoose = import.meta.env.DEV && candidates.length > 0;
+  const selector = canChoose ? (
+    <select
+      className="match-candidate-select"
+      value={resolution?.poiid ?? ''}
+      aria-label={`为${place.name}选择高德 POI`}
+      onChange={(event) => {
+        const candidate = candidates.find((item) => item.poiid === event.target.value);
+        if (candidate) onSelect?.(place.id, candidate);
+      }}
+    >
+      <option value="">无最佳匹配</option>
+      {candidates.map((candidate) => {
+        const score = Number.isFinite(candidate.nameScore) ? candidate.nameScore : 0;
+        return <option key={candidate.poiid} value={candidate.poiid} title={`距离 ${Math.round(candidate.distanceMeters)} 米，名称相似度 ${score.toFixed(2)}${candidate.address ? `，地址：${candidate.address}` : ''}`}>
+          {candidate.name}（匹配度 {Math.round(score * 100)}%）
+        </option>;
+      })}
+    </select>
+  ) : null;
   if (resolution || match?.status === 'matched') {
-    return <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>;
+    return (
+      <div className="match-cell">
+        <div className="match-controls">
+          <button className="small icon-button" disabled={disabled} aria-label="刷新 POI 匹配" title="刷新 POI 匹配" onClick={() => onMatch?.(place.id)}>↻</button>
+          {selector}
+          <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>
+        </div>
+      </div>
+    );
   }
   if (match?.status === 'ambiguous') {
     return (
@@ -1033,24 +1113,6 @@ function PoiMatchCell({
     );
   }
   if (match?.status === 'not-found') {
-    const best = match.candidates?.[0];
-    const diagnostic = [
-      `地点：${place.name}`,
-      `地址：${place.address || '（无）'}`,
-      `坐标：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`,
-      `候选数量：${match.candidates?.length ?? 0}`,
-      best ? `最佳候选：${best.name}，距离 ${Math.round(best.distanceMeters)} 米` : '',
-      match.reason ? `原因：${match.reason}` : '',
-    ].filter(Boolean).join('\n');
-    async function copyDiagnostic(): Promise<void> {
-      try {
-        await navigator.clipboard.writeText(diagnostic);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1500);
-      } catch {
-        setCopied(false);
-      }
-    }
     return (
       <div className="match-cell">
         <div className="match-controls">
@@ -1063,52 +1125,43 @@ function PoiMatchCell({
           >
             ↻
           </button>
-          {import.meta.env.DEV && (match.candidates?.length ?? 0) > 0 && (
-          <select
-            className="match-candidate-select"
-            defaultValue=""
-            aria-label={`为${place.name}选择高德 POI`}
-            onChange={(event) => {
-              const candidate = match.candidates?.find((item) => item.poiid === event.target.value);
-              if (candidate) onSelect?.(place.id, candidate);
-            }}
-          >
-            <option value="">无最佳匹配</option>
-            {(match.candidates ?? []).map((candidate) => (
-              (() => {
-                const score = Number.isFinite(candidate.nameScore) ? candidate.nameScore : 0;
-                return (
-                  <option
-                    key={candidate.poiid}
-                    value={candidate.poiid}
-                    title={`距离 ${Math.round(candidate.distanceMeters)} 米，名称相似度 ${score.toFixed(2)}${candidate.address ? `，地址：${candidate.address}` : ''}`}
-                  >
-                    {candidate.name}（匹配度 {Math.round(score * 100)}%）
-                  </option>
-                );
-              })()
-            ))}
-          </select>
+          {import.meta.env.DEV && (
+            <button className="small icon-button" aria-label="查看匹配原因" title="查看匹配原因" aria-expanded={diagnosticOpen} onClick={onToggleDiagnostic}>ⓘ</button>
           )}
-          {import.meta.env.DEV && (match.candidates?.length ?? 0) === 0 && (
+          {selector}
+          {import.meta.env.DEV && candidates.length === 0 && (
             <select className="match-candidate-select" value="" disabled aria-label={`为${place.name}选择高德 POI`}>
               <option value="">未找到</option>
             </select>
           )}
           {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
-          {import.meta.env.DEV && (
-            <details className="match-diagnostic">
-              <summary aria-label="查看匹配原因" title="查看匹配原因">ⓘ</summary>
-              <div className="match-diagnostic-body">
-                <pre>{diagnostic}</pre>
-                <button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button>
-              </div>
-            </details>
-          )}
         </div>
       </div>
     );
   }
   if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
   return <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>匹配</button>;
+}
+
+function PoiMatchDiagnostic({ place, match }: { place: Job['places'][number]; match: NonNullable<Job['amapPoiMatches']>[string] }) {
+  const [copied, setCopied] = useState(false);
+  const best = match.candidates?.[0];
+  const diagnostic = [
+    `地点：${place.name}`,
+    `地址：${place.address || '（无）'}`,
+    `坐标：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`,
+    `候选数量：${match.candidates?.length ?? 0}`,
+    best ? `最佳候选：${best.name}，距离 ${Math.round(best.distanceMeters)} 米` : '',
+    match.reason ? `原因：${match.reason}` : '',
+  ].filter(Boolean).join('\n');
+  async function copyDiagnostic(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(diagnostic);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }
+  return <div className="row-diagnostic"><pre>{diagnostic}</pre><button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button></div>;
 }

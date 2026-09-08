@@ -32,6 +32,7 @@ export default function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'general' | 'baidu' | 'amap'>('general');
   const [devLog, setDevLog] = useState<string[]>([]);
   const [devBusy, setDevBusy] = useState(false);
   const [version, setVersion] = useState('');
@@ -193,6 +194,12 @@ export default function App() {
 
         <main className="blocks-container">
           <SettingsBlock id="block-import" title="导入设置" description="迁移任务的默认行为。数据全部保存在本机浏览器，不会上传任何内容。">
+            <div className="settings-tabs" role="tablist" aria-label="导入设置分类">
+              {([['general', '通用'], ['baidu', '百度'], ['amap', '高德']] as const).map(([key, label]) => (
+                <button key={key} className={settingsTab === key ? 'active' : ''} role="tab" aria-selected={settingsTab === key} onClick={() => setSettingsTab(key)}>{label}</button>
+              ))}
+            </div>
+            {settingsTab === 'general' && <>
             <label className="field">
               <span>导入请求间隔（ms）</span>
               <input
@@ -205,6 +212,8 @@ export default function App() {
               />
               <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；影响百度和高德导入时的连续请求间隔。</small>
             </label>
+            </>}
+            {settingsTab === 'amap' && <>
             <label className="field">
               <span>高德 POI 匹配请求间隔（ms）</span>
               <input
@@ -217,6 +226,8 @@ export default function App() {
               />
               <small>仅影响导入到高德时的 POI 匹配；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。请求越慢，对目标地图接口越温和。</small>
             </label>
+            </>}
+            {settingsTab === 'baidu' && <>
             <label className="field">
               <span>百度 POI 匹配请求间隔（ms）</span>
               <input
@@ -230,6 +241,20 @@ export default function App() {
               <small>仅影响导入到百度时的 POI 搜索；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。</small>
             </label>
             <label className="field">
+              <span>百度 POI 最大匹配距离（米）</span>
+              <input
+                type="number"
+                min={50}
+                max={10000}
+                step={50}
+                value={settings.baiduPoiMatchDistanceMeters}
+                onChange={(e) => setSettings({ ...settings, baiduPoiMatchDistanceMeters: Number(e.target.value) || 3000 })}
+              />
+              <small>仅影响导入到百度时的 POI 匹配；默认 3000 米，范围 50–10000 米。</small>
+            </label>
+            </>}
+            {settingsTab === 'amap' && <>
+            <label className="field">
               <span>高德 POI 最大匹配距离（米）</span>
               <input
                 type="number"
@@ -241,6 +266,8 @@ export default function App() {
               />
               <small>仅影响导入到高德时的 POI 匹配。默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围 {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX} 米；范围越大越容易误匹配。</small>
             </label>
+            </>}
+            {settingsTab === 'amap' && <>
             <label className="field">
               <span>高德收藏同步批次大小</span>
               <input
@@ -253,6 +280,8 @@ export default function App() {
               />
               <small>仅影响高德地点和兼容旧路线的批量同步；范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条，仍受高德接口参数上限约束。</small>
             </label>
+            </>}
+            {settingsTab === 'baidu' && <>
             <label className="field">
               <span>百度收藏同步批次大小</span>
               <input
@@ -265,6 +294,8 @@ export default function App() {
               />
               <small>百度接口仍按单条请求提交；每完成此数量后额外等待一次导入间隔，范围 1–200 条。</small>
             </label>
+            </>}
+            {settingsTab === 'general' && <>
             <label className="field">
               <span>重复判断距离容差（米）</span>
               <input
@@ -277,6 +308,8 @@ export default function App() {
               />
               <small>影响百度和高德的跨地图重复判断；默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围 {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米，不改变导入坐标。</small>
             </label>
+            </>}
+            {settingsTab === 'general' && <>
             <label className="check">
               <input
                 type="checkbox"
@@ -285,6 +318,7 @@ export default function App() {
               />
               <span>跳过与目标已有收藏重复的项</span>
             </label>
+            </>}
             <div>
               <button className="primary" onClick={() => void save()}>
                 {saved ? '已保存 ✓' : '保存设置'}
