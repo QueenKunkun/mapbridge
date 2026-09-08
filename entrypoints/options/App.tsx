@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
-import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, IMPORT_DELAY_MS_DEFAULT, POI_MATCH_DELAY_MS_DEFAULT, REQUEST_DELAY_MS_MAX, REQUEST_DELAY_MS_MIN, type AppSettings } from '@/storage/db';
+import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, IMPORT_DELAY_MS_DEFAULT, POI_MATCH_DELAY_MS_DEFAULT, POI_MATCH_DISTANCE_METERS_DEFAULT, POI_MATCH_DISTANCE_METERS_MAX, POI_MATCH_DISTANCE_METERS_MIN, REQUEST_DELAY_MS_MAX, REQUEST_DELAY_MS_MIN, type AppSettings } from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
 import SettingsBlock from '@/components/SettingsBlock/SettingsBlock';
@@ -216,6 +216,18 @@ export default function App() {
                 onChange={(e) => setSettings({ ...settings, poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
               />
               <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；匹配功能启用后生效。请求越慢，对目标地图接口越温和。</small>
+            </label>
+            <label className="field">
+              <span>高德 POI 最大匹配距离（米）</span>
+              <input
+                type="number"
+                min={POI_MATCH_DISTANCE_METERS_MIN}
+                max={POI_MATCH_DISTANCE_METERS_MAX}
+                step={10}
+                value={settings.poiMatchDistanceMeters}
+                onChange={(e) => setSettings({ ...settings, poiMatchDistanceMeters: Number(e.target.value) || POI_MATCH_DISTANCE_METERS_DEFAULT })}
+              />
+              <small>默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围 {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX} 米；范围越大越容易误匹配。</small>
             </label>
             <label className="field">
               <span>失败重试次数</span>

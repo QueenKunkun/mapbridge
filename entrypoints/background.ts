@@ -78,7 +78,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number } },
+  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number } },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -236,7 +236,7 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
         resolve({ ok: false, error: '高德 POI 匹配超时' });
       }, 30000),
     };
-    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs } }).catch((e) => {
+    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs, poiMatchDistanceMeters: settings.poiMatchDistanceMeters } }).catch((e) => {
       if (pendingAmapMatch) {
         clearTimeout(pendingAmapMatch.timer);
         pendingAmapMatch = undefined;

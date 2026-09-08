@@ -158,10 +158,13 @@ export default defineContentScript({
       });
     }
 
-    async function runMatchPoi(payload: unknown, options?: { poiMatchDelayMs?: number }): Promise<void> {
+    async function runMatchPoi(payload: unknown, options?: { poiMatchDelayMs?: number; poiMatchDistanceMeters?: number }): Promise<void> {
       const places = Array.isArray(payload) ? payload as CanonicalPlace[] : [];
       const configuredDelay = Number(options?.poiMatchDelayMs);
       const delayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 1_000;
+      const maxDistanceMeters = Number.isFinite(Number(options?.poiMatchDistanceMeters))
+        ? Math.min(1_000, Math.max(50, Math.floor(Number(options?.poiMatchDistanceMeters))))
+        : 150;
       const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; name?: string; address?: string }> = {};
       const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidateNames?: string[]; error?: string }> = {};
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
@@ -171,7 +174,7 @@ export default defineContentScript({
         const searchers = useSsrFirst ? [searchAmapSsr, searchAmapSdk] : [searchAmapSdk, searchAmapSsr];
         for (const search of searchers) {
           try {
-            const match = chooseAmapPoiMatch(await search(place));
+            const match = chooseAmapPoiMatch(await search(place), { maxDistanceMeters });
             if (match.status === 'matched') {
               resolutions[place.id] = {
                 poiid: match.candidate.poiid,

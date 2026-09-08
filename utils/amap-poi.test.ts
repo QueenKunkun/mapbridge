@@ -47,4 +47,12 @@ describe('Amap POI matching', () => {
     ];
     expect(chooseAmapPoiMatch(ambiguous).status).toBe('ambiguous');
   });
+
+  it('honors a caller-provided maximum matching distance', () => {
+    const candidate = [{
+      poiid: 'B3', name: '华润大厦', address: '', location: source.wgs84, distanceMeters: 200, nameScore: 1,
+    }];
+    expect(chooseAmapPoiMatch(candidate).status).toBe('not-found');
+    expect(chooseAmapPoiMatch(candidate, { maxDistanceMeters: 250 }).status).toBe('matched');
+  });
 });

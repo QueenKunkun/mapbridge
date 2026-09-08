@@ -34,6 +34,8 @@ export interface AppSettings {
   importDelayMs: number;
   /** 高德 POI 匹配请求间隔毫秒（限速）。 */
   poiMatchDelayMs: number;
+  /** 高德 POI 匹配的最大直线距离（米）。 */
+  poiMatchDistanceMeters: number;
   /** 失败重试次数。 */
   retryCount: number;
   /** 默认目标收藏夹名。 */
@@ -53,6 +55,9 @@ export const REQUEST_DELAY_MS_MIN = 300;
 export const REQUEST_DELAY_MS_MAX = 10_000;
 export const IMPORT_DELAY_MS_DEFAULT = 500;
 export const POI_MATCH_DELAY_MS_DEFAULT = 1_000;
+export const POI_MATCH_DISTANCE_METERS_MIN = 50;
+export const POI_MATCH_DISTANCE_METERS_MAX = 1_000;
+export const POI_MATCH_DISTANCE_METERS_DEFAULT = 150;
 export const DEDUP_DISTANCE_METERS_MIN = 1;
 export const DEDUP_DISTANCE_METERS_MAX = 100;
 export const DEDUP_DISTANCE_METERS_DEFAULT = 1;
@@ -60,6 +65,7 @@ export const DEDUP_DISTANCE_METERS_DEFAULT = 1;
 export const DEFAULT_SETTINGS: AppSettings = {
   importDelayMs: IMPORT_DELAY_MS_DEFAULT,
   poiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
+  poiMatchDistanceMeters: POI_MATCH_DISTANCE_METERS_DEFAULT,
   retryCount: 2,
   defaultFolder: '',
   skipExisting: true,
@@ -81,6 +87,7 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 function normalizeSettings(settings: AppSettings): AppSettings {
   const importDelay = Number(settings.importDelayMs);
   const poiMatchDelay = Number(settings.poiMatchDelayMs);
+  const poiMatchDistance = Number(settings.poiMatchDistanceMeters);
   const value = Number(settings.amapSyncBatchSize);
   const tolerance = Number(settings.dedupDistanceMeters);
   return {
@@ -91,6 +98,9 @@ function normalizeSettings(settings: AppSettings): AppSettings {
     poiMatchDelayMs: Number.isFinite(poiMatchDelay)
       ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
       : POI_MATCH_DELAY_MS_DEFAULT,
+    poiMatchDistanceMeters: Number.isFinite(poiMatchDistance)
+      ? Math.min(POI_MATCH_DISTANCE_METERS_MAX, Math.max(POI_MATCH_DISTANCE_METERS_MIN, Math.floor(poiMatchDistance)))
+      : POI_MATCH_DISTANCE_METERS_DEFAULT,
     amapSyncBatchSize: Number.isFinite(value)
       ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
       : AMAP_SYNC_BATCH_SIZE_DEFAULT,

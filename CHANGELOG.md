@@ -16,6 +16,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Added a bounded setting for the maximum Amap POI matching distance, defaulting to 150 meters.
 - Moved manual Amap POI matching into the Places preview table, with per-place status, retry actions, and coordinates available on hover.
 - Kept the wizard footer limited to navigation controls; matching, refresh, and other task actions now stay in the page content.
 - Shortened wizard back buttons to `Back`-equivalent labels so they remain compact and do not wrap in the popup.
