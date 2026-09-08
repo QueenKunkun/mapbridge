@@ -239,6 +239,16 @@ async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgRespo
   return { type: 'job', job: await getJob(jobId) };
 }
 
+async function handleCancelJob(jobId: string): Promise<BgResponse> {
+  const job = await getJob(jobId);
+  if (!job) return { type: 'error', message: '任务不存在' };
+  if (job.status === 'importing') return { type: 'error', message: '导入已经开始，不能取消；请等待完成后再撤销已写入记录' };
+  if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return { type: 'error', message: '当前任务已经结束' };
+  const cancelled: Job = { ...job, status: 'cancelled', updatedAt: now() };
+  await saveJob(cancelled);
+  return { type: 'job', job: cancelled };
+}
+
 async function handleImportEvent(data: RawImportResult): Promise<void> {
   const jobs = await listJobs();
   const job = jobs.find((j) => j.status === 'importing');
@@ -421,6 +431,9 @@ export default defineBackground(() => {
       }
       case 'match-poi': {
         return await handleMatchAmapPoi(req.jobId, req.tabId);
+      }
+      case 'cancel-job': {
+        return await handleCancelJob(req.jobId);
       }
       case 'preview-update': {
         const job = await getJob(req.jobId);

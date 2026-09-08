@@ -120,6 +120,7 @@ export default function App() {
       const active = res.jobs.find((item) => item.status === 'importing' || item.status === 'extracting' || item.status === 'preview');
       if (!active) return;
       setJob(active);
+      setMode('migrate');
       setSource(active.sourceProvider);
       setTarget(active.targetProvider);
       setStep(active.status === 'importing' ? 'report' : active.status === 'preview' ? 'preview' : 'extract');
@@ -191,6 +192,20 @@ export default function App() {
       return res.job;
     }
     return undefined;
+  }
+
+  async function cancelCurrentJob(): Promise<void> {
+    if (!job || job.status === 'importing') return;
+    const res = await sendBg({ type: 'cancel-job', jobId: job.id });
+    if (res.type === 'job') {
+      setJob(undefined);
+      setMatching(false);
+      setStep('setup');
+      setMode('migrate');
+      setError('');
+    } else if (res.type === 'error') {
+      setError(res.message);
+    }
   }
 
   async function currentTabId(): Promise<number | undefined> {
@@ -681,6 +696,7 @@ export default function App() {
             )}
           </div>
           <div className="preview-actions">
+            <button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>
             <NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
               onClick={async () => { await savePreview(previewPlaces); setStep('import'); }}

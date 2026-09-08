@@ -114,6 +114,50 @@ export default defineContentScript({
       return m?.[1] ? decodeURIComponent(m[1]) : '';
     }
 
+    async function searchAmapSsr(place: CanonicalPlace): Promise<ReturnType<typeof parseAmapPoiCandidates>> {
+      const url = `/ssr/api/searchPoi?type=keyword&keywords=${encodeURIComponent(place.name)}&pagesize=20&city=100000`;
+      const response = await fetch(url, { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`SSR POI search HTTP ${response.status}`);
+      return parseAmapPoiCandidates(await response.json(), place);
+    }
+
+    async function searchAmapSdk(place: CanonicalPlace): Promise<ReturnType<typeof parseAmapPoiCandidates>> {
+      const page = window as unknown as { AMap?: { plugin?: (name: string[], callback: () => void) => void; PlaceSearch?: new (options: unknown) => { search: (keyword: string, callback: (status: string, result: unknown) => void) => void } } };
+      if (!page.AMap?.plugin) throw new Error('Amap SDK unavailable');
+      return new Promise((resolve, reject) => {
+        page.AMap!.plugin!(['AMap.PlaceSearch'], () => {
+          try {
+            if (!page.AMap?.PlaceSearch) throw new Error('Amap PlaceSearch unavailable');
+            const searcher = new page.AMap.PlaceSearch({ pageSize: 20, city: '全国' });
+            searcher.search(place.name, (status, result) => {
+              if (status !== 'complete') {
+                reject(new Error(`Amap SDK POI search ${status}`));
+                return;
+              }
+              const root = result && typeof result === 'object' ? result as { poiList?: { pois?: unknown[] } } : {};
+              const pois = (root.poiList?.pois ?? []).flatMap((value) => {
+                if (!value || typeof value !== 'object') return [];
+                const poi = value as Record<string, unknown>;
+                const location = poi.location && typeof poi.location === 'object' ? poi.location as { lng?: number; lat?: number } : undefined;
+                if (!Number.isFinite(location?.lng) || !Number.isFinite(location?.lat)) return [];
+                return [{
+                  poiid: poi.id ?? poi.poiid,
+                  name: poi.name,
+                  address: poi.address,
+                  location: `${location!.lng},${location!.lat}`,
+                  adcode: poi.adcode,
+                  cityname: poi.cityname,
+                }];
+              });
+              resolve(parseAmapPoiCandidates({ data: { data: { poi_list: pois } } }, place));
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+    }
+
     async function runMatchPoi(payload: unknown, options?: { poiMatchDelayMs?: number }): Promise<void> {
       const places = Array.isArray(payload) ? payload as CanonicalPlace[] : [];
       const configuredDelay = Number(options?.poiMatchDelayMs);
@@ -122,11 +166,11 @@ export default defineContentScript({
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
-        try {
-          const url = `/ssr/api/searchPoi?type=keyword&keywords=${encodeURIComponent(place.name)}&pagesize=20&city=100000`;
-          const response = await fetch(url, { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } });
-          if (response.ok) {
-            const match = chooseAmapPoiMatch(parseAmapPoiCandidates(await response.json(), place));
+        const useSsrFirst = location.pathname.startsWith('/ssr');
+        const searchers = useSsrFirst ? [searchAmapSsr, searchAmapSdk] : [searchAmapSdk, searchAmapSsr];
+        for (const search of searchers) {
+          try {
+            const match = chooseAmapPoiMatch(await search(place));
             if (match.status === 'matched') {
               resolutions[place.id] = {
                 poiid: match.candidate.poiid,
@@ -135,10 +179,11 @@ export default defineContentScript({
                 name: match.candidate.name,
                 address: match.candidate.address,
               };
+              break;
             }
+          } catch (error) {
+            log('Amap POI match strategy failed:', useSsrFirst ? 'ssr/sdk' : 'sdk/ssr', place.name, String(error));
           }
-        } catch (error) {
-          log('Amap POI match failed:', place.name, String(error));
         }
         postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: index + 1, total: places.length, message: `匹配高德 POI：${index + 1} / ${places.length}` } });
         if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
