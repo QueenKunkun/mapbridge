@@ -99,10 +99,11 @@ export function chooseBaiduPoiMatch(
 ): BaiduPoiMatch | undefined {
   const candidates = parseBaiduPoiCandidates(response)
     .map((item) => ({ ...item, distance: Math.hypot(item.x - target.x, item.y - target.y) }))
-    .filter((item) => item.name === target.name)
+    .filter((item) => normalizeName(item.name) === normalizeName(target.name))
     .sort((a, b) => a.distance - b.distance);
   const best = candidates[0];
   if (!best || best.distance > maxDistance) return undefined;
   const { distance: _distance, ...match } = best;
   return match;
 }
+import { normalizeName } from '@/core/dedup';

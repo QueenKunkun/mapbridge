@@ -54,4 +54,9 @@ describe('Baidu POI matching', () => {
     const response = { content: [{ uid: 'far', name: '真武庙', x: 1292386847, y: 425173313 }] };
     expect(chooseBaiduPoiMatch(response, { name: '真武庙', x: 12949071, y: 4152031 })).toBeUndefined();
   });
+
+  it('normalizes harmless whitespace and case differences in names', () => {
+    const response = { content: [{ uid: 'nearby', name: ' 金平湖风景区 ', x: 1294907100, y: 415203100 }] };
+    expect(chooseBaiduPoiMatch(response, { name: '金平湖风景区', x: 12949071, y: 4152031 })).toMatchObject({ uid: 'nearby' });
+  });
 });
