@@ -143,9 +143,9 @@ export default function App() {
 
   useEffect(() => {
     if (step !== 'preview' || !job) return;
-    setPreviewTab(job.places.length > 0 ? 'places' : 'routes');
+    setPreviewTab(job.previewTab ?? (job.places.length > 0 ? 'places' : 'routes'));
     setPreviewPlaces(job.places);
-  }, [step, job?.id]);
+  }, [step, job?.id, job?.previewTab]);
 
   async function refreshDetection(): Promise<void> {
     setDetecting(true);
@@ -249,7 +249,7 @@ export default function App() {
     setExportedCount(0);
     setExportWarnings([]);
     try {
-      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource });
+      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource, workflow: 'export' });
       if (res.type !== 'job' || !res.job) {
         setError('无法创建导出任务');
         return;
@@ -365,9 +365,9 @@ export default function App() {
     }
   }
 
-  async function savePreview(places: Job['places']): Promise<void> {
+  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab): Promise<void> {
     if (!job) return;
-    const res = await sendBg({ type: 'preview-update', jobId: job.id, places });
+    const res = await sendBg({ type: 'preview-update', jobId: job.id, places, previewTab: tab });
     if (res.type === 'job' && res.job) setJob(res.job);
   }
 
@@ -670,7 +670,7 @@ export default function App() {
               role="tab"
               aria-selected={activePreviewTab === 'places'}
               disabled={job.places.length === 0}
-              onClick={() => setPreviewTab('places')}
+              onClick={() => { setPreviewTab('places'); void savePreview(previewPlaces, 'places'); }}
             >
               地点 <span>({job.places.length}条)</span>
             </button>
@@ -679,7 +679,7 @@ export default function App() {
               role="tab"
               aria-selected={activePreviewTab === 'routes'}
               disabled={previewRoutes.length === 0}
-              onClick={() => setPreviewTab('routes')}
+              onClick={() => { setPreviewTab('routes'); void savePreview(previewPlaces, 'routes'); }}
             >
               路线 <span>({previewRoutes.length}条)</span>
             </button>
@@ -700,7 +700,7 @@ export default function App() {
             <button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>
             <NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
-              onClick={async () => { await savePreview(previewPlaces); setStep('import'); }}
+              onClick={async () => { await savePreview(previewPlaces, previewTab); setStep('import'); }}
             />
           </div>
         </section>

@@ -11,6 +11,8 @@ export type JobStatus =
   | 'failed'
   | 'cancelled';
 
+export type JobWorkflow = 'migrate' | 'import-file' | 'export';
+
 export interface JobProgress {
   processed: number;
   total: number;
@@ -56,7 +58,11 @@ export interface Job {
   updatedAt: string;
   sourceProvider: ProviderId;
   targetProvider: ProviderId;
+  /** 创建任务时的入口模式，用于 popup 重开后的正确恢复。 */
+  workflow: JobWorkflow;
   status: JobStatus;
+  /** 预览页最后选中的地点/路线 tab。 */
+  previewTab?: 'places' | 'routes';
   /** 归一化后的收藏（CDM），可被预览编辑。 */
   places: CanonicalPlace[];
   /** 统一模型项目；places 是当前 POI 导入链路的兼容视图。 */
@@ -78,13 +84,14 @@ export interface Job {
   error?: string;
 }
 
-type PersistedJob = Omit<Job, 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>
-  & Partial<Pick<Job, 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
+type PersistedJob = Omit<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>
+  & Partial<Pick<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
 
 /** Fill fields introduced after the first persisted Job format. */
 export function hydrateJob(job: PersistedJob): Job {
   return {
     ...job,
+    workflow: job.workflow ?? (job.sourceProvider === job.targetProvider ? 'import-file' : 'migrate'),
     items: job.items ?? job.places.map(migratePlaceToPoi),
     warnings: job.warnings ?? [],
     extractionSkipped: job.extractionSkipped ?? [],
@@ -92,7 +99,7 @@ export function hydrateJob(job: PersistedJob): Job {
   };
 }
 
-export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId): Job {
+export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId, workflow: JobWorkflow = 'migrate'): Job {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
@@ -100,6 +107,7 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     updatedAt: now,
     sourceProvider,
     targetProvider,
+    workflow,
     status: 'draft',
     places: [],
     items: [],
@@ -107,6 +115,7 @@ export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId
     extractionSkipped: [],
     rawCount: 0,
     progress: { processed: 0, total: 0 },
+    previewTab: 'places',
   };
 }
 
@@ -135,11 +144,12 @@ export function applyExtractionItems(
   };
 }
 
-export function applyPreviewPlaces(job: Job, places: CanonicalPlace[]): Job {
+export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTab?: 'places' | 'routes'): Job {
   return {
     ...job,
     items: [...job.items.filter((item) => item.kind !== 'poi'), ...places.map(migratePlaceToPoi)],
     places,
+    previewTab: previewTab ?? job.previewTab,
     status: job.status === 'draft' || job.status === 'extracting' ? 'preview' : job.status,
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),

@@ -435,7 +435,7 @@ export default defineBackground(() => {
         return { type: 'job', job: await getJob(req.id) };
       }
       case 'new-job': {
-        const job = createJob(req.source, req.target);
+        const job = createJob(req.source, req.target, req.workflow ?? 'migrate');
         await saveJob(job);
         return { type: 'job', job };
       }
@@ -455,7 +455,7 @@ export default defineBackground(() => {
       case 'preview-update': {
         const job = await getJob(req.jobId);
         if (!job) return { type: 'error', message: '任务不存在' };
-        const updated: Job = applyPreviewPlaces(job, req.places);
+        const updated: Job = applyPreviewPlaces(job, req.places, req.previewTab);
         await saveJob(updated);
         return { type: 'job', job: updated };
       }
@@ -465,7 +465,7 @@ export default defineBackground(() => {
       case 'import-file': {
         // 从 MapBridge/GPX/KML 导出文件导入；v2 文件的 Route 也必须进入任务。
         const src = req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
-        const job = createJob(src, req.target);
+        const job = createJob(src, req.target, 'import-file');
         await saveJob(job);
         const applied = applyExtractionItems({ ...job }, req.items, req.places, req.items.length, req.warnings ?? []);
         await saveJob(applied);

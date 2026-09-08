@@ -1,5 +1,5 @@
 import type { CanonicalItem, CanonicalPlace, ProviderId } from '@/core/model';
-import type { Job } from '@/core/jobs';
+import type { Job, JobWorkflow } from '@/core/jobs';
 import type { AppSettings } from '@/storage/db';
 import type { BridgeCommand, BridgeEvent } from './bridge';
 
@@ -8,12 +8,12 @@ export type BgRequest =
   | { type: 'get-state' }
   | { type: 'list-jobs' }
   | { type: 'get-job'; id: string }
-  | { type: 'new-job'; source: ProviderId; target: ProviderId }
+  | { type: 'new-job'; source: ProviderId; target: ProviderId; workflow?: JobWorkflow }
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'match-poi'; jobId: string; tabId: number }
   | { type: 'cancel-job'; jobId: string }
-  | { type: 'preview-update'; jobId: string; places: CanonicalPlace[] }
+  | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab'] }
   | { type: 'import'; jobId: string; tabId: number }
   | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[] }
   | { type: 'get-settings' }
