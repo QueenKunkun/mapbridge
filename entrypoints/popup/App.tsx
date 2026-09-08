@@ -136,10 +136,15 @@ export default function App() {
   useEffect(() => {
     void sendBg({ type: 'get-state' }).then((res) => {
       if (res.type !== 'state') return;
-      const active = res.jobs
+      const latest = res.jobs
         .filter((item) => item.status !== 'cancelled' && item.status !== 'draft')
         .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
-      if (!active) return;
+      if (!latest || latest.status === 'done' || latest.status === 'failed') {
+        setJob(undefined);
+        setStep('setup');
+        return;
+      }
+      const active = latest;
       setJob(active);
       setMode(active.workflow === 'import-file' ? 'import-file' : 'migrate');
       setSource(active.sourceProvider);
@@ -489,6 +494,16 @@ export default function App() {
     try { setVer(browser.runtime.getManifest().version); } catch { setVer('dev'); }
   }, []);
 
+  function switchMode(nextMode: 'migrate' | 'export' | 'import-file'): void {
+    setMode(nextMode);
+    if (step === 'report') {
+      setJob(undefined);
+      setStep('setup');
+      setUndoMsg('');
+      setError('');
+    }
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -509,9 +524,9 @@ export default function App() {
       {error && <div className="error">⚠ {error}</div>}
 
       <nav className="mode-tabs" aria-label="操作模式">
-        <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('migrate')}>迁移</button>
-        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('export')}>导出</button>
-        <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} disabled={step !== 'setup'} onClick={() => setMode('import-file')}>从文件导入</button>
+        <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('migrate')}>迁移</button>
+        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('export')}>导出</button>
+        <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('import-file')}>从文件导入</button>
       </nav>
 
       {mode === 'migrate' && (
@@ -1038,25 +1053,17 @@ function PoiMatchCell({
     }
     return (
       <div className="match-cell">
-        <button
-          className="small icon-button"
-          disabled={disabled}
-          aria-label="重试 POI 匹配"
-          title="重试 POI 匹配"
-          onClick={() => onMatch?.(place.id)}
-        >
-          ↻
-        </button>
-        {import.meta.env.DEV && (
-          <details className="match-diagnostic">
-            <summary aria-label="查看匹配原因" title="查看匹配原因">ⓘ</summary>
-            <div className="match-diagnostic-body">
-              <pre>{diagnostic}</pre>
-              <button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button>
-            </div>
-          </details>
-        )}
-        {import.meta.env.DEV && (match.candidates?.length ?? 0) > 0 && (
+        <div className="match-controls">
+          <button
+            className="small icon-button"
+            disabled={disabled}
+            aria-label="重试 POI 匹配"
+            title="重试 POI 匹配"
+            onClick={() => onMatch?.(place.id)}
+          >
+            ↻
+          </button>
+          {import.meta.env.DEV && (match.candidates?.length ?? 0) > 0 && (
           <select
             className="match-candidate-select"
             defaultValue=""
@@ -1082,13 +1089,23 @@ function PoiMatchCell({
               })()
             ))}
           </select>
-        )}
-        {import.meta.env.DEV && (match.candidates?.length ?? 0) === 0 && (
-          <select className="match-candidate-select" value="" disabled aria-label={`为${place.name}选择高德 POI`}>
-            <option value="">未找到</option>
-          </select>
-        )}
-        {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
+          )}
+          {import.meta.env.DEV && (match.candidates?.length ?? 0) === 0 && (
+            <select className="match-candidate-select" value="" disabled aria-label={`为${place.name}选择高德 POI`}>
+              <option value="">未找到</option>
+            </select>
+          )}
+          {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
+          {import.meta.env.DEV && (
+            <details className="match-diagnostic">
+              <summary aria-label="查看匹配原因" title="查看匹配原因">ⓘ</summary>
+              <div className="match-diagnostic-body">
+                <pre>{diagnostic}</pre>
+                <button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button>
+              </div>
+            </details>
+          )}
+        </div>
       </div>
     );
   }
