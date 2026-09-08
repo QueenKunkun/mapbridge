@@ -810,7 +810,7 @@ button.remove {
 .table-head,
 .row {
   display: grid;
-  grid-template-columns: 1.2fr 1.6fr 1.4fr 24px;
+  grid-template-columns: 24px minmax(0, 1.2fr) minmax(0, 1.6fr) minmax(0, 1.4fr);
   gap: 6px;
   align-items: center;
 }
@@ -836,6 +836,8 @@ button.remove {
 
 .table-body {
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .coords {
