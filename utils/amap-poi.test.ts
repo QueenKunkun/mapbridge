@@ -56,6 +56,18 @@ describe('Amap POI matching', () => {
     expect(chooseAmapPoiMatch(candidate, { maxDistanceMeters: 250 }).status).toBe('matched');
   });
 
+  it('explains why returned candidates were rejected', () => {
+    const candidates = parseAmapPoiCandidates({ data: { data: { poi_list: [{
+      poiid: 'far', name: '华润大厦', location: '117,40',
+    }] } } }, source);
+    const result = chooseAmapPoiMatch(candidates);
+    expect(result.status).toBe('not-found');
+    if (result.status === 'not-found') {
+      expect(result.reason).toContain('距离');
+      expect(result.candidates).toHaveLength(1);
+    }
+  });
+
   it('parses the shared poiTipsSearchlite response used by the new page', () => {
     const source: CanonicalPlace = {
       id: 'jinpinghu',

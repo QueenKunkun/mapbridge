@@ -1008,7 +1008,13 @@ function PoiMatchCell({
       </span>
     );
   }
-  if (match?.status === 'not-found') return <span className="match-status warning">未找到 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
+  if (match?.status === 'not-found') return (
+    <span className="match-status warning">
+      未找到
+      {import.meta.env.DEV && match.reason && <details className="match-diagnostic"><summary>原因</summary><small>{match.reason}</small></details>}
+      <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
+    </span>
+  );
   if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
   return <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>匹配</button>;
 }

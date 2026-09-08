@@ -64,6 +64,7 @@ export interface AmapPoiCandidateSummary {
 export interface AmapPoiMatchRecord {
   status: AmapPoiMatchStatus;
   error?: string;
+  reason?: string;
   candidates?: AmapPoiCandidateSummary[];
 }
 

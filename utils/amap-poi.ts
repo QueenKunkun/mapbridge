@@ -15,7 +15,7 @@ export interface AmapPoiCandidate {
 
 export type AmapPoiMatch =
   | { status: 'matched'; candidate: AmapPoiCandidate }
-  | { status: 'ambiguous' | 'not-found'; candidates: AmapPoiCandidate[] };
+  | { status: 'ambiguous' | 'not-found'; candidates: AmapPoiCandidate[]; reason?: string };
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
@@ -124,11 +124,18 @@ export function chooseAmapPoiMatch(
   const nearby = candidates
     .filter((candidate) => candidate.distanceMeters <= maxDistance && candidate.nameScore >= 0.85)
     .sort((a, b) => a.distanceMeters - b.distanceMeters || b.nameScore - a.nameScore);
-  if (nearby.length === 0) return { status: 'not-found', candidates: [] };
+  if (nearby.length === 0) {
+    const ranked = [...candidates].sort((a, b) => a.distanceMeters - b.distanceMeters || b.nameScore - a.nameScore);
+    const best = ranked[0];
+    const reason = !best
+      ? '搜索接口没有返回可解析的 POI 候选'
+      : `最佳候选“${best.name}”：距离 ${Math.round(best.distanceMeters)} 米，名称相似度 ${best.nameScore.toFixed(2)}；要求距离 ≤ ${maxDistance} 米且相似度 ≥ 0.85`;
+    return { status: 'not-found', candidates: ranked.slice(0, 5), reason };
+  }
   const first = nearby[0]!;
   const second = nearby[1];
   if (second && Math.abs(second.distanceMeters - first.distanceMeters) < 20 && second.nameScore >= first.nameScore - 0.03) {
-    return { status: 'ambiguous', candidates: nearby.slice(0, 5) };
+    return { status: 'ambiguous', candidates: nearby.slice(0, 5), reason: '存在距离和名称相似度都接近的多个候选' };
   }
   return { status: 'matched', candidate: first };
 }
