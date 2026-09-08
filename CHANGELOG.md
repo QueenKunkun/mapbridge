@@ -11,6 +11,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Added a configurable distance tolerance in meters for duplicate detection on supported map providers, with a safe default and maximum.
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
+### Changed
+- Added separate local settings for import request spacing and the upcoming Amap POI matching phase; import writes now honor the configured serial request interval with a safe bounded range.
+
 ## [0.5.1] - 2026-09-07
 
 ### Fixed

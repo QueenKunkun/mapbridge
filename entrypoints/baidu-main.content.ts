@@ -188,7 +188,7 @@ export default defineContentScript({
       }
     }
 
-    async function runImport(payload: unknown, options?: { dedupDistanceMeters?: number }): Promise<void> {
+    async function runImport(payload: unknown, options?: { importDelayMs?: number; poiMatchDelayMs?: number; dedupDistanceMeters?: number }): Promise<void> {
       const items = (payload ?? []) as Array<Record<string, unknown>>;
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -214,6 +214,8 @@ export default defineContentScript({
       }
       const configuredTolerance = Number(options?.dedupDistanceMeters);
       const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(100, Math.max(1, Math.floor(configuredTolerance))) : 1;
+      const configuredDelay = Number(options?.importDelayMs);
+      const importDelayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 500;
       const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items, dedupTolerance);
       const beforeIds = new Set(currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
       emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
@@ -290,7 +292,7 @@ export default defineContentScript({
         }
         processed++;
         emit({ phase: 'sync', processed, total: items.length, message: `已写入 ${processed}/${items.length}` });
-        await new Promise((r) => setTimeout(r, 400));
+        if (processed < items.length) await new Promise((r) => setTimeout(r, importDelayMs));
       }
       emit({ phase: 'verify', message: '验证结果…' });
       let targetCount: number | undefined;

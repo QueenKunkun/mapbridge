@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
-import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
+import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, IMPORT_DELAY_MS_DEFAULT, POI_MATCH_DELAY_MS_DEFAULT, REQUEST_DELAY_MS_MAX, REQUEST_DELAY_MS_MIN, type AppSettings } from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
 import SettingsBlock from '@/components/SettingsBlock/SettingsBlock';
@@ -194,14 +194,28 @@ export default function App() {
         <main className="blocks-container">
           <SettingsBlock id="block-import" title="导入设置" description="迁移任务的默认行为。数据全部保存在本机浏览器，不会上传任何内容。">
             <label className="field">
-              <span>导入批间隔（ms）</span>
+              <span>导入请求间隔（ms）</span>
               <input
                 type="number"
-                min={0}
+                min={REQUEST_DELAY_MS_MIN}
+                max={REQUEST_DELAY_MS_MAX}
                 step={100}
                 value={settings.importDelayMs}
-                onChange={(e) => setSettings({ ...settings, importDelayMs: Number(e.target.value) || 0 })}
+                onChange={(e) => setSettings({ ...settings, importDelayMs: Number(e.target.value) || IMPORT_DELAY_MS_DEFAULT })}
               />
+              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；影响逐条写入及高德分批同步之间的等待。</small>
+            </label>
+            <label className="field">
+              <span>高德 POI 匹配请求间隔（ms）</span>
+              <input
+                type="number"
+                min={REQUEST_DELAY_MS_MIN}
+                max={REQUEST_DELAY_MS_MAX}
+                step={100}
+                value={settings.poiMatchDelayMs}
+                onChange={(e) => setSettings({ ...settings, poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
+              />
+              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；匹配功能启用后生效。请求越慢，对目标地图接口越温和。</small>
             </label>
             <label className="field">
               <span>失败重试次数</span>

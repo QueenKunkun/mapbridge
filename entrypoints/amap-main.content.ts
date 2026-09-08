@@ -174,7 +174,7 @@ export default defineContentScript({
       });
     }
 
-    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
+    async function runImport(payload: unknown, options?: { importDelayMs?: number; poiMatchDelayMs?: number; amapSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -196,6 +196,11 @@ export default defineContentScript({
       let ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
       const configuredTolerance = Number(options?.dedupDistanceMeters);
       const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(100, Math.max(1, Math.floor(configuredTolerance))) : 1;
+      const configuredDelay = Number(options?.importDelayMs);
+      const importDelayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 500;
+      const waitBetweenRequests = async (): Promise<void> => {
+        await new Promise((resolve) => setTimeout(resolve, importDelayMs));
+      };
 
       const merge = mergeImportItems(currentItems, favorites, (item) => amapImportKey(item, dedupTolerance));
       const detail = merge.detail;
@@ -247,7 +252,7 @@ export default defineContentScript({
             const missing = currentItems.filter((item) => item.id && !checkIds.has(item.id));
             if (missing.length > 0) throw new Error(`同步安全检查失败：目标端有 ${missing.length} 条原有收藏消失，已停止后续批次`);
           }
-          if (index < batches.length - 1) await new Promise((resolve) => setTimeout(resolve, 300));
+          if (index < batches.length - 1) await waitBetweenRequests();
         }
       }
       if (poiSyncData !== undefined && amap?.favesStore?.update) amap.favesStore.update(poiSyncData);

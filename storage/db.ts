@@ -32,6 +32,8 @@ export async function deleteJob(id: string): Promise<void> {
 export interface AppSettings {
   /** 导入批间隔毫秒（限速）。 */
   importDelayMs: number;
+  /** 高德 POI 匹配请求间隔毫秒（限速）。 */
+  poiMatchDelayMs: number;
   /** 失败重试次数。 */
   retryCount: number;
   /** 默认目标收藏夹名。 */
@@ -47,12 +49,17 @@ export interface AppSettings {
 export const AMAP_SYNC_BATCH_SIZE_MIN = 1;
 export const AMAP_SYNC_BATCH_SIZE_MAX = 200;
 export const AMAP_SYNC_BATCH_SIZE_DEFAULT = 50;
+export const REQUEST_DELAY_MS_MIN = 300;
+export const REQUEST_DELAY_MS_MAX = 10_000;
+export const IMPORT_DELAY_MS_DEFAULT = 500;
+export const POI_MATCH_DELAY_MS_DEFAULT = 1_000;
 export const DEDUP_DISTANCE_METERS_MIN = 1;
 export const DEDUP_DISTANCE_METERS_MAX = 100;
 export const DEDUP_DISTANCE_METERS_DEFAULT = 1;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  importDelayMs: 500,
+  importDelayMs: IMPORT_DELAY_MS_DEFAULT,
+  poiMatchDelayMs: POI_MATCH_DELAY_MS_DEFAULT,
   retryCount: 2,
   defaultFolder: '',
   skipExisting: true,
@@ -72,10 +79,18 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 }
 
 function normalizeSettings(settings: AppSettings): AppSettings {
+  const importDelay = Number(settings.importDelayMs);
+  const poiMatchDelay = Number(settings.poiMatchDelayMs);
   const value = Number(settings.amapSyncBatchSize);
   const tolerance = Number(settings.dedupDistanceMeters);
   return {
     ...settings,
+    importDelayMs: Number.isFinite(importDelay)
+      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(importDelay)))
+      : IMPORT_DELAY_MS_DEFAULT,
+    poiMatchDelayMs: Number.isFinite(poiMatchDelay)
+      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
+      : POI_MATCH_DELAY_MS_DEFAULT,
     amapSyncBatchSize: Number.isFinite(value)
       ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
       : AMAP_SYNC_BATCH_SIZE_DEFAULT,
