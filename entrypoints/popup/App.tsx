@@ -728,7 +728,31 @@ export default function App() {
               <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
                 {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
               </button>
-              {Object.keys(job.amapPoiResolutions ?? {}).length > 0 && <span className="hint">已匹配 {Object.keys(job.amapPoiResolutions ?? {}).length} 条，其余将按自定义坐标导入。</span>}
+              {job.amapPoiResolutions !== undefined && !matching && (
+                <div className="match-result">
+                  <span className="hint">
+                    匹配结果：成功 <b>{Object.keys(job.amapPoiResolutions).length}</b> 条，
+                    未匹配 <b>{Math.max(0, job.places.length - Object.keys(job.amapPoiResolutions).length)}</b> 条
+                  </span>
+                  <details>
+                    <summary>查看匹配详情</summary>
+                    <ul>
+                      {job.places.map((place) => {
+                        const resolution = job.amapPoiResolutions?.[place.id];
+                        return (
+                          <li key={place.id}>
+                            {resolution ? (
+                              <>✓ {place.name} → {resolution.name ?? '高德原生 POI'}{resolution.address ? `（${resolution.address}）` : ''}</>
+                            ) : (
+                              <>⚠ {place.name}：未找到可靠的高德 POI，将按自定义坐标导入</>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                </div>
+              )}
             </div>
           )}
           {reportRoutes > 0 && (

@@ -18,6 +18,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Added the first Amap POI matching flow: matching is explicitly started before import, uses conservative name-and-distance scoring, and keeps unmatched places as custom-coordinate favorites.
 - Made Amap POI matching prefer the search strategy appropriate for the current page version, with the other strategy as a fallback when the first one fails.
 - Added a previous-step action from preview back to extraction without discarding the current preview until extraction is explicitly started again.
+- Added per-record Amap POI matching results so users can see which places use native POIs and which fall back to custom coordinates.
+- Added a bounded scroll area for detailed matching results so large match lists do not expand the popup indefinitely.
 
 ## [0.5.1] - 2026-09-07
 

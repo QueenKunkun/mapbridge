@@ -124,6 +124,31 @@ section {
   gap: 8px;
 }
 
+.match-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid #dbe2ec;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.match-result details {
+  font-size: 12px;
+}
+
+.match-result details ul {
+  max-height: 140px;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.match-result details li {
+  padding: 2px 0;
+}
+
 .route-summary {
   border: 1px solid #dbe2ec;
   border-radius: 8px;
