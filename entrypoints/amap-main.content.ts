@@ -118,13 +118,13 @@ export default defineContentScript({
       const center = wgs84ToGcj02(place.wgs84.lng, place.wgs84.lat);
       const span = 0.05;
       const pageUrl = new URL(location.href);
-      const city = pageUrl.searchParams.get('city') || '100000';
       const params = new URLSearchParams({
         words: place.name,
-        city,
         geoobj: `${center.lng - span}|${center.lat - span}|${center.lng + span}|${center.lat + span}`,
         user_loc: `${center.lng},${center.lat}`,
       });
+      const city = pageUrl.searchParams.get('city');
+      if (city) params.set('city', city);
       const response = await fetch(`/service/poiTipsSearchlite?${params.toString()}`, {
         credentials: 'include',
         cache: 'no-store',
