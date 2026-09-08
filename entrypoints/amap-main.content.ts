@@ -3,7 +3,7 @@ import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 import { mergeImportItems } from '@/core/import-merge';
 import { batchAmapSyncItems } from '@/core/amap-sync';
 import { distancePointKey } from '@/core/dedup';
-import { toWgs84 } from '@/core/coords';
+import { toWgs84, wgs84ToGcj02 } from '@/core/coords';
 import { chooseAmapPoiMatch, parseAmapPoiCandidates } from '@/utils/amap-poi';
 import type { CanonicalPlace } from '@/core/model';
 
@@ -115,8 +115,21 @@ export default defineContentScript({
     }
 
     async function searchAmapSsr(place: CanonicalPlace): Promise<ReturnType<typeof parseAmapPoiCandidates>> {
-      const url = `/ssr/api/searchPoi?type=keyword&keywords=${encodeURIComponent(place.name)}&pagesize=20&city=100000`;
-      const response = await fetch(url, { credentials: 'include', cache: 'no-store', headers: { Accept: 'application/json' } });
+      const center = wgs84ToGcj02(place.wgs84.lng, place.wgs84.lat);
+      const span = 0.05;
+      const pageUrl = new URL(location.href);
+      const city = pageUrl.searchParams.get('city') || '100000';
+      const params = new URLSearchParams({
+        words: place.name,
+        city,
+        geoobj: `${center.lng - span}|${center.lat - span}|${center.lng + span}|${center.lat + span}`,
+        user_loc: `${center.lng},${center.lat}`,
+      });
+      const response = await fetch(`/service/poiTipsSearchlite?${params.toString()}`, {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+      });
       if (!response.ok) throw new Error(`SSR POI search HTTP ${response.status}`);
       return parseAmapPoiCandidates(await response.json(), place);
     }

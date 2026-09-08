@@ -38,7 +38,10 @@ function readLocation(record: Record<string, unknown>): LngLat | undefined {
   }
   const lng = Number(record.longitude ?? record.lon ?? record.lng);
   const lat = Number(record.latitude ?? record.lat);
-  return Number.isFinite(lng) && Number.isFinite(lat) ? gcj02ToWgs84(lng, lat) : undefined;
+  if (Number.isFinite(lng) && Number.isFinite(lat)) return gcj02ToWgs84(lng, lat);
+  const x = Number(record.x);
+  const y = Number(record.y);
+  return Number.isFinite(x) && Number.isFinite(y) ? gcj02ToWgs84(x, y) : undefined;
 }
 
 function levenshtein(a: string, b: string): number {
@@ -80,7 +83,14 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
   const root = asRecord(response);
   const outer = asRecord(root?.data);
   const data = asRecord(outer?.data) ?? outer;
-  const list = data?.['poi_list'];
+  const list = Array.isArray(data?.['poi_list'])
+    ? data['poi_list']
+    : Array.isArray(data?.['tip_list'])
+      ? data['tip_list'].flatMap((value) => {
+        const wrapper = asRecord(value);
+        return wrapper?.['tip'] ? [wrapper['tip']] : [];
+      })
+      : [];
   if (!Array.isArray(list)) return [];
 
   return list.flatMap((value) => {
@@ -90,13 +100,15 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
     const name = readString(record, 'name', 'title');
     const location = readLocation(record);
     if (!poiid || !name || !location) return [];
+    const district = readString(record, 'district_name', 'districtName');
+    const city = readString(record, 'cityname', 'city_name', 'cityName', 'city');
     return [{
       poiid,
       name,
-      address: readString(record, 'address', 'addr'),
+      address: readString(record, 'address', 'addr') || [district, city].filter(Boolean).join(''),
       location,
       cityCode: readString(record, 'adcode', 'citycode', 'city_code') || undefined,
-      cityName: readString(record, 'cityname', 'city_name', 'city') || undefined,
+      cityName: city || undefined,
       distanceMeters: distanceMeters(source.wgs84, location),
       nameScore: nameScore(source.name, name),
     }];

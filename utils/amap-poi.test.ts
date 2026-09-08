@@ -55,4 +55,42 @@ describe('Amap POI matching', () => {
     expect(chooseAmapPoiMatch(candidate).status).toBe('not-found');
     expect(chooseAmapPoiMatch(candidate, { maxDistanceMeters: 250 }).status).toBe('matched');
   });
+
+  it('parses the shared poiTipsSearchlite response used by the new page', () => {
+    const source: CanonicalPlace = {
+      id: 'jinpinghu',
+      name: '金平湖公园',
+      address: '',
+      tags: [],
+      note: '',
+      wgs84: { lng: 116.3843, lat: 35.0777 },
+      source: { provider: 'baidu', crs: 'bd09mc' },
+      metadata: {},
+    };
+    const response = {
+      data: {
+        result: 'true',
+        tip_list: [{ tip: {
+          id: 'B0FFH19M92',
+          poiid: 'B0FFH19M92',
+          name: '金平湖公园',
+          x: '116.384309',
+          y: '35.077687',
+          adcode: '370828',
+          city_name: '济宁市',
+          district_name: '金乡县',
+        } }],
+      },
+    };
+
+    const candidates = parseAmapPoiCandidates(response, source);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      poiid: 'B0FFH19M92',
+      name: '金平湖公园',
+      address: '金乡县济宁市',
+      cityCode: '370828',
+      cityName: '济宁市',
+    });
+  });
 });
