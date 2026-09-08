@@ -696,6 +696,7 @@ export default function App() {
             )}
           </div>
           <div className="preview-actions">
+            <button className="ghost" onClick={() => setStep('extract')}>上一步：提取</button>
             <button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>
             <NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
