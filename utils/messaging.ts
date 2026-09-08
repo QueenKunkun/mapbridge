@@ -12,6 +12,7 @@ export type BgRequest =
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
+  | { type: 'select-poi-match'; jobId: string; placeId: string; candidate: { poiid: string; name: string; address: string; cityCode?: string; cityName?: string } }
   | { type: 'cancel-job'; jobId: string }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab'] }
   | { type: 'import'; jobId: string; tabId: number }

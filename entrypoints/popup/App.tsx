@@ -468,6 +468,13 @@ export default function App() {
     }
   }
 
+  async function selectAmapPoi(placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]): Promise<void> {
+    if (!job) return;
+    const res = await sendBg({ type: 'select-poi-match', jobId: job.id, placeId, candidate });
+    if (res.type === 'job') setJob(res.job);
+    else if (res.type === 'error') setError(res.message);
+  }
+
   const [ver, setVer] = useState('');
   const dev = import.meta.env.DEV;
   useEffect(() => {
@@ -728,6 +735,7 @@ export default function App() {
                 amapPoiResolutions={job.amapPoiResolutions}
                 matchingPlaceIds={matchingPlaceIds}
                 onMatchAmapPoi={(placeId) => void startAmapMatch(placeId)}
+                onSelectAmapPoi={(placeId, candidate) => void selectAmapPoi(placeId, candidate)}
               />
             ) : (
               <>
@@ -892,6 +900,7 @@ function PlaceTable({
   amapPoiResolutions,
   matchingPlaceIds,
   onMatchAmapPoi,
+  onSelectAmapPoi,
 }: {
   places: Job['places'];
   onChange: (places: Job['places']) => void;
@@ -900,6 +909,7 @@ function PlaceTable({
   amapPoiResolutions?: Job['amapPoiResolutions'];
   matchingPlaceIds?: Set<string>;
   onMatchAmapPoi?: (placeId: string) => void;
+  onSelectAmapPoi?: (placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]) => void;
 }) {
   const [filter, setFilter] = useState('');
 
@@ -939,6 +949,7 @@ function PlaceTable({
                 matching={matchingPlaceIds?.has(p.id) ?? false}
                 disabled={matchingPlaceIds !== undefined && matchingPlaceIds.size > 0}
                 onMatch={onMatchAmapPoi}
+                onSelect={onSelectAmapPoi}
               />
             ) : <span className="hint">—</span>}
             <button className="remove" onClick={() => remove(p.id)}>
@@ -964,6 +975,7 @@ function PoiMatchCell({
   matching,
   disabled,
   onMatch,
+  onSelect,
 }: {
   place: Job['places'][number];
   match?: NonNullable<Job['amapPoiMatches']>[string];
@@ -971,13 +983,30 @@ function PoiMatchCell({
   matching: boolean;
   disabled: boolean;
   onMatch?: (placeId: string) => void;
+  onSelect?: (placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]) => void;
 }) {
   if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
   if (resolution || match?.status === 'matched') {
     return <span className="match-status matched" title={resolution?.address ?? undefined}>✓ {resolution?.name ?? '已匹配'}</span>;
   }
   if (match?.status === 'ambiguous') {
-    return <span className="match-status warning" title={match.candidateNames?.join('、')}>候选不明确</span>;
+    return (
+      <span className="match-status warning">
+        候选不明确
+        <details className="match-candidates">
+          <summary>选择</summary>
+          <ul>
+            {(match.candidates ?? []).map((candidate) => (
+              <li key={candidate.poiid}>
+                <button className="small ghost" onClick={() => onSelect?.(place.id, candidate)}>
+                  {candidate.name}（{Math.round(candidate.distanceMeters)}m）
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      </span>
+    );
   }
   if (match?.status === 'not-found') return <span className="match-status warning">未找到 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
   if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;

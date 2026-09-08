@@ -52,10 +52,19 @@ export interface AmapPoiResolution {
 
 export type AmapPoiMatchStatus = 'idle' | 'matching' | 'matched' | 'not-found' | 'ambiguous' | 'failed';
 
+export interface AmapPoiCandidateSummary {
+  poiid: string;
+  name: string;
+  address: string;
+  distanceMeters: number;
+  cityCode?: string;
+  cityName?: string;
+}
+
 export interface AmapPoiMatchRecord {
   status: AmapPoiMatchStatus;
   error?: string;
-  candidateNames?: string[];
+  candidates?: AmapPoiCandidateSummary[];
 }
 
 export interface ExtractionSkip {

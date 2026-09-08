@@ -264,6 +264,19 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
   return { type: 'job', job: await getJob(jobId) };
 }
 
+async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: AmapPoiResolution): Promise<BgResponse> {
+  const job = await getJob(jobId);
+  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持选择高德 POI' };
+  if (!job.places.some((place) => place.id === placeId) || !candidate.poiid) return { type: 'error', message: '地点或 POI 候选不存在' };
+  await saveJob({
+    ...job,
+    amapPoiResolutions: { ...(job.amapPoiResolutions ?? {}), [placeId]: candidate },
+    amapPoiMatches: { ...(job.amapPoiMatches ?? {}), [placeId]: { status: 'matched' } },
+    updatedAt: now(),
+  });
+  return { type: 'job', job: await getJob(jobId) };
+}
+
 async function handleCancelJob(jobId: string): Promise<BgResponse> {
   const job = await getJob(jobId);
   if (!job) return { type: 'error', message: '任务不存在' };
@@ -477,6 +490,9 @@ export default defineBackground(() => {
       }
       case 'match-poi': {
         return await handleMatchAmapPoi(req.jobId, req.tabId, req.placeIds);
+      }
+      case 'select-poi-match': {
+        return await handleSelectAmapPoi(req.jobId, req.placeId, req.candidate);
       }
       case 'cancel-job': {
         return await handleCancelJob(req.jobId);

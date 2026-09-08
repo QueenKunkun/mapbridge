@@ -166,7 +166,7 @@ export default defineContentScript({
         ? Math.min(1_000, Math.max(50, Math.floor(Number(options?.poiMatchDistanceMeters))))
         : 150;
       const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; name?: string; address?: string }> = {};
-      const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidateNames?: string[]; error?: string }> = {};
+      const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidates?: Array<{ poiid: string; name: string; address: string; distanceMeters: number; cityCode?: string; cityName?: string }>; error?: string }> = {};
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
@@ -188,7 +188,14 @@ export default defineContentScript({
             }
             matches[place.id] = {
               status: match.status,
-              candidateNames: match.candidates.slice(0, 5).map((candidate) => candidate.name),
+              candidates: match.candidates.slice(0, 5).map((candidate) => ({
+                poiid: candidate.poiid,
+                name: candidate.name,
+                address: candidate.address,
+                distanceMeters: candidate.distanceMeters,
+                cityCode: candidate.cityCode,
+                cityName: candidate.cityName,
+              })),
             };
           } catch (error) {
             log('Amap POI match strategy failed:', useSsrFirst ? 'ssr/sdk' : 'sdk/ssr', place.name, String(error));

@@ -161,6 +161,40 @@ section {
   color: #b45309;
 }
 
+.match-candidates {
+  position: relative;
+  overflow: visible;
+  white-space: normal;
+}
+
+.match-candidates summary {
+  color: #2563eb;
+  cursor: pointer;
+}
+
+.match-candidates ul {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  min-width: 180px;
+  margin: 4px 0 0;
+  padding: 6px;
+  border: 1px solid #dbe2ec;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 12%);
+  list-style: none;
+}
+
+.match-candidates li + li {
+  margin-top: 4px;
+}
+
+.match-candidates button {
+  width: 100%;
+  text-align: left;
+}
+
 .match-result details {
   font-size: 12px;
 }
