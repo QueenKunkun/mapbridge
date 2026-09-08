@@ -24,4 +24,11 @@ describe('Baidu target import deduplication', () => {
     expect(result.items).toHaveLength(1);
     expect(result.duplicates).toHaveLength(1);
   });
+
+  it('uses the configured distance tolerance for converted Baidu coordinates', () => {
+    const current = [{ type: '11', extdata: { name: '测试点', geoptx: 13448418.38, geopty: 2489245.42 } }];
+    const nearby = { type: '11', extdata: { name: '测试点', geoptx: 13448428.38, geopty: 2489245.42 } };
+    expect(filterDuplicateBaiduImportItems(current, [nearby], 1).items).toHaveLength(1);
+    expect(filterDuplicateBaiduImportItems(current, [nearby], 100).duplicates).toHaveLength(1);
+  });
 });

@@ -23,6 +23,15 @@ export function placeIdentity(place: CanonicalPlace): string {
   return place.identity ?? placeFingerprint(place);
 }
 
+/** Quantize a WGS-84 point into a provider-independent distance cell. */
+export function distancePointKey(point: { lng: number; lat: number }, toleranceMeters: number): string {
+  const tolerance = Math.max(1, Number.isFinite(toleranceMeters) ? toleranceMeters : 1);
+  const latMeters = point.lat * 110_540;
+  const lngMeters = point.lng * 111_320 * Math.cos((point.lat * Math.PI) / 180);
+  const cell = tolerance * 2;
+  return `${Math.round(lngMeters / cell)},${Math.round(latMeters / cell)}`;
+}
+
 /** Route identity：保留 stop 顺序，避免把相同端点但不同途经点的路线合并。 */
 export function routeIdentity(route: CanonicalRoute): string {
   const stops = route.stops

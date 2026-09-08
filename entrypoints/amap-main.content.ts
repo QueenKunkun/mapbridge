@@ -2,6 +2,8 @@ import { installResponseCapture } from '@/utils/capture';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 import { mergeImportItems } from '@/core/import-merge';
 import { batchAmapSyncItems } from '@/core/amap-sync';
+import { distancePointKey } from '@/core/dedup';
+import { toWgs84 } from '@/core/coords';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
 
@@ -24,16 +26,15 @@ function normalizeAmapName(value: unknown): string {
   return String(value ?? '').replace(/\s+/g, '').toLowerCase();
 }
 
-function coordinateKey(value: unknown, tolerance: number): string {
-  const number = Number(value);
-  // A WGS-84 round trip can move an Amap zoom-20 pixel coordinate by a few
-  // pixels. Keep the key tolerant enough to match the same favorite after
-  // export/import, without collapsing nearby places at normal map scale.
-  return Number.isFinite(number) ? String(Math.round(number / tolerance)) : '';
+function amapPointKey(x: unknown, y: unknown, crs: 'amap_pixel' | 'gcj02', toleranceMeters: number): string {
+  const lng = Number(x);
+  const lat = Number(y);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return '';
+  return distancePointKey(toWgs84({ crs, lng, lat }), toleranceMeters);
 }
 
 /** Semantic key for old native Amap favorites whose id differs from a rebuilt payload id. */
-function amapImportKey(item: AmapItem, tolerance: number): string | undefined {
+function amapImportKey(item: AmapItem, toleranceMeters: number): string | undefined {
   const data = item.data;
   if (!data) return item.id;
   const type = Number(item.type ?? data['type']);
@@ -50,12 +51,14 @@ function amapImportKey(item: AmapItem, tolerance: number): string | undefined {
     const endX = to['x'] ?? to['mx'] ?? to['lon'];
     const endY = to['y'] ?? to['my'] ?? to['lat'];
     const rideType = type === 117 ? String(data['rideType'] ?? '') : '';
-    return `route|${type}|${rideType}|${coordinateKey(startX, tolerance)}|${coordinateKey(startY, tolerance)}|${coordinateKey(endX, tolerance)}|${coordinateKey(endY, tolerance)}`;
+    const pointCrs = start?.['x'] != null || start?.['y'] != null ? 'amap_pixel' : 'gcj02';
+    const startKey = amapPointKey(startX, startY, pointCrs, toleranceMeters);
+    const endKey = amapPointKey(endX, endY, pointCrs, toleranceMeters);
+    return startKey && endKey ? `route|${type}|${rideType}|${startKey}|${endKey}` : item.id;
   }
   const name = normalizeAmapName(data['custom_name'] ?? data['name']);
-  const x = coordinateKey(data['point_x'], tolerance);
-  const y = coordinateKey(data['point_y'], tolerance);
-  return name && x && y ? `poi|${name}|${x}|${y}` : item.id;
+  const point = amapPointKey(data['point_x'], data['point_y'], 'amap_pixel', toleranceMeters);
+  return name && point ? `poi|${name}|${point}` : item.id;
 }
 
 /**
@@ -171,7 +174,7 @@ export default defineContentScript({
       });
     }
 
-    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number; amapDedupPixelTolerance?: number }): Promise<void> {
+    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -191,8 +194,8 @@ export default defineContentScript({
       const amap = (window as unknown as { amap?: { favesStore?: { getFave?: (k: string) => unknown; update?: (d: unknown) => void } } }).amap;
       const currentItems = current.data?.items ?? [];
       let ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
-      const configuredTolerance = Number(options?.amapDedupPixelTolerance);
-      const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(64, Math.max(1, Math.floor(configuredTolerance))) : 8;
+      const configuredTolerance = Number(options?.dedupDistanceMeters);
+      const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(100, Math.max(1, Math.floor(configuredTolerance))) : 1;
 
       const merge = mergeImportItems(currentItems, favorites, (item) => amapImportKey(item, dedupTolerance));
       const detail = merge.detail;

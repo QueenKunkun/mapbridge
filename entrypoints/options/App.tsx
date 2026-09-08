@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
-import { AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT, AMAP_DEDUP_PIXEL_TOLERANCE_MAX, AMAP_DEDUP_PIXEL_TOLERANCE_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
+import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
 import SettingsBlock from '@/components/SettingsBlock/SettingsBlock';
@@ -226,16 +226,16 @@ export default function App() {
               <small>范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条；仍受高德接口参数上限约束。</small>
             </label>
             <label className="field">
-              <span>高德去重坐标容差（像素）</span>
+              <span>重复判断距离容差（米）</span>
               <input
                 type="number"
-                min={AMAP_DEDUP_PIXEL_TOLERANCE_MIN}
-                max={AMAP_DEDUP_PIXEL_TOLERANCE_MAX}
+                min={DEDUP_DISTANCE_METERS_MIN}
+                max={DEDUP_DISTANCE_METERS_MAX}
                 step={1}
-                value={settings.amapDedupPixelTolerance}
-                onChange={(e) => setSettings({ ...settings, amapDedupPixelTolerance: Number(e.target.value) || AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT })}
+                value={settings.dedupDistanceMeters}
+                onChange={(e) => setSettings({ ...settings, dedupDistanceMeters: Number(e.target.value) || DEDUP_DISTANCE_METERS_DEFAULT })}
               />
-              <small>默认 {AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT}；只影响重复判断，不改变导入坐标。</small>
+              <small>默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围 {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米；只影响重复判断，不改变导入坐标。</small>
             </label>
             <label className="field">
               <span>默认目标收藏夹名</span>

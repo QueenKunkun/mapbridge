@@ -188,7 +188,7 @@ export default defineContentScript({
       }
     }
 
-    async function runImport(payload: unknown): Promise<void> {
+    async function runImport(payload: unknown, options?: { dedupDistanceMeters?: number }): Promise<void> {
       const items = (payload ?? []) as Array<Record<string, unknown>>;
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -212,7 +212,9 @@ export default defineContentScript({
       } catch {
         currentRecords = capture.getRecords();
       }
-      const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items);
+      const configuredTolerance = Number(options?.dedupDistanceMeters);
+      const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(100, Math.max(1, Math.floor(configuredTolerance))) : 1;
+      const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items, dedupTolerance);
       const beforeIds = new Set(currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
       emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
       const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(() => ({ ok: true, duplicate: true }));
@@ -354,7 +356,7 @@ export default defineContentScript({
         });
       } else if (cmd.type === 'import') {
         log('recv import command');
-        void runImport(cmd.payload).catch((error) => {
+        void runImport(cmd.payload, cmd.options).catch((error) => {
           postEvent({
             mb: BRIDGE_CHANNEL,
             type: 'import-result',
