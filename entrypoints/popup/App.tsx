@@ -716,7 +716,7 @@ export default function App() {
             )}
           </div>
           <WizardActions
-            previous={<button className="ghost" onClick={() => setStep('extract')}>上一步：提取</button>}
+            previous={<button className="ghost" onClick={() => setStep('extract')}>返回</button>}
             next={<NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
               onClick={async () => { await savePreview(previewPlaces, previewTab); setStep('import'); }}
@@ -776,7 +776,7 @@ export default function App() {
             <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}
           <WizardActions
-            previous={<button className="ghost" onClick={() => setStep('preview')}>返回编辑</button>}
+            previous={<button className="ghost" onClick={() => setStep('preview')}>返回</button>}
             extra={job.targetProvider === 'amap' && job.places.length > 0 ? (
               <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
                 {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}

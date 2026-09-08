@@ -15,6 +15,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Shortened wizard back buttons to `Back`-equivalent labels so they remain compact and do not wrap in the popup.
 - Standardized wizard navigation actions: previous on the left, the primary next action in the center, optional actions immediately before it, and cancel on the right.
 - Added separate local settings for import request spacing and the upcoming Amap POI matching phase; import writes now honor the configured serial request interval with a safe bounded range.
 - Added the first Amap POI matching flow: matching is explicitly started before import, uses conservative name-and-distance scoring, and keeps unmatched places as custom-coordinate favorites.
