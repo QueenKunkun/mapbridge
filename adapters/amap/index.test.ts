@@ -300,6 +300,8 @@ describe('amap adapter', () => {
     expect(data.x).toBe(data.point_x);
     expect(data.y).toBe(data.point_y);
     expect(data.classification).toBe('8');
+    expect(data.custom_name).toBe('');
+    expect(data.custom_address).toBe('');
   });
 
   it('amapFavoriteId is stable across conversion chains for the same place', () => {

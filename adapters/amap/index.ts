@@ -448,6 +448,7 @@ export const amapAdapter: ProviderAdapter = {
       const phone = place.metadata.phone ?? '';
       const tags = place.tags.join(';');
       const resolution = options?.amapPoiResolutions?.[place.id];
+      const nativePoi = Boolean(resolution?.poiid);
       const resolvedWgs84 = resolution?.location ?? place.wgs84;
       const resolvedGcj02 = fromWgs84(resolvedWgs84, 'gcj02');
       const resolvedPixel = gcj02ToAmapPixel(resolvedGcj02.lng, resolvedGcj02.lat);
@@ -457,14 +458,16 @@ export const amapAdapter: ProviderAdapter = {
         type: 101,
         data: {
           item_id: id,
-          custom_address: address,
+          // A native POI favorite leaves custom fields empty. Populating them
+          // makes Amap render the entry as a manually positioned/custom item.
+          custom_address: nativePoi ? '' : address,
           poiid: resolution?.poiid ?? '',
-          custom_name: place.name,
+          custom_name: nativePoi ? '' : place.name,
           type: '0',
-          address,
+          address: resolution?.address || address,
           phone_numbers: phone,
           comment: place.note,
-          name: place.name,
+          name: resolution?.name || place.name,
           point_x: resolvedPixel.x,
           point_y: resolvedPixel.y,
           x: resolvedPixel.x,
