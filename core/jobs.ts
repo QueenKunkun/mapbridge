@@ -160,10 +160,25 @@ export function applyExtractionItems(
 }
 
 export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTab?: 'places' | 'routes'): Job {
+  const nextPlaces = new Map(places.map((place) => [place.id, place]));
+  const previousPlaces = new Map(job.places.map((place) => [place.id, place]));
+  const unchanged = (placeId: string): boolean => {
+    const previous = previousPlaces.get(placeId);
+    const next = nextPlaces.get(placeId);
+    return Boolean(previous && next
+      && previous.name === next.name
+      && previous.address === next.address
+      && previous.wgs84.lng === next.wgs84.lng
+      && previous.wgs84.lat === next.wgs84.lat);
+  };
+  const preservedResolutions = Object.fromEntries(Object.entries(job.amapPoiResolutions ?? {}).filter(([placeId]) => unchanged(placeId)));
+  const preservedMatches = Object.fromEntries(Object.entries(job.amapPoiMatches ?? {}).filter(([placeId]) => unchanged(placeId)));
   return {
     ...job,
     items: [...job.items.filter((item) => item.kind !== 'poi'), ...places.map(migratePlaceToPoi)],
     places,
+    amapPoiResolutions: Object.keys(preservedResolutions).length > 0 ? preservedResolutions : undefined,
+    amapPoiMatches: Object.keys(preservedMatches).length > 0 ? preservedMatches : undefined,
     previewTab: previewTab ?? job.previewTab,
     status: job.status === 'draft' || job.status === 'extracting' ? 'preview' : job.status,
     progress: { processed: 0, total: places.length },

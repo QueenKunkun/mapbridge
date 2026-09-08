@@ -32,6 +32,18 @@ describe('core/jobs unified items', () => {
     expect(hydrated.amapPoiMatches?.['poi-1']?.status).toBe('not-found');
   });
 
+  it('invalidates a POI match when the preview record changes', () => {
+    const job = {
+      ...createJob('baidu', 'amap'),
+      places: [place],
+      amapPoiResolutions: { [place.id]: { poiid: 'amap-1' } },
+      amapPoiMatches: { [place.id]: { status: 'matched' as const } },
+    };
+    const updated = applyPreviewPlaces(job, [{ ...place, name: 'Renamed POI' }]);
+    expect(updated.amapPoiResolutions).toBeUndefined();
+    expect(updated.amapPoiMatches).toBeUndefined();
+  });
+
   it('persists Route items while keeping POI places as the import view', () => {
     const job = applyExtractionItems(createJob('baidu', 'amap'), [route, { kind: 'poi', ...place, geometry: { type: 'point', point: place.wgs84 } }], [place], 2);
     expect(job.items.map((item) => item.kind)).toEqual(['route', 'poi']);
