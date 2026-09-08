@@ -1030,16 +1030,24 @@ function PoiMatchCell({
     }
     return (
       <div className="match-cell">
+        <button
+          className="small icon-button"
+          disabled={disabled}
+          aria-label="重试 POI 匹配"
+          title="重试 POI 匹配"
+          onClick={() => onMatch?.(place.id)}
+        >
+          ↻
+        </button>
         {import.meta.env.DEV && (
           <details className="match-diagnostic">
-            <summary>未找到 <span aria-hidden="true">⌄</span></summary>
+            <summary aria-label="查看匹配原因" title="查看匹配原因">ⓘ</summary>
             <div className="match-diagnostic-body">
               <pre>{diagnostic}</pre>
               <button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button>
             </div>
           </details>
         )}
-        {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
         {import.meta.env.DEV && (match.candidates?.length ?? 0) > 0 && (
           <select
             className="match-candidate-select"
@@ -1067,7 +1075,12 @@ function PoiMatchCell({
             ))}
           </select>
         )}
-        <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
+        {import.meta.env.DEV && (match.candidates?.length ?? 0) === 0 && (
+          <select className="match-candidate-select" value="" disabled aria-label={`为${place.name}选择高德 POI`}>
+            <option value="">未找到</option>
+          </select>
+        )}
+        {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
       </div>
     );
   }

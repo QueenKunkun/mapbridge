@@ -217,6 +217,16 @@ section {
   font-size: 11px;
 }
 
+.icon-button {
+  min-width: 24px;
+  padding: 3px 5px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1;
+}
+
 .match-candidates {
   position: relative;
   overflow: visible;
