@@ -13,6 +13,11 @@ export type JobStatus =
 
 export type JobWorkflow = 'migrate' | 'import-file' | 'export';
 
+/** The step immediately before the shared preview for each workflow entry point. */
+export function previewPreviousStep(workflow: JobWorkflow): 'setup' | 'extract' {
+  return workflow === 'migrate' ? 'extract' : 'setup';
+}
+
 export interface JobProgress {
   processed: number;
   total: number;

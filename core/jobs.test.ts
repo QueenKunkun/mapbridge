@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { migratePlaceToPoi } from '@/core/export';
-import { applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
+import { applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, previewPreviousStep, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
@@ -17,6 +17,12 @@ const route: CanonicalItem = {
 };
 
 describe('core/jobs unified items', () => {
+  it('returns to the correct entry step from the shared preview', () => {
+    expect(previewPreviousStep('migrate')).toBe('extract');
+    expect(previewPreviousStep('import-file')).toBe('setup');
+    expect(previewPreviousStep('export')).toBe('setup');
+  });
+
   it('persists Route items while keeping POI places as the import view', () => {
     const job = applyExtractionItems(createJob('baidu', 'amap'), [route, { kind: 'poi', ...place, geometry: { type: 'point', point: place.wgs84 } }], [place], 2);
     expect(job.items.map((item) => item.kind)).toEqual(['route', 'poi']);

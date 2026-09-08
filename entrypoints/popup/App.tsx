@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
-import { updatePreviewPlace, type Job } from '@/core/jobs';
+import { previewPreviousStep, updatePreviewPlace, type Job } from '@/core/jobs';
 import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableFile } from '@/core/portable-import';
@@ -714,7 +714,7 @@ export default function App() {
             )}
           </div>
           <WizardActions
-            previous={<button className="ghost" onClick={() => setStep('extract')}>返回</button>}
+            previous={<button className="ghost" onClick={() => setStep(previewPreviousStep(job.workflow))}>返回</button>}
             next={<NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
               onClick={async () => { await savePreview(previewPlaces, previewTab); setStep('import'); }}
