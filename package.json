@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "dev:watch": "chokidar 'entrypoints/**/*' 'components/**/*' 'utils/**/*' 'adapters/**/*' 'package.json' -c 'pnpm build && scripts/reload.sh'",
+    "dev:watch": "chokidar 'entrypoints/**/*' 'components/**/*' 'utils/**/*' 'adapters/**/*' 'package.json' -c 'pnpm build && scripts/reload.sh prod'",
+    "dev:dev:watch": "chokidar 'entrypoints/**/*' 'components/**/*' 'utils/**/*' 'adapters/**/*' 'package.json' -c 'pnpm build --mode development && scripts/reload.sh dev'",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
     "dev:build": "wxt build --mode development",
