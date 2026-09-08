@@ -510,7 +510,15 @@ export default defineContentScript({
       const cmd = event.data;
 
       if (cmd.type === 'match-poi') {
-        await runMatchPoi(cmd.payload, cmd.options);
+        try {
+          await runMatchPoi(cmd.payload, cmd.options);
+        } catch (error) {
+          postEvent({
+            mb: BRIDGE_CHANNEL,
+            type: 'poi-match-result',
+            data: { provider: 'amap', done: false, error: String(error instanceof Error ? error.message : error) },
+          });
+        }
         return;
       }
 

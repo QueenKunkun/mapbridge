@@ -134,6 +134,14 @@ section {
   background: #fff;
 }
 
+.match-progress {
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
 .match-result details {
   font-size: 12px;
 }

@@ -215,6 +215,12 @@ async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgRespo
   if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持匹配导入到高德的地点' };
   if (job.places.length === 0) return { type: 'error', message: '没有可匹配的地点' };
   const settings = await getSettings();
+  await saveJob(progressImport(job, {
+    phase: 'match-poi',
+    processed: 0,
+    total: job.places.length,
+    message: '正在连接高德页面…',
+  }));
   const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string }>((resolve) => {
     pendingAmapMatch = {
       jobId,
@@ -222,7 +228,7 @@ async function handleMatchAmapPoi(jobId: string, tabId: number): Promise<BgRespo
       timer: setTimeout(() => {
         pendingAmapMatch = undefined;
         resolve({ ok: false, error: '高德 POI 匹配超时' });
-      }, 600000),
+      }, 30000),
     };
     sendCommandToTab(tabId, { type: 'match-poi', payload: job.places, options: { poiMatchDelayMs: settings.poiMatchDelayMs } }).catch((e) => {
       if (pendingAmapMatch) {
@@ -284,7 +290,11 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
   }
   pendingAmapMatch = undefined;
   clearTimeout(pending.timer);
-  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution> } : {};
+  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution>; error?: string } : {};
+  if (value.error) {
+    pending.resolve({ ok: false, error: value.error });
+    return;
+  }
   pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {} } : { ok: false, error: '高德 POI 匹配未完成' });
 }
 

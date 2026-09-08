@@ -745,6 +745,11 @@ export default function App() {
           {job.targetProvider === 'amap' && job.places.length > 0 && (
             <div className="match-box">
               <p className="hint">导入地点可以先匹配高德原生 POI，以改善地图上的名称和详情展示。</p>
+              {matching && (
+                <div className="match-progress" role="status">
+                  匹配中… {Math.min(job.progress.processed, job.progress.total)} / {job.progress.total}
+                </div>
+              )}
               {job.amapPoiResolutions !== undefined && !matching && (
                 <div className="match-result">
                   <span className="hint">
@@ -779,7 +784,7 @@ export default function App() {
             previous={<button className="ghost" onClick={() => setStep('preview')}>返回</button>}
             extra={job.targetProvider === 'amap' && job.places.length > 0 ? (
               <button className="secondary" disabled={matching || busy} onClick={() => void startAmapMatch()}>
-                {matching ? `匹配中… ${job.progress.processed}/${job.progress.total}` : Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
+                {Object.keys(job.amapPoiResolutions ?? {}).length > 0 ? '重新匹配高德 POI' : '匹配高德 POI'}
               </button>
             ) : undefined}
             next={<button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
