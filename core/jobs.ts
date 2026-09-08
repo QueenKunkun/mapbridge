@@ -57,6 +57,7 @@ export interface AmapPoiCandidateSummary {
   name: string;
   address: string;
   distanceMeters: number;
+  nameScore: number;
   cityCode?: string;
   cityName?: string;
 }

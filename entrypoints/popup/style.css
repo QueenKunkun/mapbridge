@@ -206,6 +206,17 @@ section {
   font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+.match-candidate-select {
+  min-width: 0;
+  max-width: 150px;
+  padding: 4px 5px;
+  border: 1px solid #f59e0b;
+  border-radius: 5px;
+  background: #fff;
+  color: #92400e;
+  font-size: 11px;
+}
+
 .match-candidates {
   position: relative;
   overflow: visible;

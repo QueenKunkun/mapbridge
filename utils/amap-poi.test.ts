@@ -65,6 +65,7 @@ describe('Amap POI matching', () => {
     if (result.status === 'not-found') {
       expect(result.reason).toContain('距离');
       expect(result.candidates).toHaveLength(1);
+      expect(result.candidates[0]!.nameScore).toBe(1);
     }
   });
 

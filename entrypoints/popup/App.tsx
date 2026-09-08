@@ -1040,6 +1040,28 @@ function PoiMatchCell({
           </details>
         )}
         {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
+        {import.meta.env.DEV && (match.candidates?.length ?? 0) > 0 && (
+          <select
+            className="match-candidate-select"
+            defaultValue=""
+            aria-label={`为${place.name}选择高德 POI`}
+            onChange={(event) => {
+              const candidate = match.candidates?.find((item) => item.poiid === event.target.value);
+              if (candidate) onSelect?.(place.id, candidate);
+            }}
+          >
+            <option value="">无最佳匹配</option>
+            {(match.candidates ?? []).map((candidate) => (
+              <option
+                key={candidate.poiid}
+                value={candidate.poiid}
+                title={`距离 ${Math.round(candidate.distanceMeters)} 米，名称相似度 ${candidate.nameScore.toFixed(2)}${candidate.address ? `，地址：${candidate.address}` : ''}`}
+              >
+                {candidate.name}（匹配度 {Math.round(candidate.nameScore * 100)}%）
+              </option>
+            ))}
+          </select>
+        )}
         <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button>
       </div>
     );
