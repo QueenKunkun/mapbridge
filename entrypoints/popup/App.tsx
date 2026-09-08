@@ -113,6 +113,33 @@ export default function App() {
     void saveUiSelection({ source, target, mode });
   }, [source, target, mode, selectionReady]);
 
+  // Popup 是短生命周期窗口；重新打开时恢复后台仍在处理的任务，避免用户误以为任务已结束。
+  useEffect(() => {
+    void sendBg({ type: 'get-state' }).then((res) => {
+      if (res.type !== 'state') return;
+      const active = res.jobs.find((item) => item.status === 'importing' || item.status === 'extracting' || item.status === 'preview');
+      if (!active) return;
+      setJob(active);
+      setSource(active.sourceProvider);
+      setTarget(active.targetProvider);
+      setStep(active.status === 'importing' ? 'report' : active.status === 'preview' ? 'preview' : 'extract');
+      setMatching(active.progress.phase === 'match-poi' && Object.keys(active.amapPoiResolutions ?? {}).length === 0);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!job || (job.status !== 'importing' && !matching)) return;
+    const timer = setInterval(() => {
+      void sendBg({ type: 'get-job', id: job.id }).then((res) => {
+        if (res.type !== 'job' || !res.job) return;
+        setJob(res.job);
+        if (res.job.status === 'done' || res.job.status === 'failed') setMatching(false);
+        if (matching && Object.keys(res.job.amapPoiResolutions ?? {}).length > 0) setMatching(false);
+      });
+    }, 800);
+    return () => clearInterval(timer);
+  }, [job?.id, job?.status, matching]);
+
   useEffect(() => {
     if (step !== 'preview' || !job) return;
     setPreviewTab(job.places.length > 0 ? 'places' : 'routes');
