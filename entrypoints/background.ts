@@ -77,7 +77,7 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { amapSyncBatchSize?: number } },
+  command: { type: 'extract' | 'import' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { amapSyncBatchSize?: number; amapDedupPixelTolerance?: number } },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -149,7 +149,7 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     }
     const started = startImport(job, payload);
     await saveJob(started);
-    await sendCommandToTab(tabId, { type: 'import', payload, options: { amapSyncBatchSize: settings.amapSyncBatchSize } });
+    await sendCommandToTab(tabId, { type: 'import', payload, options: { amapSyncBatchSize: settings.amapSyncBatchSize, amapDedupPixelTolerance: settings.amapDedupPixelTolerance } });
     return { type: 'ok' };
   } catch (e) {
     await saveJob({ ...job, status: 'failed', error: String(e instanceof Error ? e.message : e), updatedAt: now() });

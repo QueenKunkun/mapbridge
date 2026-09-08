@@ -24,16 +24,16 @@ function normalizeAmapName(value: unknown): string {
   return String(value ?? '').replace(/\s+/g, '').toLowerCase();
 }
 
-function coordinateKey(value: unknown): string {
+function coordinateKey(value: unknown, tolerance: number): string {
   const number = Number(value);
   // A WGS-84 round trip can move an Amap zoom-20 pixel coordinate by a few
   // pixels. Keep the key tolerant enough to match the same favorite after
   // export/import, without collapsing nearby places at normal map scale.
-  return Number.isFinite(number) ? String(Math.round(number / 8)) : '';
+  return Number.isFinite(number) ? String(Math.round(number / tolerance)) : '';
 }
 
 /** Semantic key for old native Amap favorites whose id differs from a rebuilt payload id. */
-function amapImportKey(item: AmapItem): string | undefined {
+function amapImportKey(item: AmapItem, tolerance: number): string | undefined {
   const data = item.data;
   if (!data) return item.id;
   const type = Number(item.type ?? data['type']);
@@ -50,11 +50,11 @@ function amapImportKey(item: AmapItem): string | undefined {
     const endX = to['x'] ?? to['mx'] ?? to['lon'];
     const endY = to['y'] ?? to['my'] ?? to['lat'];
     const rideType = type === 117 ? String(data['rideType'] ?? '') : '';
-    return `route|${type}|${rideType}|${coordinateKey(startX)}|${coordinateKey(startY)}|${coordinateKey(endX)}|${coordinateKey(endY)}`;
+    return `route|${type}|${rideType}|${coordinateKey(startX, tolerance)}|${coordinateKey(startY, tolerance)}|${coordinateKey(endX, tolerance)}|${coordinateKey(endY, tolerance)}`;
   }
   const name = normalizeAmapName(data['custom_name'] ?? data['name']);
-  const x = coordinateKey(data['point_x']);
-  const y = coordinateKey(data['point_y']);
+  const x = coordinateKey(data['point_x'], tolerance);
+  const y = coordinateKey(data['point_y'], tolerance);
   return name && x && y ? `poi|${name}|${x}|${y}` : item.id;
 }
 
@@ -171,7 +171,7 @@ export default defineContentScript({
       });
     }
 
-    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number }): Promise<void> {
+    async function runImport(payload: unknown, options?: { amapSyncBatchSize?: number; amapDedupPixelTolerance?: number }): Promise<void> {
       const favorites = (payload ?? []) as AmapItem[];
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -191,8 +191,10 @@ export default defineContentScript({
       const amap = (window as unknown as { amap?: { favesStore?: { getFave?: (k: string) => unknown; update?: (d: unknown) => void } } }).amap;
       const currentItems = current.data?.items ?? [];
       let ver = current.data?.ver ?? (amap?.favesStore?.getFave ? String(amap.favesStore.getFave('ver') ?? '') : '');
+      const configuredTolerance = Number(options?.amapDedupPixelTolerance);
+      const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(64, Math.max(1, Math.floor(configuredTolerance))) : 8;
 
-      const merge = mergeImportItems(currentItems, favorites, amapImportKey);
+      const merge = mergeImportItems(currentItems, favorites, (item) => amapImportKey(item, dedupTolerance));
       const detail = merge.detail;
       const imported = merge.imported;
       const duplicates = merge.duplicates;
@@ -216,7 +218,7 @@ export default defineContentScript({
       }
       const syncFavorites = [...poiFavorites, ...legacyRoutes];
       if (syncFavorites.length > 0) {
-        const syncMerge = mergeImportItems(currentItems, syncFavorites, amapImportKey);
+        const syncMerge = mergeImportItems(currentItems, syncFavorites, (item) => amapImportKey(item, dedupTolerance));
         const newSyncIds = new Set(syncMerge.detail.filter((item) => item.status === 'imported').map((item) => item.id));
         const newSyncItems = syncFavorites
           .filter((item) => item.id && newSyncIds.has(item.id))

@@ -40,11 +40,16 @@ export interface AppSettings {
   skipExisting: boolean;
   /** 高德 POI 每批最多同步条数。 */
   amapSyncBatchSize: number;
+  /** 高德导入重复判断的像素坐标容差。 */
+  amapDedupPixelTolerance: number;
 }
 
 export const AMAP_SYNC_BATCH_SIZE_MIN = 1;
 export const AMAP_SYNC_BATCH_SIZE_MAX = 200;
 export const AMAP_SYNC_BATCH_SIZE_DEFAULT = 50;
+export const AMAP_DEDUP_PIXEL_TOLERANCE_MIN = 1;
+export const AMAP_DEDUP_PIXEL_TOLERANCE_MAX = 64;
+export const AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT = 8;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   importDelayMs: 500,
@@ -52,6 +57,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultFolder: '',
   skipExisting: true,
   amapSyncBatchSize: AMAP_SYNC_BATCH_SIZE_DEFAULT,
+  amapDedupPixelTolerance: AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT,
 };
 
 const SETTINGS_KEY = 'settings';
@@ -67,11 +73,15 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 
 function normalizeSettings(settings: AppSettings): AppSettings {
   const value = Number(settings.amapSyncBatchSize);
+  const tolerance = Number(settings.amapDedupPixelTolerance);
   return {
     ...settings,
     amapSyncBatchSize: Number.isFinite(value)
       ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
       : AMAP_SYNC_BATCH_SIZE_DEFAULT,
+    amapDedupPixelTolerance: Number.isFinite(tolerance)
+      ? Math.min(AMAP_DEDUP_PIXEL_TOLERANCE_MAX, Math.max(AMAP_DEDUP_PIXEL_TOLERANCE_MIN, Math.floor(tolerance)))
+      : AMAP_DEDUP_PIXEL_TOLERANCE_DEFAULT,
   };
 }
 
