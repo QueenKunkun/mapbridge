@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseBaiduPoiMatch, chooseBaiduSearchCity } from './baidu-poi';
+import { chooseBaiduPoiMatch, chooseBaiduSearchCity, parseBaiduPoiCandidates } from './baidu-poi';
 
 describe('Baidu POI matching', () => {
   it('chooses the closest city from a nationwide search response', () => {
@@ -19,6 +19,35 @@ describe('Baidu POI matching', () => {
     expect(chooseBaiduPoiMatch(response, { name: '真武庙', x: 12949071, y: 4152031 })).toEqual({
       uid: 'nearby', name: '真武庙', x: 12949073.66, y: 4152021.19,
     });
+  });
+
+  it('parses the formal Baidu search response shape', () => {
+    const response = {
+      result: { total: 20, wd: '金平湖' },
+      content: [{
+        uid: 'b9d44a0ff24f3a86b7265579',
+        name: '金平湖风景区',
+        addr: '山东省济宁市金乡县金平湖',
+        x: 1295726799,
+        y: 415071937,
+        api_admin_info: { city_code: 286, city_name: '济宁市' },
+        admin_info: { area_id: 370828, area_name: '金乡县' },
+        std_tag: '旅游景点;风景区',
+      }],
+    };
+
+    expect(parseBaiduPoiCandidates(response)).toEqual([{
+      uid: 'b9d44a0ff24f3a86b7265579',
+      name: '金平湖风景区',
+      x: 12957267.99,
+      y: 4150719.37,
+      address: '山东省济宁市金乡县金平湖',
+      cityCode: '286',
+      cityName: '济宁市',
+      districtCode: '370828',
+      districtName: '金乡县',
+      category: '旅游景点;风景区',
+    }]);
   });
 
   it('does not match a same-name POI that is too far away', () => {

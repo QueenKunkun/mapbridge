@@ -6,6 +6,16 @@ export interface BaiduMercatorPoint {
 export interface BaiduPoiMatch extends BaiduMercatorPoint {
   uid: string;
   name: string;
+  address?: string;
+  cityCode?: string;
+  cityName?: string;
+  districtCode?: string;
+  districtName?: string;
+  category?: string;
+}
+
+export interface BaiduPoiCandidate extends BaiduPoiMatch {
+  distance: number;
 }
 
 function readPoint(value: unknown): BaiduMercatorPoint | undefined {
@@ -23,6 +33,46 @@ function records(response: unknown): Record<string, unknown>[] {
   return Array.isArray(content)
     ? content.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
     : [];
+}
+
+function text(record: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number') return String(value);
+  }
+  return '';
+}
+
+/** 将百度正式搜索接口的 content[] 转为可匹配的候选 POI。 */
+export function parseBaiduPoiCandidates(response: unknown): BaiduPoiMatch[] {
+  return records(response).flatMap((item) => {
+    const uid = text(item, 'uid');
+    const name = text(item, 'name');
+    const rawX = Number(item['x']);
+    const rawY = Number(item['y']);
+    const x = Math.abs(rawX) > 100_000_000 ? rawX / 100 : rawX;
+    const y = Math.abs(rawY) > 100_000_000 ? rawY / 100 : rawY;
+    if (!uid || !name || !Number.isFinite(x) || !Number.isFinite(y)) return [];
+    const admin = item['admin_info'] && typeof item['admin_info'] === 'object'
+      ? item['admin_info'] as Record<string, unknown>
+      : undefined;
+    const apiAdmin = item['api_admin_info'] && typeof item['api_admin_info'] === 'object'
+      ? item['api_admin_info'] as Record<string, unknown>
+      : undefined;
+    return [{
+      uid,
+      name,
+      x,
+      y,
+      address: text(item, 'addr', 'poi_address') || undefined,
+      cityCode: text(apiAdmin ?? {}, 'city_code') || text(admin ?? {}, 'city_id') || undefined,
+      cityName: text(apiAdmin ?? {}, 'city_name') || text(admin ?? {}, 'city_name') || undefined,
+      districtCode: text(admin ?? {}, 'area_id') || undefined,
+      districtName: text(admin ?? {}, 'area_name') || undefined,
+      category: text(item, 'std_tag', 'di_tag') || undefined,
+    }];
+  });
 }
 
 /** 从全国搜索的城市聚合结果中选取离目标坐标最近的城市。 */
@@ -47,19 +97,12 @@ export function chooseBaiduPoiMatch(
   target: BaiduMercatorPoint & { name: string },
   maxDistance = 3_000,
 ): BaiduPoiMatch | undefined {
-  const candidates = records(response)
-    .map((item) => {
-      const uid = typeof item['uid'] === 'string' ? item['uid'] : '';
-      const name = typeof item['name'] === 'string' ? item['name'] : '';
-      const rawX = Number(item['x']);
-      const rawY = Number(item['y']);
-      const x = Math.abs(rawX) > 100_000_000 ? rawX / 100 : rawX;
-      const y = Math.abs(rawY) > 100_000_000 ? rawY / 100 : rawY;
-      const distance = Math.hypot(x - target.x, y - target.y);
-      return { uid, name, x, y, distance };
-    })
-    .filter((item) => item.uid && item.name === target.name && Number.isFinite(item.x) && Number.isFinite(item.y))
+  const candidates = parseBaiduPoiCandidates(response)
+    .map((item) => ({ ...item, distance: Math.hypot(item.x - target.x, item.y - target.y) }))
+    .filter((item) => item.name === target.name)
     .sort((a, b) => a.distance - b.distance);
   const best = candidates[0];
-  return best && best.distance <= maxDistance ? { uid: best.uid, name: best.name, x: best.x, y: best.y } : undefined;
+  if (!best || best.distance > maxDistance) return undefined;
+  const { distance: _distance, ...match } = best;
+  return match;
 }
