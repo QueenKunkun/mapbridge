@@ -1076,10 +1076,10 @@ function PoiMatchCell({
       }}
     >
       <option value="">无最佳匹配</option>
-      {candidates.map((candidate) => {
+      {candidates.map((candidate, index) => {
         const score = Number.isFinite(candidate.nameScore) ? candidate.nameScore : 0;
         return <option key={candidate.poiid} value={candidate.poiid} title={`距离 ${Math.round(candidate.distanceMeters)} 米，名称相似度 ${score.toFixed(2)}${candidate.address ? `，地址：${candidate.address}` : ''}`}>
-          {candidate.name}（匹配度 {Math.round(score * 100)}%）
+          {index + 1}. {candidate.name}（匹配度 {Math.round(score * 100)}%）
         </option>;
       })}
     </select>
