@@ -283,6 +283,25 @@ async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: Am
   return { type: 'job', job: await getJob(jobId) };
 }
 
+async function handleClearAmapPoi(jobId: string, placeId: string): Promise<BgResponse> {
+  const job = await getJob(jobId);
+  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持清除高德 POI 选择' };
+  if (!job.places.some((place) => place.id === placeId)) return { type: 'error', message: '地点不存在' };
+  const resolutions = { ...(job.amapPoiResolutions ?? {}) };
+  delete resolutions[placeId];
+  const previous = job.amapPoiMatches?.[placeId];
+  await saveJob({
+    ...job,
+    amapPoiResolutions: Object.keys(resolutions).length > 0 ? resolutions : undefined,
+    amapPoiMatches: {
+      ...(job.amapPoiMatches ?? {}),
+      [placeId]: { ...(previous ?? {}), status: 'not-found' },
+    },
+    updatedAt: now(),
+  });
+  return { type: 'job', job: await getJob(jobId) };
+}
+
 async function handleCancelJob(jobId: string): Promise<BgResponse> {
   const job = await getJob(jobId);
   if (!job) return { type: 'error', message: '任务不存在' };
@@ -499,6 +518,9 @@ export default defineBackground(() => {
       }
       case 'select-poi-match': {
         return await handleSelectAmapPoi(req.jobId, req.placeId, req.candidate);
+      }
+      case 'clear-poi-match': {
+        return await handleClearAmapPoi(req.jobId, req.placeId);
       }
       case 'cancel-job': {
         return await handleCancelJob(req.jobId);

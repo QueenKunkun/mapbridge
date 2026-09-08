@@ -481,9 +481,11 @@ export default function App() {
     }
   }
 
-  async function selectAmapPoi(placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]): Promise<void> {
+  async function selectAmapPoi(placeId: string, candidate?: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]): Promise<void> {
     if (!job) return;
-    const res = await sendBg({ type: 'select-poi-match', jobId: job.id, placeId, candidate });
+    const res = await sendBg(candidate
+      ? { type: 'select-poi-match', jobId: job.id, placeId, candidate }
+      : { type: 'clear-poi-match', jobId: job.id, placeId });
     if (res.type === 'job') setJob(res.job);
     else if (res.type === 'error') setError(res.message);
   }
@@ -932,7 +934,7 @@ function PlaceTable({
   amapPoiResolutions?: Job['amapPoiResolutions'];
   matchingPlaceIds?: Set<string>;
   onMatchAmapPoi?: (placeId: string) => void;
-  onSelectAmapPoi?: (placeId: string, candidate: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]) => void;
+  onSelectAmapPoi?: (placeId: string, candidate?: PoiCandidate) => void;
 }) {
   const [filter, setFilter] = useState('');
 
@@ -1005,7 +1007,7 @@ function PlaceRow({
   onChange: (id: string, patch: Partial<Job['places'][number]>) => void;
   onRemove: (id: string) => void;
   onMatch?: (placeId: string) => void;
-  onSelect?: (placeId: string, candidate: PoiCandidate) => void;
+  onSelect?: (placeId: string, candidate?: PoiCandidate) => void;
 }) {
   const [diagnosticOpen, setDiagnosticOpen] = useState(false);
   return (
@@ -1058,7 +1060,7 @@ function PoiMatchCell({
   diagnosticOpen: boolean;
   onToggleDiagnostic: () => void;
   onMatch?: (placeId: string) => void;
-  onSelect?: (placeId: string, candidate: PoiCandidate) => void;
+  onSelect?: (placeId: string, candidate?: PoiCandidate) => void;
 }) {
   if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
   const candidates = match?.candidates ?? [];
@@ -1070,7 +1072,7 @@ function PoiMatchCell({
       aria-label={`为${place.name}选择高德 POI`}
       onChange={(event) => {
         const candidate = candidates.find((item) => item.poiid === event.target.value);
-        if (candidate) onSelect?.(place.id, candidate);
+        onSelect?.(place.id, candidate);
       }}
     >
       <option value="">无最佳匹配</option>
