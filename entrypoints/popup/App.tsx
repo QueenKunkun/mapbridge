@@ -1,14 +1,15 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
-import { updatePreviewPlace, type Job } from '@/core/jobs';
+import type { Job } from '@/core/jobs';
 import { restorePopupState } from '@/core/popup-state';
 import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableFile } from '@/core/portable-import';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
-import { IconGear, IconSearch } from '@/components/Icons';
+import { IconGear } from '@/components/Icons';
+import { PopupView } from './PopupView';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
   { id: 'baidu', name: '百度地图' },
@@ -22,81 +23,11 @@ const SELECTABLE_PROVIDERS = PROVIDERS.filter((p) => p.id !== 'tencent');
 type Step = 'setup' | 'extract' | 'preview' | 'import' | 'report';
 type ExportFormat = 'mapbridge' | 'gpx' | 'kml';
 
-function groupExtractionSkips(skips: Job['extractionSkipped']): { reason: string; items: typeof skips }[] {
-  const groups = new Map<string, typeof skips>();
-  for (const skip of skips) {
-    const items = groups.get(skip.reason) ?? [];
-    items.push(skip);
-    groups.set(skip.reason, items);
-  }
-  return Array.from(groups, ([reason, items]) => ({ reason, items }));
-}
-
-function formatSkipIndices(items: Job['extractionSkipped']): string {
-  return items.map((item) => item.index + 1).join('、');
-}
-
-function ExtractionWarningPanel({ skips, warnings }: { skips: Job['extractionSkipped']; warnings: string[] }) {
-  const groups = groupExtractionSkips(skips);
-  const otherWarnings = warnings.filter((warning) => skips.length === 0 || !/^第 \d+ 条：/.test(warning));
-  if (groups.length === 0 && otherWarnings.length === 0) return null;
-
-  return (
-    <div className="export-warning">
-      <strong>提取/解析提示</strong>
-      <div className="warning-scroll">
-        {groups.length > 0 && (
-          <ul>
-            {groups.map((group) => (
-              <li key={group.reason}>
-                第 {formatSkipIndices(group.items)} 条：{group.reason}
-                {group.items.some((item) => item.label) && (
-                  <details>
-                    <summary>查看记录</summary>
-                    <ul>
-                      {group.items.map((item) => <li key={item.index}>第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}</li>)}
-                    </ul>
-                  </details>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {otherWarnings.length > 0 && (
-          <ul>
-            {otherWarnings.map((warning, index) => <li key={`${index}-${warning}`}>{warning}</li>)}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
 }
 
-function NextImportButton({ disabled, onClick }: { disabled?: boolean; onClick: () => void | Promise<void> }) {
-  return <button className="primary" disabled={disabled} onClick={() => void onClick()}>下一步：导入 →</button>;
-}
-
-function WizardActions({
-  previous,
-  next,
-  cancel,
-}: {
-  previous?: ReactNode;
-  next: ReactNode;
-  cancel?: ReactNode;
-}) {
-  return (
-    <div className="wizard-actions">
-      <div className="wizard-actions-previous">{previous}</div>
-      <div className="wizard-actions-next">{next}</div>
-      <div className="wizard-actions-cancel">{cancel}</div>
-    </div>
-  );
-}
 
 export default function App() {
   const [source, setSource] = useState<ProviderId>('baidu');
@@ -503,718 +434,61 @@ export default function App() {
     }
   }
 
-  return (
-    <div className="app">
-      <header className="app-header">
-        <h1>MapBridge</h1>
-        <span className="tagline">地图收藏夹迁移</span>
-        {dev && <span className="dev-badge">DEV</span>}
-        {ver && <span className="ver-badge">v{ver}</span>}
-        <button
-          className="icon-btn"
-          title="设置"
-          aria-label="设置"
-          onClick={() => void browser.runtime.openOptionsPage()}
-        >
-          <IconGear />
-        </button>
-      </header>
-
-      {error && <div className="error">⚠ {error}</div>}
-
-      <nav className="mode-tabs" aria-label="操作模式">
-        <button className={`mode-tab${mode === 'migrate' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('migrate')}>迁移</button>
-        <button className={`mode-tab${mode === 'export' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('export')}>导出</button>
-        <button className={`mode-tab${mode === 'import-file' ? ' active' : ''}`} disabled={step !== 'setup' && step !== 'report'} onClick={() => switchMode('import-file')}>从文件导入</button>
-      </nav>
-
-      {mode === 'migrate' && (
-        <div className="migration-flow">
-          <div className="steps" aria-label="迁移步骤">
-            {(['setup', 'extract', 'preview', 'import', 'report'] as Step[]).map((s, i) => (
-              <span key={s} className={`step${step === s ? ' active' : ''}${stepIndex(step) > i ? ' done' : ''}`}>
-                {i + 1}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === 'setup' && (
-        <section className="setup">
-          {mode === 'migrate' && (
-            <div className="migration-content">
-              <div className="pick">
-                <label>
-                  从
-                  <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
-                    {SELECTABLE_PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <span className="arrow">→</span>
-                <label>
-                  到
-                  <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
-                    {SELECTABLE_PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="detect-list">
-                {[source, target]
-                  .filter((v, i, a) => a.indexOf(v) === i)
-                  .map((pid) => {
-                    const p = PROVIDERS.find((x) => x.id === pid)!;
-                    const ok = detected.some((d) => d.providerId === pid);
-                    const loggedIn = isProviderLoggedIn(pid);
-                    return (
-                      <div key={pid} className="detect-item">
-                        <span className={`dot${ok ? ' ok' : ''}`} />
-                        <span>{p.name}收藏页</span>
-                        {ok ? (
-                          <>
-                            {pid === 'amap' && <span className="version-tag">{detected.find((d) => d.providerId === pid)?.version === 'new' ? '新版' : '旧版'}</span>}
-                            {loggedIn === false ? (
-                              <span className="warn-tag">未登录</span>
-                            ) : loggedIn === true ? (
-                              <span className="ok-tag">已登录 ✓</span>
-                            ) : (
-                              <span className="hint">已检测到，登录状态待确认</span>
-                            )}
-                          </>
-                        ) : (
-                          <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
-                            打开
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                <div className="detect-actions">
-                  {detecting && <span className="hint">检测中…</span>}
-                  <button className="ghost small" disabled={detecting} onClick={() => void refreshDetection()}>
-                    刷新检测
-                  </button>
-                </div>
-              </div>
-              <p className="hint">请确保地图网址已打开，并完成登录。</p>
-              <button className="primary" disabled={!canStart || busy} onClick={() => void newJob()}>
-                {canStart ? '开始' : '请选择不同平台'}
-              </button>
-            </div>
-          )}
-
-          {mode === 'export' && (
-            <>
-              {activeProvider ? (
-                <div className="auto-provider">
-                  <span className="dot ok" />
-                  当前页面：<b>{providerName(activeProvider)}</b>（将导出此地图收藏）
-                </div>
-              ) : null}
-              <div className="export-options">
-                {!activeProvider && (
-                  <label className="field-inline">
-                    选择地图
-                    <select value={source} onChange={(e) => setSource(e.target.value as ProviderId)}>
-                      {SELECTABLE_PROVIDERS.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <label className="field-inline">
-                  导出格式
-                  <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value as ExportFormat)}>
-                    <option value="mapbridge">MapBridge JSON（完整备份）</option>
-                    <option value="gpx">GPX 1.1（通用交换）</option>
-                    <option value="kml">KML 2.2（通用交换）</option>
-                  </select>
-                </label>
-              </div>
-              <p className="hint">MapBridge JSON 可用于完整恢复；GPX/KML 适合在其他地图软件中交换，部分平台字段可能无法保留。</p>
-              <button className="primary" disabled={busy} onClick={() => void startExport()}>
-                {busy ? '导出中…' : `导出${activeProvider ? providerName(activeProvider) : '当前地图'}收藏`}
-              </button>
-              {exportedCount > 0 && <div className="count">已导出 <b>{exportedCount}</b> 条 ✓</div>}
-              {exportWarnings.length > 0 && <div className="export-warning">⚠ {exportWarnings.join('；')}</div>}
-            </>
-          )}
-
-          {mode === 'import-file' && (
-            <>
-              {activeProvider ? (
-                <div className="auto-provider">
-                  <span className="dot ok" />
-                  当前页面：<b>{providerName(activeProvider)}</b>（将导入到此地图）
-                </div>
-              ) : (
-                <label className="field-inline">
-                  导入到
-                  <select value={target} onChange={(e) => setTarget(e.target.value as ProviderId)}>
-                    {SELECTABLE_PROVIDERS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <p className="hint">选择已登录的目标地图收藏页，再选择 MapBridge 导出文件（<code>mapbridge-*.json</code>）。</p>
-              {fileWarnings.length > 0 && <div className="export-warning">⚠ {fileWarnings.join('；')}</div>}
-              <label className={`file-btn${busy ? ' disabled' : ''}`}>
-                选择文件
-                <input type="file" accept="application/json,.json,.gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml" onChange={(e) => void onImportFile(e)} disabled={busy} hidden />
-              </label>
-              {activeProvider && !detectedTab(activeProvider) && (
-                <div className="open-right">
-                  <button className="ghost small" onClick={() => void openPage(getAdapter(activeProvider).importPage)}>
-                    打开目标页
-                  </button>
-                </div>
-              )}
-              {!activeProvider && !detectedTab(target) && (
-                <div className="open-right">
-                  <button className="ghost small" onClick={() => void openPage(getAdapter(target).importPage)}>
-                    打开目标页
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-      )}
-
-      {step === 'extract' && job && (
-        <section className="migration-content extract">
-          <h2>提取收藏 · {providerName(job.sourceProvider)}</h2>
-          {detectedTab(job.sourceProvider) !== undefined ? (
-            <p className="hint ok-tag">源收藏页已检测到 ✓，可直接提取</p>
-          ) : (
-            <>
-              <p className="hint">
-                未检测到源收藏页。请打开已登录的 {providerName(job.sourceProvider)} 收藏页：
-              </p>
-              <button className="ghost" onClick={() => void openPage(sourcePage)}>
-                打开源收藏页
-              </button>
-            </>
-          )}
-          <div className="page-actions">
-            <button className="ghost" onClick={() => { void refreshJob(); void refreshDetection(); }}>
-              刷新状态
-            </button>
-          </div>
-          {job.items.length > 0 && (
-            <div className="count">
-              已提取 <b>{job.items.length}</b> 条，其中可导入项目 <b>{job.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length}</b> 条
-              {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route；目标平台支持且交通方式明确时可参与导入。</div>}
-            </div>
-          )}
-          <WizardActions
-            previous={<button className="ghost" onClick={() => void cancelCurrentJob()}>返回</button>}
-            next={<button className="primary" disabled={busy} onClick={() => void startExtract()}>{busy ? '提取中…' : '开始提取'}</button>}
-            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
-          />
-        </section>
-      )}
-
-      {step === 'preview' && job && (
-        <section className="migration-content preview">
-          <h2>预览与编辑</h2>
-          <ExtractionWarningPanel skips={job.extractionSkipped} warnings={job.warnings} />
-          <div className="preview-tabs" role="tablist" aria-label="导入项目类型">
-            <button
-              className={`preview-tab${activePreviewTab === 'places' ? ' active' : ''}`}
-              role="tab"
-              aria-selected={activePreviewTab === 'places'}
-              disabled={job.places.length === 0}
-              onClick={() => { setPreviewTab('places'); void savePreview(previewPlaces, 'places'); }}
-            >
-              地点 <span>({job.places.length}条)</span>
-            </button>
-            <button
-              className={`preview-tab${activePreviewTab === 'routes' ? ' active' : ''}`}
-              role="tab"
-              aria-selected={activePreviewTab === 'routes'}
-              disabled={previewRoutes.length === 0}
-              onClick={() => { setPreviewTab('routes'); void savePreview(previewPlaces, 'routes'); }}
-            >
-              路线 <span>({previewRoutes.length}条)</span>
-            </button>
-          </div>
-          <div className="preview-panel">
-            {activePreviewTab === 'places' ? (
-              <PlaceTable
-                places={previewPlaces}
-                onChange={setPreviewPlaces}
-                canMatchAmap={job.targetProvider === 'amap'}
-                amapPoiMatches={job.amapPoiMatches}
-                amapPoiResolutions={job.amapPoiResolutions}
-                matchingPlaceIds={matchingPlaceIds}
-                matching={matching}
-                onMatchAmapPoi={(placeId) => void startAmapMatch(placeId)}
-                onMatchAmapPage={(placeIds) => void startAmapMatch(placeIds)}
-                onSelectAmapPoi={(placeId, candidate) => void selectAmapPoi(placeId, candidate)}
-              />
-            ) : (
-              <>
-                <div className="route-list">
-                  {previewRoutes.map((route) => <RouteSummary key={route.id} route={route} />)}
-                </div>
-              </>
-            )}
-          </div>
-          <WizardActions
-            previous={<button className="ghost" onClick={() => {
-              if (job.workflow === 'migrate') {
-                void savePreview(previewPlaces, previewTab, 'extract');
-                setStep('extract');
-              } else {
-                void cancelCurrentJob();
-              }
-            }}>返回</button>}
-            next={<NextImportButton
-              disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
-                onClick={async () => { await savePreview(previewPlaces, previewTab, 'import'); setStep('import'); }}
-            />}
-            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
-          />
-        </section>
-      )}
-
-      {step === 'import' && job && (
-        <section className="migration-content import">
-          <h2>导入 · {providerName(job.targetProvider)}</h2>
-          {detectedTab(job.targetProvider) !== undefined ? (
-            <p className="hint ok-tag">目标收藏页已检测到 ✓，可直接导入</p>
-          ) : (
-            <>
-              <p className="hint">
-                未检测到目标收藏页。请打开已登录的 {providerName(job.targetProvider)} 收藏页：
-              </p>
-              <button className="ghost" onClick={() => void openPage(targetPage)}>
-                打开目标收藏页
-              </button>
-            </>
-          )}
-          <div className="count">待导入 {reportImportable} 条</div>
-          {reportRoutes > 0 && (
-            <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
-          )}
-          <WizardActions
-            previous={<button className="ghost" onClick={() => { void savePreview(previewPlaces, previewTab, 'preview'); setStep('preview'); }}>返回</button>}
-            next={<button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
-              {busy ? '导入中…' : reportImportable === 0 ? '没有可导入的项目' : '开始导入'}
-            </button>}
-            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
-          />
-          {busy && (
-            <div className="progress">
-              <div className="progress-msg">{job.progress?.message ?? '正在导入…'}</div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {step === 'report' && job && (
-        <section className="migration-content report">
-          <h2>{job.status === 'done' ? '导入完成 ✅' : job.status === 'failed' ? '导入失败 ❌' : '导入中…'}</h2>
-          <div className="report-meta">
-            <span>来源：{providerName(job.sourceProvider)}</span>
-            <span>目标：{providerName(job.targetProvider)}</span>
-          </div>
-          <div className="report-overview" aria-label="导入概览">
-            <div><span>原始记录</span><strong>{job.rawCount} 条</strong></div>
-            <div><span>已识别项目</span><strong>{job.items.length} 条</strong></div>
-            <div><span>可导入项目</span><strong>{reportImportable} 条</strong></div>
-          </div>
-          {job.status === 'importing' && (
-            <div className="import-progress" aria-live="polite">
-              <div className="import-progress-header">
-                <strong>{job.progress.phase === 'read-existing' ? '读取目标收藏' : job.progress.phase === 'verify' ? '验证导入结果' : '写入目标地图'}</strong>
-                <span>{job.progress.processed} / {job.progress.total}</span>
-              </div>
-              <div className="import-progress-track">
-                <div className="import-progress-bar" style={{ width: `${job.progress.total > 0 ? Math.min(100, Math.round((job.progress.processed / job.progress.total) * 100)) : 0}%` }} />
-              </div>
-              <div className="import-progress-message">{job.progress.message ?? '正在处理…'}</div>
-            </div>
-          )}
-          {job.status !== 'importing' && <div className="report-section">
-            <h3>导入结果</h3>
-            <div className="report-stats" aria-label="导入统计">
-              <div className="report-stat success">
-                <span>成功导入</span>
-                <strong>{job.report?.imported ?? '—'} <small>条</small></strong>
-              </div>
-              <div className="report-stat duplicate">
-                <span>重复跳过</span>
-                <strong>{job.report?.skippedDuplicates ?? '—'} <small>条</small></strong>
-              </div>
-              <div className="report-stat failure">
-                <span>导入失败</span>
-                <strong>{job.report?.failed ?? '—'} <small>条</small></strong>
-              </div>
-            </div>
-            {job.report?.targetCount !== undefined && (
-              <div className="report-target-total">
-                <span>目标地图导入后总数</span>
-                <strong>{job.report.targetCount} 条</strong>
-              </div>
-            )}
-          </div>}
-          {(reportRoutes > 0 || reportSkipped > 0) && (
-            <div className="report-section report-excluded">
-              <h3>未导入项目</h3>
-              <ul>
-                {reportRoutes > 0 && <li>{reportRoutes} 条路线（当前目标平台不支持路线导入）</li>}
-                {reportSkipped > 0 && <li>{reportSkipped} 条记录（提取阶段未纳入导入）</li>}
-              </ul>
-            </div>
-          )}
-          {job.error && <div className="error">{job.error}</div>}
-          <ExtractionWarningPanel skips={job.extractionSkipped} warnings={job.warnings} />
-          {undoMsg && <div className="count ok-tag">✓ {undoMsg}</div>}
-          <div className="actions">
-            <button className="ghost" onClick={() => void openPage(targetPage)}>
-              去目标页核对
-            </button>
-            <button className="ghost" onClick={() => setStep('setup')}>
-              再来一次
-            </button>
-            {job.status === 'done' && (job.report?.importedIds?.length ?? 0) > 0 && !job.report?.undone && (
-              <button className="danger" disabled={busy} onClick={() => void undoImport()}>
-                {busy ? '撤销中…' : '撤销本次导入'}
-              </button>
-            )}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function stepIndex(s: Step): number {
-  return ['setup', 'extract', 'preview', 'import', 'report'].indexOf(s);
-}
-
-function RouteSummary({ route }: { route: Extract<Job['items'][number], { kind: 'route' }> }) {
-  const roleName: Record<string, string> = { start: '起点', waypoint: '途经点', end: '终点' };
-  return (
-    <article className="route-summary">
-      <div className="route-summary-head">
-        <strong>{route.name}</strong>
-        <span>{route.travelMode ?? route.routing.transitKind ?? '路线'}</span>
-      </div>
-      <ol>
-        {route.stops.map((stop) => (
-          <li key={`${stop.role}-${stop.point.lng}-${stop.point.lat}`}>
-            <span>{roleName[stop.role] ?? stop.role}：{stop.name}</span>
-            <code>{stop.point.lng.toFixed(5)}, {stop.point.lat.toFixed(5)}</code>
-          </li>
-        ))}
-      </ol>
-    </article>
-  );
-}
-
-function PlaceTable({
-  places,
-  onChange,
-  canMatchAmap,
-  amapPoiMatches,
-  amapPoiResolutions,
-  matchingPlaceIds,
-  matching,
-  onMatchAmapPoi,
-  onMatchAmapPage,
-  onSelectAmapPoi,
-}: {
-  places: Job['places'];
-  onChange: (places: Job['places']) => void;
-  canMatchAmap?: boolean;
-  amapPoiMatches?: Job['amapPoiMatches'];
-  amapPoiResolutions?: Job['amapPoiResolutions'];
-  matchingPlaceIds?: Set<string>;
-  matching?: boolean;
-  onMatchAmapPoi?: (placeId: string) => void;
-  onMatchAmapPage?: (placeIds: string[]) => void;
-  onSelectAmapPoi?: (placeId: string, candidate?: PoiCandidate) => void;
-}) {
-  const [filter, setFilter] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
-  const [page, setPage] = useState(1);
-
-  const filtered = places.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const shown = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  function updateFilter(value: string): void {
-    setFilter(value);
-    setPage(1);
-  }
-
-  function update(id: string, patch: Partial<Job['places'][number]>) {
-    onChange(places.map((p) => (p.id === id ? updatePreviewPlace(p, patch) : p)));
-  }
-
-  function remove(id: string) {
-    onChange(places.filter((p) => p.id !== id));
-  }
-
-  return (
-    <div className="place-table">
-      <div className="place-toolbar">
-        <label className="page-size" title="每页显示数量">
-          <span className="sr-only">每页显示</span>
-          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value) as 10 | 30 | 50); setPage(1); }}>
-            <option value="10">10条</option>
-            <option value="30">30条</option>
-            <option value="50">50条</option>
-          </select>
-        </label>
-        <div className="place-search">
-          <button className={`small icon-button${searchOpen ? ' active' : ''}`} aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}><IconSearch /></button>
-          {searchOpen && (
-            <div className="place-search-popover">
-              <input autoFocus className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => updateFilter(e.target.value)} />
-              {filter && <button className="small icon-button" aria-label="清除搜索" title="清除搜索" onClick={() => updateFilter('')}>×</button>}
-            </div>
-          )}
-        </div>
-        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '尝试地址匹配'}</button>}
-      </div>
-      <div className="table-head">
-        <span></span>
-        <span>名称</span>
-        <span>地址</span>
-        <span>{canMatchAmap ? '地址匹配' : ''}</span>
-      </div>
-      <div className="table-body">
-        {shown.map((p) => (
-          <PlaceRow
-            key={p.id}
-            place={p}
-            canMatchAmap={canMatchAmap}
-            match={amapPoiMatches?.[p.id]}
-            resolution={amapPoiResolutions?.[p.id]}
-            matching={matchingPlaceIds?.has(p.id) ?? false}
-            disabled={matchingPlaceIds !== undefined && matchingPlaceIds.size > 0}
-            onChange={update}
-            onRemove={remove}
-            onMatch={onMatchAmapPoi}
-            onSelect={onSelectAmapPoi}
-          />
-        ))}
-        {shown.length === 0 && <div className="empty">无匹配</div>}
-      </div>
-      <div className="table-foot">
-        <span>
-          共 {places.length} 条，匹配 {filtered.length} 条，当前 {currentPage}/{pageCount} 页
-        </span>
-        {pageCount > 1 && <div className="pagination" aria-label="地点分页">
-          <button className="small ghost" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>‹</button>
-          <button className="small ghost" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>›</button>
-        </div>}
-      </div>
-    </div>
-  );
-}
-
-type PoiCandidate = NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number];
-
-function PlaceRow({
-  place,
-  canMatchAmap,
-  match,
-  resolution,
-  matching,
-  disabled,
-  onChange,
-  onRemove,
-  onMatch,
-  onSelect,
-}: {
-  place: Job['places'][number];
-  canMatchAmap?: boolean;
-  match?: NonNullable<Job['amapPoiMatches']>[string];
-  resolution?: NonNullable<Job['amapPoiResolutions']>[string];
-  matching: boolean;
-  disabled: boolean;
-  onChange: (id: string, patch: Partial<Job['places'][number]>) => void;
-  onRemove: (id: string) => void;
-  onMatch?: (placeId: string) => void;
-  onSelect?: (placeId: string, candidate?: PoiCandidate) => void;
-}) {
-  const [diagnosticOpen, setDiagnosticOpen] = useState(false);
-  return (
-    <div className="place-row">
-      <div className="row">
-        <button className="remove" aria-label={`删除${place.name}`} title="删除此记录" onClick={() => onRemove(place.id)}>✕</button>
-        <input
-          value={place.name}
-          title={`名称：${place.name}\nWGS-84：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`}
-          onChange={(e) => onChange(place.id, { name: e.target.value })}
-        />
-        <input value={place.address ?? ''} title={`地址：${place.address ?? ''}`} onChange={(e) => onChange(place.id, { address: e.target.value })} />
-        {canMatchAmap ? (
-          <PoiMatchCell
-            place={place}
-            match={match}
-            resolution={resolution}
-            matching={matching}
-            disabled={disabled}
-            diagnosticOpen={diagnosticOpen}
-            onToggleDiagnostic={() => setDiagnosticOpen((open) => !open)}
-            onMatch={onMatch}
-            onSelect={onSelect}
-          />
-        ) : <span aria-hidden="true" />}
-      </div>
-      {import.meta.env.DEV && diagnosticOpen && match && (
-        <PoiMatchDiagnostic place={place} match={match} />
-      )}
-    </div>
-  );
-}
-
-function PoiMatchCell({
-  place,
-  match,
-  resolution,
-  matching,
-  disabled,
-  diagnosticOpen,
-  onToggleDiagnostic,
-  onMatch,
-  onSelect,
-}: {
-  place: Job['places'][number];
-  match?: NonNullable<Job['amapPoiMatches']>[string];
-  resolution?: NonNullable<Job['amapPoiResolutions']>[string];
-  matching: boolean;
-  disabled: boolean;
-  diagnosticOpen: boolean;
-  onToggleDiagnostic: () => void;
-  onMatch?: (placeId: string) => void;
-  onSelect?: (placeId: string, candidate?: PoiCandidate) => void;
-}) {
-  if (matching || match?.status === 'matching') return <span className="match-progress" role="status">匹配中…</span>;
-  const candidates = match?.candidates ?? [];
-  const canChoose = import.meta.env.DEV && candidates.length > 0;
-  const selector = canChoose ? (
-    <select
-      className="match-candidate-select"
-      value={resolution?.poiid ?? ''}
-      aria-label={`为${place.name}选择高德 POI`}
-      onChange={(event) => {
-        const candidate = candidates.find((item) => item.poiid === event.target.value);
-        onSelect?.(place.id, candidate);
-      }}
-    >
-      <option value="">无最佳匹配</option>
-      {candidates.map((candidate, index) => {
-        const score = Number.isFinite(candidate.nameScore) ? candidate.nameScore : 0;
-        return <option key={candidate.poiid} value={candidate.poiid} title={`距离 ${Math.round(candidate.distanceMeters)} 米，名称相似度 ${score.toFixed(2)}${candidate.address ? `，地址：${candidate.address}` : ''}`}>
-          {index + 1}. {candidate.name}（匹配度 {Math.round(score * 100)}%）
-        </option>;
-      })}
-    </select>
-  ) : null;
-  if (resolution || match?.status === 'matched') {
-    return (
-      <div className="match-cell">
-        <div className="match-controls">
-          <button className="small icon-button" disabled={disabled} aria-label="刷新 POI 匹配" title="刷新 POI 匹配" onClick={() => onMatch?.(place.id)}>↻</button>
-          {import.meta.env.DEV && (
-            <button className="small icon-button" aria-label="查看匹配原因" title="查看匹配原因" aria-expanded={diagnosticOpen} onClick={onToggleDiagnostic}>ⓘ</button>
-          )}
-          {selector}
-        </div>
-      </div>
-    );
-  }
-  if (match?.status === 'ambiguous') {
-    return (
-      <span className="match-status warning">
-        候选不明确
-        <details className="match-candidates">
-          <summary>选择</summary>
-          <ul>
-            {(match.candidates ?? []).map((candidate) => (
-              <li key={candidate.poiid}>
-                <button className="small ghost" onClick={() => onSelect?.(place.id, candidate)}>
-                  {candidate.name}（{Math.round(candidate.distanceMeters)}m）
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      </span>
-    );
-  }
-  if (match?.status === 'not-found') {
-    return (
-      <div className="match-cell">
-        <div className="match-controls">
-          <button
-            className="small icon-button"
-            disabled={disabled}
-            aria-label="重试 POI 匹配"
-            title="重试 POI 匹配"
-            onClick={() => onMatch?.(place.id)}
-          >
-            ↻
-          </button>
-          {import.meta.env.DEV && (
-            <button className="small icon-button" aria-label="查看匹配原因" title="查看匹配原因" aria-expanded={diagnosticOpen} onClick={onToggleDiagnostic}>ⓘ</button>
-          )}
-          {selector}
-          {import.meta.env.DEV && candidates.length === 0 && (
-            <select className="match-candidate-select" value="" disabled aria-label={`为${place.name}选择高德 POI`}>
-              <option value="">未找到</option>
-            </select>
-          )}
-          {!import.meta.env.DEV && <span className="match-status warning">未找到</span>}
-        </div>
-      </div>
-    );
-  }
-  if (match?.status === 'failed') return <span className="match-status warning" title={match.error}>失败 <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>重试</button></span>;
-  return <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>匹配</button>;
-}
-
-function PoiMatchDiagnostic({ place, match }: { place: Job['places'][number]; match: NonNullable<Job['amapPoiMatches']>[string] }) {
-  const [copied, setCopied] = useState(false);
-  const best = match.candidates?.[0];
-  const diagnostic = [
-    `地点：${place.name}`,
-    `地址：${place.address || '（无）'}`,
-    `坐标：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`,
-    `候选数量：${match.candidates?.length ?? 0}`,
-    best ? `最佳候选：${best.name}，距离 ${Math.round(best.distanceMeters)} 米` : '',
-    match.reason ? `原因：${match.reason}` : '',
-  ].filter(Boolean).join('\n');
-  async function copyDiagnostic(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(diagnostic);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
-  return <div className="row-diagnostic"><button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button><pre>{diagnostic}</pre></div>;
+  return <PopupView
+    providers={PROVIDERS}
+    selectableProviders={SELECTABLE_PROVIDERS}
+    providerName={providerName}
+    dev={dev}
+    ver={ver}
+    error={error}
+    mode={mode}
+    step={step}
+    switchMode={switchMode}
+    source={source}
+    target={target}
+    detected={detected}
+    isProviderLoggedIn={isProviderLoggedIn}
+    detecting={detecting}
+    refreshDetection={refreshDetection}
+    openPage={openPage}
+    canStart={canStart}
+    busy={busy}
+    newJob={newJob}
+    activeProvider={activeProvider}
+    exportFormat={exportFormat}
+    setExportFormat={setExportFormat}
+    startExport={startExport}
+    exportedCount={exportedCount}
+    exportWarnings={exportWarnings}
+    fileWarnings={fileWarnings}
+    onImportFile={onImportFile}
+    onSourceChange={setSource}
+    onTargetChange={setTarget}
+    onPreviewPlacesChange={setPreviewPlaces}
+    onStepChange={setStep}
+    cancelCurrentJob={cancelCurrentJob}
+    job={job}
+    targetCapabilities={targetCapabilities}
+    detectedTab={detectedTab}
+    refreshJob={refreshJob}
+    sourcePage={sourcePage}
+    targetPage={targetPage}
+    startExtract={startExtract}
+    previewRoutes={previewRoutes}
+    activePreviewTab={activePreviewTab}
+    previewTab={previewTab}
+    setPreviewTab={setPreviewTab}
+    previewPlaces={previewPlaces}
+    savePreview={savePreview}
+    matchingPlaceIds={matchingPlaceIds}
+    matching={matching}
+    startAmapMatch={startAmapMatch}
+    selectAmapPoi={selectAmapPoi}
+    reportImportable={reportImportable}
+    reportRoutes={reportRoutes}
+    startImport={startImport}
+    undoMsg={undoMsg}
+    reportSkipped={reportSkipped}
+    undoImport={undoImport}
+  />;
 }
