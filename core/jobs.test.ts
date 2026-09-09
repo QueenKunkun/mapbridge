@@ -44,6 +44,12 @@ describe('core/jobs unified items', () => {
     expect(restorePopupState([job], { mode: 'migrate' })).toMatchObject({ kind: 'active', mode: 'migrate', step: 'import' });
   });
 
+  it('restores migration preview returned to extraction as the extraction step', () => {
+    const job = applyPreviewPlaces(createJob('baidu', 'amap'), [place], 'places', 'extract');
+    expect(job.status).toBe('preview');
+    expect(restorePopupState([job], { mode: 'migrate' })).toMatchObject({ kind: 'active', step: 'extract' });
+  });
+
   it('restores only the explicitly active job when an active id is available', () => {
     const older = { ...createJob('baidu', 'amap'), status: 'preview' as const, updatedAt: '2026-09-09T00:00:00.000Z' };
     const newer = { ...createJob('amap', 'baidu'), status: 'preview' as const, updatedAt: '2026-09-09T01:00:00.000Z' };

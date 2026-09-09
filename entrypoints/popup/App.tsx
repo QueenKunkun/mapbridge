@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
-import { previewPreviousStep, updatePreviewPlace, type Job } from '@/core/jobs';
+import { updatePreviewPlace, type Job } from '@/core/jobs';
 import { restorePopupState } from '@/core/popup-state';
 import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
@@ -236,7 +236,7 @@ export default function App() {
       setMatching(false);
       setMatchingPlaceIds(new Set());
       setStep('setup');
-      setMode('migrate');
+      setMode(mode);
       setError('');
     } else if (res.type === 'error') {
       setError(res.message);
@@ -402,7 +402,7 @@ export default function App() {
     }
   }
 
-  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab, phase: 'preview' | 'import' = 'preview'): Promise<void> {
+  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab, phase: 'extract' | 'preview' | 'import' = 'preview'): Promise<void> {
     if (!job) return;
     const res = await sendBg({ type: 'preview-update', jobId: job.id, places, previewTab: tab, phase });
     if (res.type === 'job' && res.job) setJob(res.job);
@@ -723,6 +723,11 @@ export default function App() {
               {job.items.some((item) => item.kind === 'route') && <div className="hint">已识别 Route；目标平台支持且交通方式明确时可参与导入。</div>}
             </div>
           )}
+          <WizardActions
+            previous={<button className="ghost" onClick={() => void cancelCurrentJob()}>返回</button>}
+            next={<button className="primary" disabled={busy} onClick={() => void startExtract()}>{busy ? '提取中…' : '开始提取'}</button>}
+            cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
+          />
         </section>
       )}
 
@@ -773,7 +778,14 @@ export default function App() {
             )}
           </div>
           <WizardActions
-            previous={<button className="ghost" onClick={() => setStep(previewPreviousStep(job.workflow))}>返回</button>}
+            previous={<button className="ghost" onClick={() => {
+              if (job.workflow === 'migrate') {
+                void savePreview(previewPlaces, previewTab, 'extract');
+                setStep('extract');
+              } else {
+                void cancelCurrentJob();
+              }
+            }}>返回</button>}
             next={<NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
                 onClick={async () => { await savePreview(previewPlaces, previewTab, 'import'); setStep('import'); }}
