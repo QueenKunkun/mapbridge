@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Made place-table pagination buttons wider and standardized POI action and candidate-control sizing for consistent alignment.
 - Made development backup files use the standard MapBridge export format so they can be restored through the normal file-import flow.
 - Added full-text tooltips for long place names and addresses, moved diagnostic copy controls to the top, and widened the popup for POI candidate selection.
 - Removed the duplicate start-extraction action from the extraction step.
