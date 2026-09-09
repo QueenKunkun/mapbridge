@@ -13,6 +13,8 @@ export type JobStatus =
 
 export type JobWorkflow = 'migrate' | 'import-file' | 'export';
 
+export type JobPhase = 'extract' | 'preview' | 'import' | 'report' | 'exporting' | 'result';
+
 /** The step immediately before the shared preview for each workflow entry point. */
 export function previewPreviousStep(workflow: JobWorkflow): 'setup' | 'extract' {
   return workflow === 'migrate' ? 'extract' : 'setup';
@@ -86,6 +88,8 @@ export interface Job {
   targetProvider: ProviderId;
   /** 创建任务时的入口模式，用于 popup 重开后的正确恢复。 */
   workflow: JobWorkflow;
+  /** Persisted sub-state used to restore the correct workflow after popup restart. */
+  phase?: JobPhase;
   status: JobStatus;
   /** 预览页最后选中的地点/路线 tab。 */
   previewTab?: 'places' | 'routes';
@@ -159,6 +163,7 @@ export function applyExtractionItems(
   warnings: string[] = [],
   extractionSkipped: ExtractionSkip[] = [],
 ): Job {
+  const isExport = job.workflow === 'export';
   return {
     ...job,
     items,
@@ -166,13 +171,14 @@ export function applyExtractionItems(
     warnings,
     extractionSkipped,
     rawCount,
-    status: 'preview',
+    status: isExport ? 'done' : 'preview',
+    phase: isExport ? 'result' : 'preview',
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),
   };
 }
 
-export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTab?: 'places' | 'routes'): Job {
+export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTab?: 'places' | 'routes', phase: JobPhase = 'preview'): Job {
   const nextPlaces = new Map(places.map((place) => [place.id, place]));
   const previousPlaces = new Map(job.places.map((place) => [place.id, place]));
   const unchanged = (placeId: string): boolean => {
@@ -193,6 +199,7 @@ export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTa
     amapPoiResolutions: Object.keys(preservedResolutions).length > 0 ? preservedResolutions : undefined,
     amapPoiMatches: Object.keys(preservedMatches).length > 0 ? preservedMatches : undefined,
     previewTab: previewTab ?? job.previewTab,
+    phase,
     status: job.status === 'draft' || job.status === 'extracting' ? 'preview' : job.status,
     progress: { processed: 0, total: places.length },
     updatedAt: new Date().toISOString(),
@@ -213,6 +220,7 @@ export function startImport(job: Job, payload: unknown): Job {
     ...job,
     importPayload: payload,
     status: 'importing',
+    phase: 'report',
     progress: { processed: 0, total: job.items.length },
     updatedAt: new Date().toISOString(),
   };
@@ -231,6 +239,7 @@ export function finalizeImport(job: Job, rawResult: RawImportResult, report: Imp
     ...job,
     status: rawResult.done && !rawResult.error ? 'done' : 'failed',
     report,
+    phase: 'report',
     error: rawResult.error,
     updatedAt: new Date().toISOString(),
   };

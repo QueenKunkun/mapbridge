@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { migratePlaceToPoi } from '@/core/export';
 import { applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, previewPreviousStep, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
+import { restorePopupState } from '@/core/popup-state';
 
 const place: CanonicalPlace = {
   id: 'poi-1', name: 'POI', address: '', tags: [], note: '', wgs84: { lng: 104, lat: 30 },
@@ -17,6 +18,33 @@ const route: CanonicalItem = {
 };
 
 describe('core/jobs unified items', () => {
+  it.each([
+    ['migrate', 'extracting', 'extract'],
+    ['migrate', 'preview', 'preview'],
+    ['migrate', 'importing', 'report'],
+    ['import-file', 'preview', 'preview'],
+    ['import-file', 'importing', 'report'],
+  ] as const)('restores %s %s to %s', (workflow, status, step) => {
+    const job = { ...createJob('baidu', 'amap', workflow), status, updatedAt: '2026-09-09T00:00:00.000Z' };
+    expect(restorePopupState([job], { mode: 'migrate' })).toMatchObject({ kind: 'active', mode: workflow, step, job });
+  });
+
+  it.each(['done', 'failed', 'cancelled', 'draft'] as const)('does not restore %s jobs', (status) => {
+    const job = { ...createJob('baidu', 'amap'), status, updatedAt: '2026-09-09T00:00:00.000Z' };
+    expect(restorePopupState([job], { mode: 'export' })).toEqual({ kind: 'idle', mode: 'export' });
+  });
+
+  it('never restores an export extraction as migration preview', () => {
+    const job = { ...createJob('amap', 'amap', 'export'), status: 'preview' as const, updatedAt: '2026-09-09T00:00:00.000Z' };
+    expect(restorePopupState([job], { mode: 'migrate' })).toEqual({ kind: 'idle', mode: 'migrate' });
+  });
+
+  it('restores only the explicitly active job when an active id is available', () => {
+    const older = { ...createJob('baidu', 'amap'), status: 'preview' as const, updatedAt: '2026-09-09T00:00:00.000Z' };
+    const newer = { ...createJob('amap', 'baidu'), status: 'preview' as const, updatedAt: '2026-09-09T01:00:00.000Z' };
+    expect(restorePopupState([older, newer], { mode: 'migrate' }, older.id)).toMatchObject({ kind: 'active', job: older });
+  });
+
   it('returns to the correct entry step from the shared preview', () => {
     expect(previewPreviousStep('migrate')).toBe('extract');
     expect(previewPreviousStep('import-file')).toBe('setup');
