@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Restored the export tab after reopening the popup instead of incorrectly resuming the migration preview step.
 - Made selected native POI imports use the target map's native-name rendering fields instead of custom-place fields.
 - Fixed file-import preview navigation incorrectly returning to the map extraction step instead of the file-selection step.
 - Fixed Amap POI matching progress remaining at `0/n` when the final progress and completion events arrived out of order.

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
@@ -117,13 +117,14 @@ export default function App() {
   const [selectionReady, setSelectionReady] = useState(false);
   const [previewTab, setPreviewTab] = useState<'places' | 'routes'>('places');
   const [previewPlaces, setPreviewPlaces] = useState<Job['places']>([]);
+  const restoredWorkflow = useRef<'migrate' | 'import-file' | 'export' | 'none' | undefined>(undefined);
 
   // 记住上次的选择（来源 / 目标 / 模式）
   useEffect(() => {
     void getUiSelection().then((sel) => {
       if (sel.source) setSource(sel.source);
       if (sel.target) setTarget(sel.target);
-      if (sel.mode) setMode(sel.mode);
+      if (sel.mode && (restoredWorkflow.current === undefined || restoredWorkflow.current === 'none')) setMode(sel.mode);
       setSelectionReady(true);
     });
   }, []);
@@ -140,11 +141,23 @@ export default function App() {
         .filter((item) => item.status !== 'cancelled' && item.status !== 'draft')
         .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
       if (!latest || latest.status === 'done' || latest.status === 'failed') {
+        restoredWorkflow.current = 'none';
         setJob(undefined);
         setStep('setup');
         return;
       }
+      // Export creates a persisted extraction job only to produce the file;
+      // it is not a resumable migration workflow. Never restore it as the
+      // shared migration preview step when the popup is reopened.
+      if (latest.workflow === 'export') {
+        restoredWorkflow.current = 'export';
+        setJob(undefined);
+        setMode('export');
+        setStep('setup');
+        return;
+      }
       const active = latest;
+      restoredWorkflow.current = active.workflow;
       setJob(active);
       setMode(active.workflow === 'import-file' ? 'import-file' : 'migrate');
       setSource(active.sourceProvider);
