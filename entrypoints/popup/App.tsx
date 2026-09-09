@@ -446,7 +446,7 @@ export default function App() {
     }
   }
 
-  async function startAmapMatch(placeId: string): Promise<void> {
+  async function startAmapMatch(placeIdOrIds: string | string[]): Promise<void> {
     if (!job || job.targetProvider !== 'amap' || job.places.length === 0) return;
     if (matching) return;
     const tabId = detectedTab('amap') ?? (await currentTabId());
@@ -454,10 +454,11 @@ export default function App() {
       setError('未检测到高德收藏页，请打开后重试');
       return;
     }
-    const places = previewPlaces.filter((place) => place.id === placeId);
+    const placeIds = Array.isArray(placeIdOrIds) ? placeIdOrIds : [placeIdOrIds];
+    const places = previewPlaces.filter((place) => placeIds.includes(place.id));
     if (places.length === 0) return;
     await savePreview(previewPlaces, previewTab);
-    setMatchingPlaceIds(new Set([placeId]));
+    setMatchingPlaceIds(Array.isArray(placeIdOrIds) ? new Set() : new Set(placeIds));
     setMatching(true);
     setError('');
     const poll = setInterval(() => {
@@ -466,7 +467,7 @@ export default function App() {
       });
     }, 500);
     try {
-      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds: [placeId] });
+      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds });
       if (res.type === 'job' && res.job) setJob(res.job);
       else if (res.type === 'error') setError(res.message);
     } finally {
@@ -757,7 +758,9 @@ export default function App() {
                 amapPoiMatches={job.amapPoiMatches}
                 amapPoiResolutions={job.amapPoiResolutions}
                 matchingPlaceIds={matchingPlaceIds}
+                matching={matching}
                 onMatchAmapPoi={(placeId) => void startAmapMatch(placeId)}
+                onMatchAmapPage={(placeIds) => void startAmapMatch(placeIds)}
                 onSelectAmapPoi={(placeId, candidate) => void selectAmapPoi(placeId, candidate)}
               />
             ) : (
@@ -922,7 +925,9 @@ function PlaceTable({
   amapPoiMatches,
   amapPoiResolutions,
   matchingPlaceIds,
+  matching,
   onMatchAmapPoi,
+  onMatchAmapPage,
   onSelectAmapPoi,
 }: {
   places: Job['places'];
@@ -931,12 +936,25 @@ function PlaceTable({
   amapPoiMatches?: Job['amapPoiMatches'];
   amapPoiResolutions?: Job['amapPoiResolutions'];
   matchingPlaceIds?: Set<string>;
+  matching?: boolean;
   onMatchAmapPoi?: (placeId: string) => void;
+  onMatchAmapPage?: (placeIds: string[]) => void;
   onSelectAmapPoi?: (placeId: string, candidate?: PoiCandidate) => void;
 }) {
   const [filter, setFilter] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
+  const [page, setPage] = useState(1);
 
-  const shown = places.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
+  const filtered = places.filter((p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()) || (p.address ?? '').toLowerCase().includes(filter.toLowerCase()));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const shown = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  function updateFilter(value: string): void {
+    setFilter(value);
+    setPage(1);
+  }
 
   function update(id: string, patch: Partial<Job['places'][number]>) {
     onChange(places.map((p) => (p.id === id ? updatePreviewPlace(p, patch) : p)));
@@ -948,7 +966,26 @@ function PlaceTable({
 
   return (
     <div className="place-table">
-      <input className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+      <div className="place-toolbar">
+        <label className="page-size" title="每页显示数量">
+          <span className="sr-only">每页显示</span>
+          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value) as 10 | 30 | 50); setPage(1); }}>
+            <option value="10">10条</option>
+            <option value="30">30条</option>
+            <option value="50">50条</option>
+          </select>
+        </label>
+        <div className="place-search">
+          <button className="small icon-button" aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}>⌕</button>
+          {searchOpen && (
+            <div className="place-search-popover">
+              <input autoFocus className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => updateFilter(e.target.value)} />
+              {filter && <button className="small icon-button" aria-label="清除搜索" title="清除搜索" onClick={() => updateFilter('')}>×</button>}
+            </div>
+          )}
+        </div>
+        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '匹配'}</button>}
+      </div>
       <div className="table-head">
         <span></span>
         <span>名称</span>
@@ -975,8 +1012,12 @@ function PlaceTable({
       </div>
       <div className="table-foot">
         <span>
-          共 {places.length} 条，显示 {shown.length}
+          共 {places.length} 条，匹配 {filtered.length} 条，当前 {currentPage}/{pageCount} 页
         </span>
+        {pageCount > 1 && <div className="pagination" aria-label="地点分页">
+          <button className="small ghost" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>‹</button>
+          <button className="small ghost" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>›</button>
+        </div>}
       </div>
     </div>
   );
