@@ -9,10 +9,6 @@ function groupExtractionSkips(
   return Array.from(groups, ([reason, items]) => ({ reason, items }));
 }
 
-function formatSkipIndices(items: Job['extractionSkipped']): string {
-  return items.map((item) => item.index + 1).join('、');
-}
-
 export function ExtractionWarningPanel({
   skips,
   warnings,
@@ -24,28 +20,27 @@ export function ExtractionWarningPanel({
   const otherWarnings = warnings.filter(
     (warning) => skips.length === 0 || !/^第 \d+ 条：/.test(warning),
   );
+  const warningCount = skips.length + otherWarnings.length;
   if (groups.length === 0 && otherWarnings.length === 0) return null;
   return (
     <div className="export-warning">
-      <strong>提取/解析提示</strong>
+      <strong>提取/解析提示：共 {warningCount} 条</strong>
       <div className="warning-scroll">
         {groups.length > 0 && (
           <ul>
             {groups.map((group) => (
               <li key={group.reason}>
-                第 {formatSkipIndices(group.items)} 条：{group.reason}
-                {group.items.some((item) => item.label) && (
-                  <details>
-                    <summary>查看记录</summary>
-                    <ul>
-                      {group.items.map((item) => (
-                        <li key={item.index}>
-                          第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
+                {group.reason}（{group.items.length} 条）
+                <details>
+                  <summary>查看记录</summary>
+                  <ul>
+                    {group.items.map((item) => (
+                      <li key={item.index}>
+                        第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               </li>
             ))}
           </ul>
