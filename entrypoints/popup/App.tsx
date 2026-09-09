@@ -786,7 +786,7 @@ export default function App() {
             <p className="hint warning">另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。</p>
           )}
           <WizardActions
-            previous={<button className="ghost" onClick={() => setStep('preview')}>返回</button>}
+            previous={<button className="ghost" onClick={() => { void savePreview(previewPlaces, previewTab, 'preview'); setStep('preview'); }}>返回</button>}
             next={<button className="primary" disabled={busy || reportImportable === 0} onClick={() => void startImport()}>
               {busy ? '导入中…' : reportImportable === 0 ? '没有可导入的项目' : '开始导入'}
             </button>}

@@ -324,7 +324,8 @@ async function handleCancelJob(jobId: string): Promise<BgResponse> {
 
 async function handleImportEvent(data: RawImportResult): Promise<void> {
   const jobs = await listJobs();
-  const job = jobs.find((j) => j.status === 'importing');
+  const activeJobId = await getActiveJobId();
+  const job = jobs.find((j) => j.status === 'importing' && (!activeJobId || j.id === activeJobId));
   log('handleImportEvent', 'importingJob=', job?.id, 'done=', data.done, 'error=', data.error, 'targetCount=', data.targetCount);
   if (!job) return;
   const target = getAdapter(job.targetProvider);
@@ -520,6 +521,7 @@ export default defineBackground(() => {
       }
       case 'delete-job': {
         await deleteJob(req.id);
+        await clearActiveJobId(req.id);
         return { type: 'ok' };
       }
       case 'extract': {
