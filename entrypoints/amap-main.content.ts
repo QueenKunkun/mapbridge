@@ -4,7 +4,7 @@ import { mergeImportItems } from '@/core/import-merge';
 import { batchAmapSyncItems } from '@/core/amap-sync';
 import { distancePointKey } from '@/core/dedup';
 import { toWgs84, wgs84ToGcj02 } from '@/core/coords';
-import { chooseAmapPoiMatch, parseAmapPoiCandidates } from '@/utils/amap-poi';
+import { chooseAmapPoiMatch, parseAmapPoiCandidates, serializeAmapPoiMatch } from '@/utils/amap-poi';
 import type { CanonicalPlace } from '@/core/model';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
@@ -201,37 +201,10 @@ export default defineContentScript({
                 name: match.candidate.name,
                 address: match.candidate.address,
               };
-              matches[place.id] = {
-                status: 'matched',
-                candidates: match.candidates.slice(0, 5).map((candidate) => ({
-                  poiid: candidate.poiid,
-                  name: candidate.name,
-                  address: candidate.address,
-                  location: candidate.location,
-                  distanceMeters: candidate.distanceMeters,
-                  nameScore: candidate.nameScore,
-                  cityCode: candidate.cityCode,
-                  cityName: candidate.cityName,
-                  adcode: candidate.adcode,
-                })),
-              };
+              matches[place.id] = serializeAmapPoiMatch(match);
               break;
             }
-            matches[place.id] = {
-              status: match.status,
-              reason: match.reason,
-              candidates: match.candidates.slice(0, 5).map((candidate) => ({
-                poiid: candidate.poiid,
-                name: candidate.name,
-                address: candidate.address,
-                location: candidate.location,
-                distanceMeters: candidate.distanceMeters,
-                nameScore: candidate.nameScore,
-                cityCode: candidate.cityCode,
-                cityName: candidate.cityName,
-                adcode: candidate.adcode,
-              })),
-            };
+            matches[place.id] = serializeAmapPoiMatch(match);
           } catch (error) {
             log('Amap POI match strategy failed:', useSsrFirst ? 'ssr/sdk' : 'sdk/ssr', place.name, String(error));
           }

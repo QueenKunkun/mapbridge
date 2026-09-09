@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseAmapPoiMatch, parseAmapPoiCandidates } from './amap-poi';
+import { chooseAmapPoiMatch, parseAmapPoiCandidates, serializeAmapPoiMatch } from './amap-poi';
 import type { CanonicalPlace } from '@/core/model';
 import { wgs84ToGcj02 } from '@/core/coords';
 
@@ -37,6 +37,7 @@ describe('Amap POI matching', () => {
     if (result.status === 'matched') {
       expect(result.candidate.poiid).toBe('B1');
       expect(result.candidates).toHaveLength(1);
+      expect(serializeAmapPoiMatch(result)).toMatchObject({ status: 'matched', candidates: [{ poiid: 'B1' }] });
     }
   });
 

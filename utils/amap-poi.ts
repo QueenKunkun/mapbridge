@@ -1,4 +1,5 @@
 import type { CanonicalPlace, LngLat } from '@/core/model';
+import type { AmapPoiMatchRecord, AmapPoiMatchStatus } from '@/core/jobs';
 import { gcj02ToWgs84 } from '@/core/coords';
 import { normalizeName } from '@/core/dedup';
 
@@ -17,6 +18,26 @@ export interface AmapPoiCandidate {
 export type AmapPoiMatch =
   | { status: 'matched'; candidate: AmapPoiCandidate; candidates: AmapPoiCandidate[] }
   | { status: 'ambiguous' | 'not-found'; candidates: AmapPoiCandidate[]; reason?: string };
+
+/** Convert a matcher result to the compact record persisted by the background job. */
+export function serializeAmapPoiMatch(match: AmapPoiMatch): Omit<AmapPoiMatchRecord, 'status'> & { status: Exclude<AmapPoiMatchStatus, 'idle' | 'matching'> } {
+  const candidates = match.candidates.slice(0, 5).map((candidate) => ({
+    poiid: candidate.poiid,
+    name: candidate.name,
+    address: candidate.address,
+    location: candidate.location,
+    distanceMeters: candidate.distanceMeters,
+    nameScore: candidate.nameScore,
+    cityCode: candidate.cityCode,
+    cityName: candidate.cityName,
+    adcode: candidate.adcode,
+  }));
+  return {
+    status: match.status,
+    candidates,
+    ...('reason' in match && match.reason ? { reason: match.reason } : {}),
+  };
+}
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
