@@ -710,9 +710,6 @@ export default function App() {
             </>
           )}
           <div className="page-actions">
-            <button className="primary" disabled={busy} onClick={() => void startExtract()}>
-              {busy ? '提取中…' : '开始提取'}
-            </button>
             <button className="ghost" onClick={() => { void refreshJob(); void refreshDetection(); }}>
               刷新状态
             </button>
