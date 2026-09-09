@@ -3,6 +3,7 @@ import { sendBg } from '@/utils/messaging';
 import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, IMPORT_DELAY_MS_DEFAULT, POI_MATCH_DELAY_MS_DEFAULT, POI_MATCH_DISTANCE_METERS_DEFAULT, POI_MATCH_DISTANCE_METERS_MAX, POI_MATCH_DISTANCE_METERS_MIN, REQUEST_DELAY_MS_MAX, REQUEST_DELAY_MS_MIN, type AppSettings } from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
+import { serializeItems } from '@/core/export';
 import SettingsBlock from '@/components/SettingsBlock/SettingsBlock';
 
 const PROVIDER_NAME: Record<string, string> = {
@@ -119,22 +120,23 @@ export default function App() {
         logLine(`✗ 读取失败：${read.type === 'error' ? read.message : '未知响应'}`);
         return;
       }
-      const fav = read.data.fav as
-        | { raw?: { data?: { items?: unknown[] } }; store?: { poi?: { items?: unknown[] }; dir?: { items?: unknown[] } }; savedAt?: number }
-        | undefined;
-      const poiCount = fav?.store?.poi?.items?.length ?? fav?.raw?.data?.items?.length ?? 0;
-      const dirCount = fav?.store?.dir?.items?.length ?? 0;
+      const fav = read.data.fav as { raw?: unknown } | undefined;
+      const raw = fav?.raw as { data?: { items?: unknown[] } } | unknown[] | undefined;
+      const records = provider === 'amap'
+        ? ((raw && typeof raw === 'object' && !Array.isArray(raw) ? raw.data?.items : undefined) ?? [])
+        : (Array.isArray(raw) ? raw : []);
+      const exported = getAdapter(provider).buildExtractResult({ provider, records, exhausted: true });
       const now = new Date();
       const stamp = `${pad2(now.getFullYear())}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
       const filename = `mapbridge-${provider}-backup-${stamp}.json`;
-      const blob = new Blob([JSON.stringify({ savedAt: new Date().toISOString(), ...fav }, null, 2)], { type: 'application/json' });
+      const blob = new Blob([serializeItems(exported.items, provider)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      logLine(`✓ 已下载备份 ${filename}（收藏 ${poiCount} 条${dirCount ? ` · 文件夹 ${dirCount} 个` : ''}）`);
+      logLine(`✓ 已下载备份 ${filename}（收藏 ${exported.items.length} 条${exported.skipped.length ? ` · 跳过 ${exported.skipped.length} 条` : ''}）`);
 
       logLine('清空收藏…');
       const clearP = sendBg({ type: 'dev-fav-clear', tabId: tab.tabId });
