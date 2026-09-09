@@ -15,7 +15,7 @@ export interface AmapPoiCandidate {
 }
 
 export type AmapPoiMatch =
-  | { status: 'matched'; candidate: AmapPoiCandidate }
+  | { status: 'matched'; candidate: AmapPoiCandidate; candidates: AmapPoiCandidate[] }
   | { status: 'ambiguous' | 'not-found'; candidates: AmapPoiCandidate[]; reason?: string };
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -160,5 +160,5 @@ export function chooseAmapPoiMatch(
   if (second && Math.abs(second.distanceMeters - first.distanceMeters) < 20 && second.nameScore >= first.nameScore - 0.03) {
     return { status: 'ambiguous', candidates: nearby.slice(0, 5), reason: '存在距离和名称相似度都接近的多个候选' };
   }
-  return { status: 'matched', candidate: first };
+  return { status: 'matched', candidate: first, candidates: nearby.slice(0, 5) };
 }

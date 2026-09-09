@@ -201,7 +201,20 @@ export default defineContentScript({
                 name: match.candidate.name,
                 address: match.candidate.address,
               };
-              matches[place.id] = { status: 'matched' };
+              matches[place.id] = {
+                status: 'matched',
+                candidates: match.candidates.slice(0, 5).map((candidate) => ({
+                  poiid: candidate.poiid,
+                  name: candidate.name,
+                  address: candidate.address,
+                  location: candidate.location,
+                  distanceMeters: candidate.distanceMeters,
+                  nameScore: candidate.nameScore,
+                  cityCode: candidate.cityCode,
+                  cityName: candidate.cityName,
+                  adcode: candidate.adcode,
+                })),
+              };
               break;
             }
             matches[place.id] = {

@@ -20,6 +20,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Improved Amap POI search parsing and added a fallback search when the nearby search returns no parseable candidates.
 - Accepted additional Amap suggestion POI ID and entrance-coordinate fields so returned suggestions are not incorrectly shown as zero candidates.
 - Made Amap suggestion-list parsing resilient to additional response nesting.
+- Preserved the candidate list after an automatic Amap POI match so users can inspect and change the selected result.
 - Improved Amap duplicate matching for small coordinate conversion differences and exposed HTTP status details for Route sync failures.
 - Added a configurable distance tolerance in meters for duplicate detection on supported map providers, with a safe default and maximum.
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.

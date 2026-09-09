@@ -34,7 +34,10 @@ describe('Amap POI matching', () => {
     const candidates = parseAmapPoiCandidates({ data: { data: { poi_list: [{ poiid: 'B1', name: '华润大厦', location: matchingLocation }] } } }, source);
     const result = chooseAmapPoiMatch(candidates);
     expect(result.status).toBe('matched');
-    if (result.status === 'matched') expect(result.candidate.poiid).toBe('B1');
+    if (result.status === 'matched') {
+      expect(result.candidate.poiid).toBe('B1');
+      expect(result.candidates).toHaveLength(1);
+    }
   });
 
   it('does not match a distant or ambiguous candidate', () => {
