@@ -8,6 +8,7 @@ import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableFile } from '@/core/portable-import';
 import { getUiSelection, saveUiSelection } from '@/storage/db';
+import { IconGear, IconSearch } from '@/components/Icons';
 
 const PROVIDERS: { id: ProviderId; name: string }[] = [
   { id: 'baidu', name: '百度地图' },
@@ -515,7 +516,7 @@ export default function App() {
           aria-label="设置"
           onClick={() => void browser.runtime.openOptionsPage()}
         >
-          ⚙
+          <IconGear />
         </button>
       </header>
 
@@ -976,7 +977,7 @@ function PlaceTable({
           </select>
         </label>
         <div className="place-search">
-          <button className="small icon-button" aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}>⌕</button>
+          <button className="small icon-button" aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}><IconSearch /></button>
           {searchOpen && (
             <div className="place-search-popover">
               <input autoFocus className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => updateFilter(e.target.value)} />
