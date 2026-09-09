@@ -35,6 +35,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Added preview-time POI search matching for Baidu Maps, including native POI selection before import.
 - Renamed the page-level POI matching action to make clear that it performs a POI search attempt.
 - Show per-place Amap POI matching progress so only the currently requested place is marked as matching.
 - Replaced popup search and settings text glyphs with consistent inline icons.

@@ -235,7 +235,7 @@ async function handleExtractData(event: ContentEvent['event'], data: RawExtract)
 
 async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceIds?: string[]): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持匹配导入到高德的地点' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持 POI 匹配' };
   if (job.places.length === 0) return { type: 'error', message: '没有可匹配的地点' };
   const placeIds = requestedPlaceIds?.length ? requestedPlaceIds.filter((id) => job.places.some((place) => place.id === id)) : job.places.map((place) => place.id);
   if (placeIds.length === 0) return { type: 'error', message: '没有找到要匹配的地点' };
@@ -244,7 +244,7 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
     phase: 'match-poi',
     processed: 0,
     total: placeIds.length,
-    message: '正在连接高德页面…',
+    message: `正在连接${job.targetProvider === 'baidu' ? '百度' : '高德'}页面…`,
   } as Partial<JobProgress>));
   const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }>((resolve) => {
     pendingAmapMatch = {
@@ -253,10 +253,10 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
       resolve,
       timer: setTimeout(() => {
         pendingAmapMatch = undefined;
-        resolve({ ok: false, error: '高德 POI 匹配超时' });
+        resolve({ ok: false, error: 'POI 匹配超时' });
       }, 30000),
     };
-    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs, poiMatchDistanceMeters: settings.poiMatchDistanceMeters } }).catch((e) => {
+    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs, poiMatchDistanceMeters: settings.poiMatchDistanceMeters, baiduPoiMatchDelayMs: settings.baiduPoiMatchDelayMs, baiduPoiMatchDistanceMeters: settings.baiduPoiMatchDistanceMeters } }).catch((e) => {
       if (pendingAmapMatch) {
         clearTimeout(pendingAmapMatch.timer);
         pendingAmapMatch = undefined;
@@ -268,10 +268,10 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
   if (!result.ok) {
     if (latest) {
       const failed = { ...(latest.amapPoiMatches ?? {}) };
-      for (const placeId of placeIds) failed[placeId] = { status: 'failed', error: result.error ?? '高德 POI 匹配失败' };
-      await saveJob({ ...latest, amapPoiMatches: failed, progress: { ...latest.progress, processed: 0, total: placeIds.length, message: result.error ?? '高德 POI 匹配失败' }, updatedAt: now() });
+      for (const placeId of placeIds) failed[placeId] = { status: 'failed', error: result.error ?? 'POI 匹配失败' };
+      await saveJob({ ...latest, amapPoiMatches: failed, progress: { ...latest.progress, processed: 0, total: placeIds.length, message: result.error ?? 'POI 匹配失败' }, updatedAt: now() });
     }
-    return { type: 'error', message: result.error ?? '高德 POI 匹配失败' };
+    return { type: 'error', message: result.error ?? 'POI 匹配失败' };
   }
   const updated = await getJob(jobId);
   if (!updated) return { type: 'error', message: '任务不存在' };
@@ -286,7 +286,7 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
 
 async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: AmapPoiResolution): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持选择高德 POI' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持选择 POI' };
   if (!job.places.some((place) => place.id === placeId) || !candidate.poiid) return { type: 'error', message: '地点或 POI 候选不存在' };
   await saveJob({
     ...job,
@@ -302,7 +302,7 @@ async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: Am
 
 async function handleClearAmapPoi(jobId: string, placeId: string): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || job.targetProvider !== 'amap') return { type: 'error', message: '仅支持清除高德 POI 选择' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持清除 POI 选择' };
   if (!job.places.some((place) => place.id === placeId)) return { type: 'error', message: '地点不存在' };
   const resolutions = { ...(job.amapPoiResolutions ?? {}) };
   delete resolutions[placeId];
@@ -363,7 +363,7 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
       phase: 'match-poi',
       processed: job.progress.total,
       total: job.progress.total,
-      message: '高德 POI 匹配完成',
+      message: `${job.targetProvider === 'baidu' ? '百度' : '高德'} POI 匹配完成`,
     }));
   }
   pendingAmapMatch = undefined;
@@ -373,7 +373,7 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
     pending.resolve({ ok: false, matches: value.matches, error: value.error });
     return;
   }
-  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {}, matches: value.matches ?? {} } : { ok: false, matches: value.matches, error: '高德 POI 匹配未完成' });
+  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {}, matches: value.matches ?? {} } : { ok: false, matches: value.matches, error: 'POI 匹配未完成' });
 }
 
 async function handleDevFavRead(tabId: number): Promise<BgResponse> {

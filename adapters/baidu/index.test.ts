@@ -229,6 +229,17 @@ describe('baidu adapter', () => {
     expect((payload[0] as Record<string, unknown>).extdata).toMatchObject({ pathname: 'driving route', wp: [] });
   });
 
+  it('builds a native Baidu POI payload when a search match is selected', () => {
+    const place = normalizeBaidu(shareItems[0])!;
+    const payload = baiduAdapter.buildImportPayload([place], {
+      amapPoiResolutions: {
+        [place.id]: { poiid: 'native-uid', name: 'Alpha Tech Park', location: place.wgs84, cityCode: '286' },
+      },
+    }) as Array<Record<string, unknown>>;
+    expect(payload[0]).toMatchObject({ type: '10', sourceid: 'native-uid' });
+    expect(payload[0]!.extdata).toMatchObject({ name: 'Alpha Tech Park', cityid: '286' });
+  });
+
   it('normalizes the direct type 20 payload used when saving a route', () => {
     const route = normalizeBaiduRoute(routeAddPayload);
     expect(route).not.toBeNull();

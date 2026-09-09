@@ -379,11 +379,11 @@ export default function App() {
   }
 
   async function startAmapMatch(placeIdOrIds: string | string[]): Promise<void> {
-    if (!job || job.targetProvider !== 'amap' || job.places.length === 0) return;
+    if (!job || !['amap', 'baidu'].includes(job.targetProvider) || job.places.length === 0) return;
     if (matching) return;
-    const tabId = detectedTab('amap') ?? (await currentTabId());
+    const tabId = detectedTab(job.targetProvider) ?? (await currentTabId());
     if (tabId === undefined) {
-      setError('未检测到高德收藏页，请打开后重试');
+      setError(`未检测到${providerName(job.targetProvider)}收藏页，请打开后重试`);
       return;
     }
     const placeIds = Array.isArray(placeIdOrIds) ? placeIdOrIds : [placeIdOrIds];

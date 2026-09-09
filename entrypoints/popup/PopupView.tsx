@@ -292,7 +292,7 @@ export function PopupView({
               <PlaceTable
                 places={previewPlaces}
                 onChange={onPreviewPlacesChange}
-                canMatchAmap={job.targetProvider === 'amap'}
+                canMatchAmap={job.targetProvider === 'amap' || job.targetProvider === 'baidu'}
                 amapPoiMatches={job.amapPoiMatches}
                 amapPoiResolutions={job.amapPoiResolutions}
                 matchingPlaceIds={matchingPlaceIds}

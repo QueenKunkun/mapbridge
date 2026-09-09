@@ -5,6 +5,7 @@ import { placeIdentity, routeIdentity } from '@/core/dedup';
 import { migratePlaceToPoi } from '@/core/export';
 import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
+import type { AmapPoiResolution } from '@/core/jobs';
 
 interface BaiduMercator {
   x: number;
@@ -349,8 +350,26 @@ export const baiduAdapter: ProviderAdapter = {
     return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
-  buildImportPayload(places: CanonicalPlace[]): unknown {
+  buildImportPayload(places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown {
     return places.map((p) => {
+      const native = options?.amapPoiResolutions?.[p.id];
+      if (native?.poiid && native.location) {
+        const mc = wgs84ToBd09mc(native.location.lng, native.location.lat);
+        return {
+          type: '10',
+          sourceid: native.poiid,
+          plateform: 3,
+          fromapp: '百度地图',
+          extdata: {
+            name: native.name ?? p.name,
+            geoptx: Number(mc.x.toFixed(2)),
+            geopty: Number(mc.y.toFixed(2)),
+            ...(native.address ? { content: `地址:${native.address}` } : {}),
+            ...(native.cityCode ? { cityid: native.cityCode } : {}),
+            ...(native.cityName ? { cityname: native.cityName } : {}),
+          },
+        };
+      }
       const mc = wgs84ToBd09mc(p.wgs84.lng, p.wgs84.lat);
       const extdata: Record<string, string> = {
         name: p.name,
@@ -373,8 +392,8 @@ export const baiduAdapter: ProviderAdapter = {
     });
   },
 
-  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[]): unknown[] {
-    const payload = this.buildImportPayload(places) as unknown[];
+  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
+    const payload = this.buildImportPayload(places, options) as unknown[];
     const routeTypes: Record<string, string> = {
       driving: '20',
       drive: '20',

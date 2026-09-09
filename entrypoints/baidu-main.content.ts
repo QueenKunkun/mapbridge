@@ -3,6 +3,7 @@ import { isBaiduFavWriteSuccess } from '@/utils/baidu-fav';
 import { chooseBaiduPoiMatch, chooseBaiduSearchCity } from '@/utils/baidu-poi';
 import { filterDuplicateBaiduImportItems } from '@/core/baidu-import';
 import { baiduImportKey, type BaiduImportRecord } from '@/core/baidu-import';
+import { toWgs84, wgs84ToBd09mc } from '@/core/coords';
 import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
@@ -339,6 +340,49 @@ export default defineContentScript({
       });
     }
 
+    async function runMatchPoi(payload: unknown, options?: { baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number }): Promise<void> {
+      const places = Array.isArray(payload) ? payload as Array<{ id: string; name: string; wgs84: { lng: number; lat: number } }> : [];
+      const delay = Number(options?.baiduPoiMatchDelayMs);
+      const delayMs = Number.isFinite(delay) ? Math.min(10_000, Math.max(300, Math.floor(delay))) : 1_000;
+      const distance = Number(options?.baiduPoiMatchDistanceMeters);
+      const maxDistance = Number.isFinite(distance) ? Math.min(10_000, Math.max(50, Math.floor(distance))) : 3_000;
+      const resolutions: Record<string, { poiid: string; location: { lng: number; lat: number }; name: string; address?: string; cityCode?: string; cityName?: string }> = {};
+      const matches: Record<string, { status: 'matched' | 'not-found' | 'failed'; candidates: Array<{ poiid: string; name: string; address: string; location: { lng: number; lat: number }; distanceMeters: number; nameScore: number; cityCode?: string; cityName?: string }>; reason?: string; error?: string }> = {};
+      const base = capture.lastUrl;
+      if (!base) throw new Error('未捕获到百度搜索请求，请先打开百度地图页面后重试');
+      const request = async (place: typeof places[number], city: number): Promise<unknown> => {
+        const point = wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat);
+        const url = new URL(base);
+        url.searchParams.set('qt', 's'); url.searchParams.set('wd', place.name); url.searchParams.set('c', String(city));
+        url.searchParams.set('b', `(${point.x - 10_000},${point.y - 10_000};${point.x + 10_000},${point.y + 10_000})`);
+        url.searchParams.set('nn', '0');
+        for (const key of ['mode', 'type', 'limit', 'lastver']) url.searchParams.delete(key);
+        return parseMaybeJsonp(await (await fetch(url, { credentials: 'include' })).text());
+      };
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配百度 POI…' } });
+      for (let index = 0; index < places.length; index++) {
+        const place = places[index]!;
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { currentPlaceId: place.id, processed: index, total: places.length, message: `匹配百度 POI：${index + 1} / ${places.length}` } });
+        try {
+          const first = await request(place, 0);
+          const city = chooseBaiduSearchCity(first, wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat)) ?? 0;
+          if (city !== 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+          const match = chooseBaiduPoiMatch(await request(place, city), { name: place.name, ...wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat) }, maxDistance);
+          if (match) {
+            const location = toWgs84({ crs: 'bd09mc', lng: match.x, lat: match.y });
+            const candidate = { poiid: match.uid, name: match.name, address: match.address ?? '', location, distanceMeters: Math.hypot(match.x - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).x, match.y - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).y), nameScore: 1, cityCode: match.cityCode, cityName: match.cityName };
+            resolutions[place.id] = { poiid: match.uid, location, name: match.name, address: match.address, cityCode: match.cityCode, cityName: match.cityName };
+            matches[place.id] = { status: 'matched', candidates: [candidate] };
+          } else matches[place.id] = { status: 'not-found', candidates: [], reason: `未找到与“${place.name}”同名且距离不超过 ${maxDistance} 米的百度 POI` };
+        } catch (error) {
+          matches[place.id] = { status: 'failed', candidates: [], error: String(error instanceof Error ? error.message : error) };
+        }
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { completedPlaceId: place.id, match: matches[place.id], resolution: resolutions[place.id], processed: index + 1, total: places.length, message: `匹配百度 POI：${index + 1} / ${places.length}` } });
+        if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'baidu', resolutions, matches, done: true } });
+    }
+
     window.addEventListener('message', async (event) => {
       if (event.source !== window) return;
       if (!isBridgeCommand(event.data)) return;
@@ -373,6 +417,10 @@ export default defineContentScript({
           mb: BRIDGE_CHANNEL,
           type: 'extract-data',
           data: { provider: 'baidu', records, exhausted, hint },
+        });
+      } else if (cmd.type === 'match-poi') {
+        void runMatchPoi(cmd.payload, cmd.options).catch((error) => {
+          postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'baidu', resolutions: {}, matches: {}, done: true, error: String(error instanceof Error ? error.message : error) } });
         });
       } else if (cmd.type === 'import') {
         log('recv import command');
