@@ -6,6 +6,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [0.6.0] - 2026-09-09
 
+## [0.6.0] - 2026-09-09
+
 ### Added
 
 - Added POI search matching before import for both Baidu Maps and Amap.
