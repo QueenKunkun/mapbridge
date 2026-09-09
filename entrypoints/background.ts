@@ -2,7 +2,7 @@ import { getAdapter, getAdapterForHost } from '@/adapters';
 import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
-import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, clearActiveJobId, getActiveJobId, setActiveJobId, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
+import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, clearActiveJobId, clearActiveJobTab, getActiveJobIds, setActiveJobId, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
@@ -55,7 +55,11 @@ async function applyExtractData(data: RawExtract): Promise<void> {
   const warnings = result.skipped.map((item) => `第 ${item.index + 1} 条：${item.reason}`);
   const updated = applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings, result.skipped);
   await saveJob(updated);
-  if (job.workflow === 'export') await clearActiveJobId(job.id);
+  if (job.workflow === 'export') {
+    await clearActiveJobId(job.id);
+  } else {
+    await setActiveJobId(job.id, [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined));
+  }
   await resolvePendingExtract(true);
 }
 
@@ -69,6 +73,10 @@ interface PendingDev {
 let pendingDev: PendingDev | undefined;
 let devClearProgress: { deleted: number; failed: number; total: number; done: number } | undefined;
 let pendingUndo: { resolve: (r: { ok: boolean; data?: unknown; error?: string }) => void; timer?: ReturnType<typeof setTimeout> } | undefined;
+
+browser.tabs.onRemoved.addListener((tabId) => {
+  void clearActiveJobTab(tabId);
+});
 
 function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
   const pending = pendingDev;
@@ -98,7 +106,9 @@ async function handleExtract(jobId: string, tabId: number): Promise<BgResponse> 
     return { type: 'error', message: `${source.name} 暂不支持提取` };
   }
 
-  await saveJob({ ...job, status: 'extracting', phase: job.workflow === 'export' ? 'exporting' : 'extract', updatedAt: now() });
+  const extractPhase = job.workflow === 'export' ? 'exporting' : 'extract';
+  await saveJob({ ...job, status: 'extracting', phase: extractPhase, updatedAt: now() });
+  await setActiveJobId(job.id, [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined));
 
   const outcome = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
     pendingExtract = {
@@ -158,6 +168,7 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     }
     const started = startImport(job, payload);
     await saveJob(started);
+    await setActiveJobId(job.id, [job.targetTabId ?? job.ownerTabId].filter((id): id is number => id !== undefined));
     await sendCommandToTab(tabId, {
       type: 'import',
       payload,
@@ -324,8 +335,9 @@ async function handleCancelJob(jobId: string): Promise<BgResponse> {
 
 async function handleImportEvent(data: RawImportResult): Promise<void> {
   const jobs = await listJobs();
-  const activeJobId = await getActiveJobId();
-  const job = jobs.find((j) => j.status === 'importing' && (!activeJobId || j.id === activeJobId));
+  const activeJobIds = await getActiveJobIds();
+  const activeIds = new Set(Object.values(activeJobIds));
+  const job = jobs.find((j) => j.status === 'importing' && (activeIds.size === 0 || activeIds.has(j.id)));
   log('handleImportEvent', 'importingJob=', job?.id, 'done=', data.done, 'error=', data.error, 'targetCount=', data.targetCount);
   if (!job) return;
   const target = getAdapter(job.targetProvider);
@@ -505,7 +517,7 @@ export default defineBackground(() => {
     log('recv req', req.type, (req as { jobId?: string }).jobId ?? '');
     switch (req.type) {
       case 'get-state': {
-        return { type: 'state', jobs: await listJobs(), settings: await getSettings(), activeJobId: await getActiveJobId() };
+        return { type: 'state', jobs: await listJobs(), settings: await getSettings(), activeJobIds: await getActiveJobIds() };
       }
       case 'list-jobs': {
         return { type: 'jobs', jobs: await listJobs() };
@@ -514,9 +526,14 @@ export default defineBackground(() => {
         return { type: 'job', job: await getJob(req.id) };
       }
       case 'new-job': {
-        const job = createJob(req.source, req.target, req.workflow ?? 'migrate');
+        const job = {
+          ...createJob(req.source, req.target, req.workflow ?? 'migrate'),
+          sourceTabId: req.sourceTabId,
+          targetTabId: req.targetTabId,
+          ownerTabId: req.ownerTabId,
+        };
         await saveJob(job);
-        await setActiveJobId(job.id);
+        await setActiveJobId(job.id, [req.sourceTabId, req.targetTabId, req.ownerTabId].filter((id): id is number => id !== undefined));
         return { type: 'job', job };
       }
       case 'delete-job': {
@@ -553,10 +570,12 @@ export default defineBackground(() => {
         // 从 MapBridge/GPX/KML 导出文件导入；v2 文件的 Route 也必须进入任务。
         const src = req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
         const job = createJob(src, req.target, 'import-file');
-        await saveJob(job);
-        await setActiveJobId(job.id);
-        const applied = applyExtractionItems({ ...job }, req.items, req.places, req.items.length, req.warnings ?? []);
+        const tabbedJob = { ...job, targetTabId: req.targetTabId, ownerTabId: req.ownerTabId };
+        await saveJob(tabbedJob);
+        await setActiveJobId(tabbedJob.id, [req.targetTabId, req.ownerTabId].filter((id): id is number => id !== undefined));
+        const applied = applyExtractionItems({ ...tabbedJob }, req.items, req.places, req.items.length, req.warnings ?? []);
         await saveJob(applied);
+        await setActiveJobId(applied.id, [applied.ownerTabId ?? applied.targetTabId].filter((id): id is number => id !== undefined));
         return { type: 'job', job: applied };
       }
       case 'get-settings': {

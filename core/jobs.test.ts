@@ -50,6 +50,11 @@ describe('core/jobs unified items', () => {
     expect(restorePopupState([older, newer], { mode: 'migrate' }, older.id)).toMatchObject({ kind: 'active', job: older });
   });
 
+  it('does not restore another tab\'s task when the current tab has no active task', () => {
+    const job = { ...createJob('baidu', 'amap'), status: 'preview' as const };
+    expect(restorePopupState([job], { mode: 'migrate' }, undefined, true)).toEqual({ kind: 'idle', mode: 'migrate' });
+  });
+
   it('returns to the correct entry step from the shared preview', () => {
     expect(previewPreviousStep('migrate')).toBe('extract');
     expect(previewPreviousStep('import-file')).toBe('setup');

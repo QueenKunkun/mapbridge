@@ -39,10 +39,10 @@ function stepFor(job: Job): Exclude<PopupStep, 'setup'> | undefined {
 }
 
 /** Decide popup startup state without React or browser dependencies. */
-export function restorePopupState(jobs: Job[], selection: PopupUiSelection, activeJobId?: string): RestoredPopupState {
+export function restorePopupState(jobs: Job[], selection: PopupUiSelection, activeJobId?: string, tabScoped = false): RestoredPopupState {
   const candidates = jobs
     .filter(isRecoverable)
-    .filter((job) => activeJobId === undefined || job.id === activeJobId)
+    .filter((job) => tabScoped ? job.id === activeJobId : activeJobId === undefined || job.id === activeJobId)
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const job = candidates[0];
   const step = job ? stepFor(job) : undefined;

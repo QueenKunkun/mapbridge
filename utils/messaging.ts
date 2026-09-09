@@ -8,7 +8,7 @@ export type BgRequest =
   | { type: 'get-state' }
   | { type: 'list-jobs' }
   | { type: 'get-job'; id: string }
-  | { type: 'new-job'; source: ProviderId; target: ProviderId; workflow?: JobWorkflow }
+  | { type: 'new-job'; source: ProviderId; target: ProviderId; workflow?: JobWorkflow; sourceTabId?: number; targetTabId?: number; ownerTabId?: number }
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
@@ -17,7 +17,7 @@ export type BgRequest =
   | { type: 'cancel-job'; jobId: string }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab']; phase?: 'preview' | 'import' }
   | { type: 'import'; jobId: string; tabId: number }
-  | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[] }
+  | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[]; targetTabId?: number; ownerTabId?: number }
   | { type: 'get-settings' }
   | { type: 'save-settings'; settings: AppSettings }
   | { type: 'open-tab'; url: string }
@@ -29,7 +29,7 @@ export type BgRequest =
   | { type: 'undo-import'; jobId: string; tabId: number };
 
 export type BgResponse =
-  | { type: 'state'; jobs: Job[]; settings: AppSettings; activeJobId?: string }
+  | { type: 'state'; jobs: Job[]; settings: AppSettings; activeJobIds: Record<string, string> }
   | { type: 'job'; job: Job | undefined }
   | { type: 'jobs'; jobs: Job[] }
   | { type: 'settings'; settings: AppSettings }

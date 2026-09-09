@@ -86,6 +86,10 @@ export interface Job {
   updatedAt: string;
   sourceProvider: ProviderId;
   targetProvider: ProviderId;
+  /** Browser tabs participating in this task; used to scope popup recovery. */
+  sourceTabId?: number;
+  targetTabId?: number;
+  ownerTabId?: number;
   /** 创建任务时的入口模式，用于 popup 重开后的正确恢复。 */
   workflow: JobWorkflow;
   /** Persisted sub-state used to restore the correct workflow after popup restart. */

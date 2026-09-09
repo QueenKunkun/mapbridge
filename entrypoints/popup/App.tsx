@@ -123,11 +123,18 @@ export default function App() {
   // cannot make the entry tab and task phase disagree.
   useEffect(() => {
     let disposed = false;
-    void Promise.all([sendBg({ type: 'get-state' }), getUiSelection()]).then(([state, selection]) => {
+    void Promise.all([sendBg({ type: 'get-state' }), getUiSelection(), sendBg({ type: 'get-active-tab' })]).then(([state, selection, active]) => {
       if (disposed || state.type !== 'state') return;
+      if (active.type === 'active-tab' && active.tabId >= 0) setTabId(active.tabId);
       if (selection.source) setSource(selection.source);
       if (selection.target) setTarget(selection.target);
-      const restored = restorePopupState(state.jobs, selection, state.activeJobId);
+      const currentTabId = active.type === 'active-tab' && active.tabId >= 0 ? active.tabId : undefined;
+      const restored = restorePopupState(
+        state.jobs,
+        selection,
+        currentTabId === undefined ? undefined : state.activeJobIds[String(currentTabId)],
+        currentTabId !== undefined,
+      );
       setMode(restored.mode);
       setStep(restored.kind === 'active' ? restored.step : 'setup');
       setJob(restored.kind === 'active' ? restored.job : undefined);
@@ -178,9 +185,6 @@ export default function App() {
 
   useEffect(() => {
     void refreshDetection();
-    void sendBg({ type: 'get-active-tab' }).then((res) => {
-      if (res.type === 'active-tab' && res.tabId >= 0) setTabId(res.tabId);
-    });
   }, []);
 
   // 选定源/目标后开始检测对应收藏页是否已打开
@@ -206,7 +210,14 @@ export default function App() {
   const reportSkipped = job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ?? 0;
 
   async function newJob(): Promise<Job | undefined> {
-    const res = await sendBg({ type: 'new-job', source, target });
+    const res = await sendBg({
+      type: 'new-job',
+      source,
+      target,
+      sourceTabId: detectedTab(source),
+      targetTabId: detectedTab(target),
+      ownerTabId: tabId,
+    });
     if (res.type === 'job' && res.job) {
       setJob(res.job);
       setStep('extract');
@@ -272,17 +283,17 @@ export default function App() {
     setExportedCount(0);
     setExportWarnings([]);
     try {
-      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource, workflow: 'export' });
+      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource, workflow: 'export', sourceTabId: detectedTab(effectiveSource) ?? tabId, ownerTabId: tabId });
       if (res.type !== 'job' || !res.job) {
         setError('无法创建导出任务');
         return;
       }
-      const tabId = detectedTab(effectiveSource) ?? (await currentTabId());
-      if (tabId === undefined) {
+      const exportTabId = detectedTab(effectiveSource) ?? (await currentTabId());
+      if (exportTabId === undefined) {
         setError('未检测到源地图收藏页，请打开并登录后重试');
         return;
       }
-      const r = await sendBg({ type: 'extract', jobId: res.job.id, tabId });
+      const r = await sendBg({ type: 'extract', jobId: res.job.id, tabId: exportTabId });
       if (r.type === 'job' && r.job) {
         if (r.job.items.length === 0) {
           setError('没有提取到有效收藏（可能页面还没加载收藏列表）');
@@ -341,6 +352,8 @@ export default function App() {
         items: parsed.items,
         places: parsed.places,
         warnings: 'warnings' in parsed ? parsed.warnings : [],
+        targetTabId: detectedTab(effectiveTarget) ?? tabId,
+        ownerTabId: tabId,
       });
       if (res.type === 'job' && res.job) {
         setJob(res.job);

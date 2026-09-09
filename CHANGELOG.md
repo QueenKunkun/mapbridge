@@ -12,6 +12,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed file-import preview navigation incorrectly returning to the map extraction step instead of the file-selection step.
 - Fixed Amap POI matching progress remaining at `0/n` when the final progress and completion events arrived out of order.
 - Restored active extraction, matching, preview, and import tasks when the popup is reopened, so closing the popup no longer makes an in-progress task appear lost.
+- Scoped popup task recovery to the browser tab associated with the current workflow, and removed tab recovery pointers when a tab is closed without deleting the durable task.
 - Restored the migration/file-import mode and the selected places/routes preview tab when reopening a persisted task.
 - Preserved Routes when importing MapBridge JSON files, and prevented re-importing existing Amap favorites when provider IDs differ.
 - Routed legacy Amap driving, transit, and walking favorites through the compatible sync API during re-import.
