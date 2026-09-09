@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeAmap, normalizeAmapRoute, normalizeAmapLegacyRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload, buildAmapRoutePayloadForImport } from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
-import { toWgs84 } from '@/core/coords';
+import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
 import { placeFingerprint } from '@/core/dedup';
 import type { CanonicalPlace } from '@/core/model';
@@ -302,6 +302,18 @@ describe('amap adapter', () => {
     expect(data.classification).toBe('8');
     expect(data.custom_name).toBe('');
     expect(data.custom_address).toBe('');
+  });
+
+  it('uses the selected POI coordinate instead of the converted source coordinate', () => {
+    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[0]!)!;
+    const selectedLocation = { lng: 104.050001, lat: 30.650002 };
+    const payload = amapAdapter.buildImportPayload([place], {
+      amapPoiResolutions: { [place.id]: { poiid: 'B-SELECTED', location: selectedLocation } },
+    }) as Array<Record<string, unknown>>;
+    const data = payload[0]!.data as Record<string, unknown>;
+    const expected = gcj02ToAmapPixel(fromWgs84(selectedLocation, 'gcj02').lng, fromWgs84(selectedLocation, 'gcj02').lat);
+    expect(data.point_x).toBe(expected.x);
+    expect(data.point_y).toBe(expected.y);
   });
 
   it('amapFavoriteId is stable across conversion chains for the same place', () => {

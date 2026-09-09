@@ -58,6 +58,8 @@ function amapImportKey(item: AmapItem, toleranceMeters: number): string | undefi
     const endKey = amapPointKey(endX, endY, pointCrs, toleranceMeters);
     return startKey && endKey ? `route|${type}|${rideType}|${startKey}|${endKey}` : item.id;
   }
+  const poiid = normalizeAmapName(data['poiid']);
+  if (poiid) return `poi|poiid|${poiid}`;
   const name = normalizeAmapName(data['custom_name'] ?? data['name']);
   const point = amapPointKey(data['point_x'], data['point_y'], 'amap_pixel', toleranceMeters);
   return name && point ? `poi|${name}|${point}` : item.id;
@@ -179,7 +181,7 @@ export default defineContentScript({
         ? Math.min(1_000, Math.max(50, Math.floor(Number(options?.poiMatchDistanceMeters))))
         : 150;
       const resolutions: Record<string, { poiid: string; cityCode?: string; cityName?: string; adcode?: string; location?: { lng: number; lat: number }; name?: string; address?: string }> = {};
-      const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidates?: Array<{ poiid: string; name: string; address: string; distanceMeters: number; nameScore: number; cityCode?: string; cityName?: string }>; error?: string; reason?: string }> = {};
+      const matches: Record<string, { status: 'matched' | 'not-found' | 'ambiguous' | 'failed'; candidates?: Array<{ poiid: string; name: string; address: string; location: { lng: number; lat: number }; distanceMeters: number; nameScore: number; cityCode?: string; cityName?: string; adcode?: string }>; error?: string; reason?: string }> = {};
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
@@ -208,10 +210,12 @@ export default defineContentScript({
                 poiid: candidate.poiid,
                 name: candidate.name,
                 address: candidate.address,
+                location: candidate.location,
                 distanceMeters: candidate.distanceMeters,
                 nameScore: candidate.nameScore,
                 cityCode: candidate.cityCode,
                 cityName: candidate.cityName,
+                adcode: candidate.adcode,
               })),
             };
           } catch (error) {

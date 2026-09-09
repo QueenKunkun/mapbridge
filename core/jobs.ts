@@ -60,6 +60,7 @@ export interface AmapPoiCandidateSummary {
   poiid: string;
   name: string;
   address: string;
+  location: { lng: number; lat: number };
   distanceMeters: number;
   nameScore: number;
   cityCode?: string;

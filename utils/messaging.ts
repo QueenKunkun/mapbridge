@@ -12,7 +12,7 @@ export type BgRequest =
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
-  | { type: 'select-poi-match'; jobId: string; placeId: string; candidate: { poiid: string; name: string; address: string; cityCode?: string; cityName?: string } }
+  | { type: 'select-poi-match'; jobId: string; placeId: string; candidate: { poiid: string; name: string; address: string; location: { lng: number; lat: number }; cityCode?: string; cityName?: string; adcode?: string } }
   | { type: 'clear-poi-match'; jobId: string; placeId: string }
   | { type: 'cancel-job'; jobId: string }
   | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab']; phase?: 'preview' | 'import' }
