@@ -1065,10 +1065,10 @@ function PlaceRow({
         <button className="remove" aria-label={`删除${place.name}`} title="删除此记录" onClick={() => onRemove(place.id)}>✕</button>
         <input
           value={place.name}
-          title={`WGS-84：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`}
+          title={`名称：${place.name}\nWGS-84：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`}
           onChange={(e) => onChange(place.id, { name: e.target.value })}
         />
-        <input value={place.address ?? ''} onChange={(e) => onChange(place.id, { address: e.target.value })} />
+        <input value={place.address ?? ''} title={`地址：${place.address ?? ''}`} onChange={(e) => onChange(place.id, { address: e.target.value })} />
         {canMatchAmap ? (
           <PoiMatchCell
             place={place}
@@ -1216,5 +1216,5 @@ function PoiMatchDiagnostic({ place, match }: { place: Job['places'][number]; ma
       setCopied(false);
     }
   }
-  return <div className="row-diagnostic"><pre>{diagnostic}</pre><button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button></div>;
+  return <div className="row-diagnostic"><button className="small ghost" onClick={() => void copyDiagnostic()}>{copied ? '已复制 ✓' : '复制记录'}</button><pre>{diagnostic}</pre></div>;
 }

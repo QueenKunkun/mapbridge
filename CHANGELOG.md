@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Added full-text tooltips for long place names and addresses, moved diagnostic copy controls to the top, and widened the popup for POI candidate selection.
 - Removed the duplicate start-extraction action from the extraction step.
 - Kept the place-list count and pagination controls fixed while only the list body scrolls.
 - Fixed returning from preview getting stuck in the extraction step without a way to end the task or return to the first step.
