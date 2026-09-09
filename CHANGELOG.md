@@ -4,6 +4,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-09
+
 ## [0.6.0] - 2026-09-09
 
 ## [0.6.0] - 2026-09-09
