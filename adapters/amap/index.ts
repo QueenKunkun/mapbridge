@@ -2,7 +2,13 @@ import { randomUUID } from '@/utils/uuid';
 import { md5 } from '@/utils/md5';
 import { migratePlaceToPoi } from '@/core/export';
 import { placeFingerprint, placeIdentity, routeIdentity } from '@/core/dedup';
-import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
+import type {
+  CanonicalItem,
+  CanonicalPlace,
+  CanonicalRoute,
+  Collection,
+  RouteStop,
+} from '@/core/model';
 import { Crs } from '@/core/model';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import type { ProviderAdapter, RawExtract, RawImportResult } from '../types';
@@ -79,16 +85,28 @@ interface AmapRoutePoi {
   poiid?: string;
 }
 
-function routePoint(poi: AmapRoutePoi): { point: { lng: number; lat: number }; crs: 'amap_pixel' | 'gcj02'; original: { crs: 'amap_pixel' | 'gcj02'; lng: number; lat: number } } | null {
+function routePoint(poi: AmapRoutePoi): {
+  point: { lng: number; lat: number };
+  crs: 'amap_pixel' | 'gcj02';
+  original: { crs: 'amap_pixel' | 'gcj02'; lng: number; lat: number };
+} | null {
   const x = Number(poi.x);
   const y = Number(poi.y);
   if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
-    return { point: toWgs84({ crs: 'amap_pixel', lng: x, lat: y }), crs: 'amap_pixel', original: { crs: 'amap_pixel', lng: x, lat: y } };
+    return {
+      point: toWgs84({ crs: 'amap_pixel', lng: x, lat: y }),
+      crs: 'amap_pixel',
+      original: { crs: 'amap_pixel', lng: x, lat: y },
+    };
   }
   const lng = Number(poi.lon);
   const lat = Number(poi.lat);
   if (Number.isFinite(lng) && Number.isFinite(lat) && (lng !== 0 || lat !== 0)) {
-    return { point: toWgs84({ crs: 'gcj02', lng, lat }), crs: 'gcj02', original: { crs: 'gcj02', lng, lat } };
+    return {
+      point: toWgs84({ crs: 'gcj02', lng, lat }),
+      crs: 'gcj02',
+      original: { crs: 'gcj02', lng, lat },
+    };
   }
   return null;
 }
@@ -96,15 +114,26 @@ function routePoint(poi: AmapRoutePoi): { point: { lng: number; lat: number }; c
 function amapRecordLabel(raw: unknown): string | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const record = raw as Record<string, unknown>;
-  const data = record['data'] && typeof record['data'] === 'object' ? record['data'] as Record<string, unknown> : record;
+  const data =
+    record['data'] && typeof record['data'] === 'object'
+      ? (record['data'] as Record<string, unknown>)
+      : record;
   const type = record['type'] ?? data['type'];
   const name = data['name'] ?? data['custom_name'] ?? data['route_name'];
-  const start = data['startPoi'] && typeof data['startPoi'] === 'object' ? (data['startPoi'] as Record<string, unknown>)['name'] : undefined;
-  const end = data['endPoi'] && typeof data['endPoi'] === 'object' ? (data['endPoi'] as Record<string, unknown>)['name'] : undefined;
-  const id = record['id'] ?? data['id'];
+  const start =
+    data['startPoi'] && typeof data['startPoi'] === 'object'
+      ? (data['startPoi'] as Record<string, unknown>)['name']
+      : undefined;
+  const end =
+    data['endPoi'] && typeof data['endPoi'] === 'object'
+      ? (data['endPoi'] as Record<string, unknown>)['name']
+      : undefined;
   const route = start && end ? `${String(start)} → ${String(end)}` : undefined;
-  const parts = [type != null ? `type:${String(type)}` : '', name ? String(name).trim() : route ?? '', id ? `ID:${String(id)}` : ''].filter(Boolean);
-  return parts.join(' · ') || undefined;
+  const trimmedName = name ? String(name).trim() : (route ?? '');
+  if (trimmedName) {
+    return [type != null ? `type:${String(type)}` : '', trimmedName].filter(Boolean).join(' · ');
+  }
+  return type != null ? `未命名地点（类型 ${String(type)}）` : '未命名记录';
 }
 
 /** 高德新版 SSR type 117 路线收藏：保存起点/途经点/终点，不代表真实道路几何。 */
@@ -112,23 +141,37 @@ export function normalizeAmapRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
   const data = (record['data'] ?? record) as Record<string, unknown> | undefined;
-  if (!data || String(record['type'] ?? '') !== '117' && String(data['type'] ?? '') !== '117') return null;
+  if (!data || (String(record['type'] ?? '') !== '117' && String(data['type'] ?? '') !== '117'))
+    return null;
 
   const start = data['startPoi'] as AmapRoutePoi | undefined;
   const end = data['endPoi'] as AmapRoutePoi | undefined;
-  const middle = Array.isArray(data['midPois']) ? data['midPois'] as AmapRoutePoi[] : [];
+  const middle = Array.isArray(data['midPois']) ? (data['midPois'] as AmapRoutePoi[]) : [];
   if (!start || !end) return null;
   const startPoint = routePoint(start);
   const endPoint = routePoint(end);
   if (!startPoint || !endPoint) return null;
 
-  const stops: RouteStop[] = [{ role: 'start', name: String(start.name ?? '').trim(), point: startPoint.point, sourceRecordId: start.poiid }];
+  const stops: RouteStop[] = [
+    {
+      role: 'start',
+      name: String(start.name ?? '').trim(),
+      point: startPoint.point,
+      sourceRecordId: start.poiid,
+    },
+  ];
   for (const poi of middle) {
     const point = routePoint(poi);
     const name = String(poi.name ?? '').trim();
-    if (point && name) stops.push({ role: 'waypoint', name, point: point.point, sourceRecordId: poi.poiid });
+    if (point && name)
+      stops.push({ role: 'waypoint', name, point: point.point, sourceRecordId: poi.poiid });
   }
-  stops.push({ role: 'end', name: String(end.name ?? '').trim(), point: endPoint.point, sourceRecordId: end.poiid });
+  stops.push({
+    role: 'end',
+    name: String(end.name ?? '').trim(),
+    point: endPoint.point,
+    sourceRecordId: end.poiid,
+  });
   if (stops.some((stop) => !stop.name)) return null;
 
   return {
@@ -179,15 +222,22 @@ function normalizeAmapLegacyRoutePoi(raw: unknown): RouteStop | null {
 export function normalizeAmapLegacyRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
-  const data = record['data'] && typeof record['data'] === 'object' ? record['data'] as Record<string, unknown> : record;
+  const data =
+    record['data'] && typeof record['data'] === 'object'
+      ? (record['data'] as Record<string, unknown>)
+      : record;
   const type = String(record['type'] ?? data['type'] ?? '');
-  const mode = ({ '102': 'driving', '103': 'transit', '104': 'walking' } as Record<string, string>)[type];
+  const mode = ({ '102': 'driving', '103': 'transit', '104': 'walking' } as Record<string, string>)[
+    type
+  ];
   if (!mode) return null;
   const start = normalizeAmapLegacyRoutePoi(data['from_poi']);
   const end = normalizeAmapLegacyRoutePoi(data['to_poi']);
   if (!start || !end) return null;
   const middle = Array.isArray(data['mid_pois'])
-    ? data['mid_pois'].map(normalizeAmapLegacyRoutePoi).filter((stop): stop is RouteStop => stop !== null)
+    ? data['mid_pois']
+        .map(normalizeAmapLegacyRoutePoi)
+        .filter((stop): stop is RouteStop => stop !== null)
     : [];
   const stops: RouteStop[] = [
     { ...start, role: 'start' },
@@ -202,14 +252,22 @@ export function normalizeAmapLegacyRoute(raw: unknown): CanonicalRoute | null {
     travelMode: mode,
     routing: {
       pathType: Number.isFinite(Number(data['method'])) ? Number(data['method']) : undefined,
-      distanceMeters: Number.isFinite(Number(data['route_len'])) ? Number(data['route_len']) : undefined,
-      durationSeconds: Number.isFinite(Number(data['mCostTime'])) ? Number(data['mCostTime']) : undefined,
+      distanceMeters: Number.isFinite(Number(data['route_len']))
+        ? Number(data['route_len'])
+        : undefined,
+      durationSeconds: Number.isFinite(Number(data['mCostTime']))
+        ? Number(data['mCostTime'])
+        : undefined,
       routeType: String(data['route_type'] ?? '') || undefined,
     },
     source: {
       provider: 'amap',
       crs: 'amap_pixel',
-      original: { crs: 'amap_pixel', lng: Number((data['from_poi'] as AmapLegacyRoutePoi).mx), lat: Number((data['from_poi'] as AmapLegacyRoutePoi).my) },
+      original: {
+        crs: 'amap_pixel',
+        lng: Number((data['from_poi'] as AmapLegacyRoutePoi).mx),
+        lat: Number((data['from_poi'] as AmapLegacyRoutePoi).my),
+      },
       recordId: String(record['id'] ?? data['id'] ?? '') || undefined,
     },
     metadata: { createdAt: data['create_time'] == null ? undefined : String(data['create_time']) },
@@ -250,7 +308,10 @@ export function amapRideFavoriteId(route: CanonicalRoute, rideType: number): str
  * This is intentionally separate from the provider import workflow until
  * cross-provider travel-mode mapping and coordinate validation are complete.
  */
-export function buildAmapRoutePayload(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
+export function buildAmapRoutePayload(
+  route: CanonicalRoute,
+  createdAt = Math.floor(Date.now() / 1000),
+): Record<string, unknown> {
   const routeType = route.routing.routeType ?? route.travelMode;
   if (routeType !== '13' && routeType !== '14') {
     throw new Error('Amap type 117 payloads require a confirmed ride routeType (13 or 14)');
@@ -289,7 +350,11 @@ const AMAP_LEGACY_ROUTE_TYPES: Record<AmapLegacyRouteMode, { type: number; route
   walking: { type: 104, routeType: '3' },
 };
 
-function amapLegacyFavoriteId(start: Record<string, unknown>, end: Record<string, unknown>, type: number): string {
+function amapLegacyFavoriteId(
+  start: Record<string, unknown>,
+  end: Record<string, unknown>,
+  type: number,
+): string {
   const value = `${start.mx}-${start.my}-${end.mx}-${end.my}-${type}`;
   return btoa(value).replace(/[+/=]/g, '');
 }
@@ -351,7 +416,10 @@ export function buildAmapLegacyRoutePayload(
 }
 
 /** Select a verified Amap route shape without inferring an unknown source mode. */
-export function buildAmapRoutePayloadForImport(route: CanonicalRoute, createdAt = Math.floor(Date.now() / 1000)): Record<string, unknown> {
+export function buildAmapRoutePayloadForImport(
+  route: CanonicalRoute,
+  createdAt = Math.floor(Date.now() / 1000),
+): Record<string, unknown> {
   const mode = route.travelMode?.toLowerCase();
   if (mode === '13' || mode === '14' || mode === 'ride') {
     return buildAmapRoutePayload(route, createdAt);
@@ -359,11 +427,14 @@ export function buildAmapRoutePayloadForImport(route: CanonicalRoute, createdAt 
   if (mode === 'cycling') {
     // Amap's verified type 117 ride shape uses routeType 13 for the observed
     // cycling favorite. Keep the provider-specific value out of the canonical model.
-    return buildAmapRoutePayload({
-      ...route,
-      travelMode: '13',
-      routing: { ...route.routing, routeType: '13', rideType: 0 },
-    }, createdAt);
+    return buildAmapRoutePayload(
+      {
+        ...route,
+        travelMode: '13',
+        routing: { ...route.routing, routeType: '13', rideType: 0 },
+      },
+      createdAt,
+    );
   }
   if (mode === 'driving' || mode === 'drive' || mode === 'car') {
     return buildAmapLegacyRoutePayload(route, 'driving', createdAt);
@@ -384,7 +455,12 @@ export const amapAdapter: ProviderAdapter = {
   extractPage: 'https://ditu.amap.com/faves',
   importPage: 'https://ditu.amap.com/faves',
   crs: 'amap_pixel',
-  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi', 'route'] },
+  capabilities: {
+    canExtract: true,
+    canImport: true,
+    extractKinds: ['poi', 'route'],
+    importKinds: ['poi', 'route'],
+  },
 
   normalize: normalizeAmap,
 
@@ -402,15 +478,22 @@ export const amapAdapter: ProviderAdapter = {
       }
       const place = normalizeAmap(record);
       if (!place) {
-        const recordData = record && typeof record === 'object' && (record as Record<string, unknown>)['data'] && typeof (record as Record<string, unknown>)['data'] === 'object'
-          ? (record as Record<string, unknown>)['data'] as Record<string, unknown>
-          : undefined;
-        const type = record && typeof record === 'object'
-          ? String((record as Record<string, unknown>)['type'] ?? recordData?.['type'] ?? '')
-          : '';
+        const recordData =
+          record &&
+          typeof record === 'object' &&
+          (record as Record<string, unknown>)['data'] &&
+          typeof (record as Record<string, unknown>)['data'] === 'object'
+            ? ((record as Record<string, unknown>)['data'] as Record<string, unknown>)
+            : undefined;
+        const type =
+          record && typeof record === 'object'
+            ? String((record as Record<string, unknown>)['type'] ?? recordData?.['type'] ?? '')
+            : '';
         skipped.push({
           index,
-          reason: ['102', '103', '104'].includes(type) ? '高德路线记录缺少起点、终点或坐标' : '缺少名称或高德像素坐标',
+          reason: ['102', '103', '104'].includes(type)
+            ? '高德路线记录缺少起点、终点或坐标'
+            : '缺少名称或高德像素坐标',
           label: amapRecordLabel(record),
         });
         return;
@@ -436,7 +519,10 @@ export const amapAdapter: ProviderAdapter = {
     return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
-  buildImportPayload(places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
+  buildImportPayload(
+    places: CanonicalPlace[],
+    options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> },
+  ): unknown[] {
     const payload: Array<Record<string, unknown>> = [];
     for (const place of places) {
       const gcj02 = fromWgs84(place.wgs84, 'gcj02');
@@ -493,7 +579,11 @@ export const amapAdapter: ProviderAdapter = {
     return payload;
   },
 
-  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
+  buildImportItemsPayload(
+    items: CanonicalItem[],
+    places: CanonicalPlace[],
+    options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> },
+  ): unknown[] {
     const payload = this.buildImportPayload(places, options) as unknown[];
     for (const item of items) {
       if (item.kind === 'route') payload.push(buildAmapRoutePayloadForImport(item));
@@ -511,9 +601,11 @@ export const amapAdapter: ProviderAdapter = {
     }
 
     // 若 MAIN 执行器带了明细（raw.detail），按条统计。
-    const detail = result.raw && typeof result.raw === 'object'
-      ? (result.raw as { detail?: Array<{ id?: string; status?: string; error?: string }> }).detail
-      : undefined;
+    const detail =
+      result.raw && typeof result.raw === 'object'
+        ? (result.raw as { detail?: Array<{ id?: string; status?: string; error?: string }> })
+            .detail
+        : undefined;
     if (Array.isArray(detail)) {
       for (const item of detail) {
         if (item.status === 'duplicate') skippedDuplicates += 1;

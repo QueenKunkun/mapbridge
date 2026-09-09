@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+
 - Added consistent spacing between the page-size label, selector, and adjacent place-table tools.
 - Improved the place preview layout by labeling the page-size control, explaining address matching in the column header, and removing the empty matching column for unsupported targets.
 - Standardized place-table toolbar control heights and kept the active search control visibly highlighted while search is expanded.
@@ -35,6 +36,9 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+
+- Added project-wide Prettier formatting with `format` and `format:check` scripts.
+- Improved extraction warning labels by showing place names or route endpoints instead of internal IDs.
 - Added preview-time POI search matching for Baidu Maps, including native POI selection before import.
 - Renamed the page-level POI matching action to make clear that it performs a POI search attempt.
 - Show per-place Amap POI matching progress so only the currently requested place is marked as matching.
@@ -61,36 +65,44 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [0.5.1] - 2026-09-07
 
 ### Fixed
+
 - Avoided large Amap import requests by sending only new places in parameter-limited batches.
 
 ### Changed
+
 - Added a configurable maximum number of Amap POIs per sync batch, with a safe upper bound.
 
 ## [0.5.0] - 2026-09-05
 
 ### Added
+
 - Added Route migration from Amap to Baidu for driving, bus, walking, and cycling favorites.
 - Added undo support for imports into Baidu Maps.
 
 ### Changed
+
 - Import progress now shows the current stage, processed count, and total count.
 - Extraction warnings are grouped by reason, with expandable record details and a scrollable warning panel.
 
 ### Fixed
+
 - Fixed Amap Route extraction for historical Route record formats returned by the current favorites page.
 - Fixed repeated reverse migrations by refreshing the target favorites before duplicate detection and checking the final provider payload.
 
 ## [0.4.0] - 2026-09-05
 
 ### Added
+
 - Added Amap Route import for recognized driving, bus, walking, and cycling routes.
 - Added Route extraction and read-only previews for Amap SSR favorites.
 
 ### Changed
+
 - Improved import reports with clearer success, duplicate, failure, and post-import total statistics.
 - Improved export and import workflows with clearer labels and less crowded form layouts.
 
 ### Fixed
+
 - Fixed Baidu Route extraction to recognize driving, bus, walking, and cycling routes.
 - Fixed cycling Route migration by mapping it to Amap's verified riding favorite format.
 - Fixed import undo for Amap's newer SSR pages, including accurate partial-failure reporting.
@@ -99,16 +111,19 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [0.3.0] - 2026-09-04
 
 ### Added
+
 - Added versioned MapBridge JSON documents with POI and Route support while keeping v1 files importable.
 - Added Baidu Route extraction and read-only Route previews, with Route export to GPX and KML.
 - Added POI import and export for GPX 1.1 and KML 2.2, with clear warnings when unsupported route data or fields cannot be preserved.
 - Added richer import reports that distinguish recognized items, import outcomes, unsupported Routes, and skipped source records.
 
 ### Changed
+
 - Import previews now separate Places and Routes into dedicated tabs, and the primary next-step action is visually emphasized.
 - POI matching and deduplication now use a stable provider-independent identity where available.
 
 ### Fixed
+
 - Improved Amap login detection on the SSR favorites page by probing the read-only favorites endpoint before falling back to page markers.
 - Improved detection refresh controls and clarified warnings for records already marked as deleted by the source map.
 - Existing jobs and mixed documents now migrate or import supported POIs without silently discarding unsupported items.
@@ -116,22 +131,26 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [0.2.1] - 2026-09-04
 
 ### Added
+
 - feat: 百度自动导入（支持双向迁移）
 - feat: 百度 POI 匹配（导入前自动匹配已有收藏）
 - feat: 高德新版本 SSR 支持（CSRF token 修复）
 
 ### Fixed
+
 - Amap import failing with "非法 token" on new SSR version (`ditu.amap.com/ssr/faves`) by sending `x-csrf-token` header in POST requests.
 
 ## [0.2.0] - 2026-08-24
 
 ### Added
+
 - Export favorites from the current map as a MapBridge file.
 - Import a MapBridge file into your selected map, with a chance to preview and edit places first.
 - Undo a completed import from the result screen or job history.
 - Transfer favorites from Amap to Baidu Maps.
 
 ### Improved
+
 - Choose between migration, export, and file import directly from the popup.
 - MapBridge remembers your last workflow and map selections.
 - Migration steps and progress are easier to follow.
@@ -139,10 +158,12 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [0.1.6] - 2026-08-22
 
 ### Improved
+
 - Improved map-tab detection, login feedback, and the favorites migration flow.
 - Added a clearer settings page.
 
 ## [0.1.0] - 2026-08-19
 
 ### Added
+
 - First release of MapBridge with Baidu Maps to Amap favorites migration.

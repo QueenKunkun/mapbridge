@@ -33,10 +33,13 @@ export async function deleteJob(id: string): Promise<void> {
 export async function getActiveJobIds(): Promise<Record<string, string>> {
   const value = await get(ACTIVE_JOB_KEY, store);
   if (!value || typeof value !== 'object') return {};
-  return Object.entries(value as Record<string, unknown>).reduce<Record<string, string>>((result, [tabId, id]) => {
-    if (typeof id === 'string' && id.length > 0) result[tabId] = id;
-    return result;
-  }, {});
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, string>>(
+    (result, [tabId, id]) => {
+      if (typeof id === 'string' && id.length > 0) result[tabId] = id;
+      return result;
+    },
+    {},
+  );
 }
 
 export async function setActiveJobId(id: string, tabIds: number[] = []): Promise<void> {
@@ -144,13 +147,19 @@ function normalizeSettings(settings: AppSettings): AppSettings {
       ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
       : POI_MATCH_DELAY_MS_DEFAULT,
     baiduPoiMatchDelayMs: Number.isFinite(baiduPoiMatchDelay)
-      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)))
+      ? Math.min(
+          REQUEST_DELAY_MS_MAX,
+          Math.max(REQUEST_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)),
+        )
       : POI_MATCH_DELAY_MS_DEFAULT,
     baiduPoiMatchDistanceMeters: Number.isFinite(baiduPoiMatchDistance)
       ? Math.min(10_000, Math.max(50, Math.floor(baiduPoiMatchDistance)))
       : 3_000,
     poiMatchDistanceMeters: Number.isFinite(poiMatchDistance)
-      ? Math.min(POI_MATCH_DISTANCE_METERS_MAX, Math.max(POI_MATCH_DISTANCE_METERS_MIN, Math.floor(poiMatchDistance)))
+      ? Math.min(
+          POI_MATCH_DISTANCE_METERS_MAX,
+          Math.max(POI_MATCH_DISTANCE_METERS_MIN, Math.floor(poiMatchDistance)),
+        )
       : POI_MATCH_DISTANCE_METERS_DEFAULT,
     amapSyncBatchSize: Number.isFinite(value)
       ? Math.min(AMAP_SYNC_BATCH_SIZE_MAX, Math.max(AMAP_SYNC_BATCH_SIZE_MIN, Math.floor(value)))
@@ -159,7 +168,10 @@ function normalizeSettings(settings: AppSettings): AppSettings {
       ? Math.min(200, Math.max(1, Math.floor(baiduBatch)))
       : 20,
     dedupDistanceMeters: Number.isFinite(tolerance)
-      ? Math.min(DEDUP_DISTANCE_METERS_MAX, Math.max(DEDUP_DISTANCE_METERS_MIN, Math.floor(tolerance)))
+      ? Math.min(
+          DEDUP_DISTANCE_METERS_MAX,
+          Math.max(DEDUP_DISTANCE_METERS_MIN, Math.floor(tolerance)),
+        )
       : DEDUP_DISTANCE_METERS_DEFAULT,
   };
 }

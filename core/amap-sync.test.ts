@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { batchAmapSyncItems, countFormParameters } from '@/core/amap-sync';
 
-const item = (id: string): { id: string; type: number; act: string; data: Record<string, unknown> } => ({
-  id, type: 101, act: 'c', data: { name: id, point: { x: 1, y: 2 } },
+const item = (
+  id: string,
+): { id: string; type: number; act: string; data: Record<string, unknown> } => ({
+  id,
+  type: 101,
+  act: 'c',
+  data: { name: id, point: { x: 1, y: 2 } },
 });
 
 describe('Amap incremental sync batching', () => {
@@ -17,7 +22,10 @@ describe('Amap incremental sync batching', () => {
   });
 
   it('keeps an individual oversized item instead of dropping it', () => {
-    const oversized = { ...item('large'), data: { values: Array.from({ length: 20 }, (_, i) => i) } };
+    const oversized = {
+      ...item('large'),
+      data: { values: Array.from({ length: 20 }, (_, i) => i) },
+    };
     expect(batchAmapSyncItems([oversized], 5)).toEqual([[oversized]]);
   });
 

@@ -31,10 +31,15 @@ describe('v2 model schemas', () => {
       kind: 'route',
       id: 'route-1',
       name: 'Future route',
-      geometry: { type: 'line', points: [{ lng: 104, lat: 30 }, { lng: 105, lat: 31 }] },
+      geometry: {
+        type: 'line',
+        points: [
+          { lng: 104, lat: 30 },
+          { lng: 105, lat: 31 },
+        ],
+      },
       source,
     });
     expect(result.success).toBe(false);
   });
-
 });

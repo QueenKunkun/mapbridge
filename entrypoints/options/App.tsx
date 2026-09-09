@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react';
 import { sendBg } from '@/utils/messaging';
-import { DEDUP_DISTANCE_METERS_DEFAULT, DEDUP_DISTANCE_METERS_MAX, DEDUP_DISTANCE_METERS_MIN, AMAP_SYNC_BATCH_SIZE_MAX, AMAP_SYNC_BATCH_SIZE_MIN, DEFAULT_SETTINGS, IMPORT_DELAY_MS_DEFAULT, POI_MATCH_DELAY_MS_DEFAULT, POI_MATCH_DISTANCE_METERS_DEFAULT, POI_MATCH_DISTANCE_METERS_MAX, POI_MATCH_DISTANCE_METERS_MIN, REQUEST_DELAY_MS_MAX, REQUEST_DELAY_MS_MIN, type AppSettings } from '@/storage/db';
+import {
+  DEDUP_DISTANCE_METERS_DEFAULT,
+  DEDUP_DISTANCE_METERS_MAX,
+  DEDUP_DISTANCE_METERS_MIN,
+  AMAP_SYNC_BATCH_SIZE_MAX,
+  AMAP_SYNC_BATCH_SIZE_MIN,
+  DEFAULT_SETTINGS,
+  IMPORT_DELAY_MS_DEFAULT,
+  POI_MATCH_DELAY_MS_DEFAULT,
+  POI_MATCH_DISTANCE_METERS_DEFAULT,
+  POI_MATCH_DISTANCE_METERS_MAX,
+  POI_MATCH_DISTANCE_METERS_MIN,
+  REQUEST_DELAY_MS_MAX,
+  REQUEST_DELAY_MS_MIN,
+  type AppSettings,
+} from '@/storage/db';
 import type { Job } from '@/core/jobs';
 import { getAdapter } from '@/adapters';
 import { serializeItems } from '@/core/export';
@@ -41,7 +56,10 @@ export default function App() {
   const [undoingId, setUndoingId] = useState<string | null>(null);
 
   const sidebar = import.meta.env.DEV
-    ? [...SIDEBAR_SECTIONS, { category: '开发', items: [{ label: '开发工具', blockId: 'block-dev' }] }]
+    ? [
+        ...SIDEBAR_SECTIONS,
+        { category: '开发', items: [{ label: '开发工具', blockId: 'block-dev' }] },
+      ]
     : SIDEBAR_SECTIONS;
 
   useEffect(() => {
@@ -58,7 +76,10 @@ export default function App() {
   }
 
   async function refresh(): Promise<void> {
-    const [j, s] = await Promise.all([sendBg({ type: 'list-jobs' }), sendBg({ type: 'get-settings' })]);
+    const [j, s] = await Promise.all([
+      sendBg({ type: 'list-jobs' }),
+      sendBg({ type: 'get-settings' }),
+    ]);
     if (j.type === 'jobs') setJobs(j.jobs);
     if (s.type === 'settings') setSettings(s.settings);
   }
@@ -72,17 +93,24 @@ export default function App() {
     if (undoingId) return;
     setMsg('');
     const det = await sendBg({ type: 'detect-map-tabs' });
-    const tab = det.type === 'detected' ? det.tabs.find((t) => t.providerId === job.targetProvider) : undefined;
+    const tab =
+      det.type === 'detected'
+        ? det.tabs.find((t) => t.providerId === job.targetProvider)
+        : undefined;
     const tabId = tab?.tabId;
     if (tabId === undefined) {
-      setMsg(`未检测到已登录的${PROVIDER_NAME[job.targetProvider] ?? job.targetProvider}收藏页，无法撤销`);
+      setMsg(
+        `未检测到已登录的${PROVIDER_NAME[job.targetProvider] ?? job.targetProvider}收藏页，无法撤销`,
+      );
       return;
     }
     setUndoingId(job.id);
     const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
     setUndoingId(null);
     if (res.type === 'undo-result') {
-      setMsg(`已撤销导入 ${res.data.deleted} 条${res.data.failed > 0 ? `，${res.data.failed} 条失败` : ''}`);
+      setMsg(
+        `已撤销导入 ${res.data.deleted} 条${res.data.failed > 0 ? `，${res.data.failed} 条失败` : ''}`,
+      );
       await refresh();
     } else if (res.type === 'error') {
       setMsg(res.message);
@@ -106,7 +134,8 @@ export default function App() {
     setDevLog([]);
     try {
       const det = await sendBg({ type: 'detect-map-tabs' });
-      const tab = det.type === 'detected' ? det.tabs.find((t) => t.providerId === provider) : undefined;
+      const tab =
+        det.type === 'detected' ? det.tabs.find((t) => t.providerId === provider) : undefined;
       const label = provider === 'amap' ? '高德' : '百度';
       if (!tab) {
         logLine(`✗ 未检测到已打开的${label}标签页`);
@@ -122,21 +151,34 @@ export default function App() {
       }
       const fav = read.data.fav as { raw?: unknown } | undefined;
       const raw = fav?.raw as { data?: { items?: unknown[] } } | unknown[] | undefined;
-      const records = provider === 'amap'
-        ? ((raw && typeof raw === 'object' && !Array.isArray(raw) ? raw.data?.items : undefined) ?? [])
-        : (Array.isArray(raw) ? raw : []);
-      const exported = getAdapter(provider).buildExtractResult({ provider, records, exhausted: true });
+      const records =
+        provider === 'amap'
+          ? ((raw && typeof raw === 'object' && !Array.isArray(raw)
+              ? raw.data?.items
+              : undefined) ?? [])
+          : Array.isArray(raw)
+            ? raw
+            : [];
+      const exported = getAdapter(provider).buildExtractResult({
+        provider,
+        records,
+        exhausted: true,
+      });
       const now = new Date();
       const stamp = `${pad2(now.getFullYear())}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
       const filename = `mapbridge-${provider}-backup-${stamp}.json`;
-      const blob = new Blob([serializeItems(exported.items, provider)], { type: 'application/json' });
+      const blob = new Blob([serializeItems(exported.items, provider)], {
+        type: 'application/json',
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      logLine(`✓ 已下载备份 ${filename}（收藏 ${exported.items.length} 条${exported.skipped.length ? ` · 跳过 ${exported.skipped.length} 条` : ''}）`);
+      logLine(
+        `✓ 已下载备份 ${filename}（收藏 ${exported.items.length} 条${exported.skipped.length ? ` · 跳过 ${exported.skipped.length} 条` : ''}）`,
+      );
 
       logLine('清空收藏…');
       const clearP = sendBg({ type: 'dev-fav-clear', tabId: tab.tabId });
@@ -152,7 +194,9 @@ export default function App() {
         logLine(`✗ 清空失败：${clear.type === 'error' ? clear.message : '未知响应'}`);
         return;
       }
-      logLine(`${clear.data.ok ? '✓' : '✗'} 删除 ${clear.data.deleted} 条 / 失败 ${clear.data.failed} 条 / 剩余 ${clear.data.remaining} 条`);
+      logLine(
+        `${clear.data.ok ? '✓' : '✗'} 删除 ${clear.data.deleted} 条 / 失败 ${clear.data.failed} 条 / 剩余 ${clear.data.remaining} 条`,
+      );
     } catch (e) {
       logLine(`✗ 出错：${String(e instanceof Error ? e.message : e)}`);
     } finally {
@@ -195,132 +239,226 @@ export default function App() {
         </nav>
 
         <main className="blocks-container">
-          <SettingsBlock id="block-import" title="导入设置" description="迁移任务的默认行为。数据全部保存在本机浏览器，不会上传任何内容。">
+          <SettingsBlock
+            id="block-import"
+            title="导入设置"
+            description="迁移任务的默认行为。数据全部保存在本机浏览器，不会上传任何内容。"
+          >
             <div className="settings-tabs" role="tablist" aria-label="导入设置分类">
-              {([['general', '通用'], ['baidu', '百度'], ['amap', '高德']] as const).map(([key, label]) => (
-                <button key={key} className={settingsTab === key ? 'active' : ''} role="tab" aria-selected={settingsTab === key} onClick={() => setSettingsTab(key)}>{label}</button>
+              {(
+                [
+                  ['general', '通用'],
+                  ['baidu', '百度'],
+                  ['amap', '高德'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={settingsTab === key ? 'active' : ''}
+                  role="tab"
+                  aria-selected={settingsTab === key}
+                  onClick={() => setSettingsTab(key)}
+                >
+                  {label}
+                </button>
               ))}
             </div>
-            {settingsTab === 'general' && <>
-            <label className="field">
-              <span>导入请求间隔（ms）</span>
-              <input
-                type="number"
-                min={REQUEST_DELAY_MS_MIN}
-                max={REQUEST_DELAY_MS_MAX}
-                step={100}
-                value={settings.importDelayMs}
-                onChange={(e) => setSettings({ ...settings, importDelayMs: Number(e.target.value) || IMPORT_DELAY_MS_DEFAULT })}
-              />
-              <small>范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms；影响百度和高德导入时的连续请求间隔。</small>
-            </label>
-            </>}
-            {settingsTab === 'amap' && <>
-            <label className="field">
-              <span>高德 POI 匹配请求间隔（ms）</span>
-              <input
-                type="number"
-                min={REQUEST_DELAY_MS_MIN}
-                max={REQUEST_DELAY_MS_MAX}
-                step={100}
-                value={settings.poiMatchDelayMs}
-                onChange={(e) => setSettings({ ...settings, poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
-              />
-              <small>仅影响导入到高德时的 POI 匹配；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。请求越慢，对目标地图接口越温和。</small>
-            </label>
-            </>}
-            {settingsTab === 'baidu' && <>
-            <label className="field">
-              <span>百度 POI 匹配请求间隔（ms）</span>
-              <input
-                type="number"
-                min={REQUEST_DELAY_MS_MIN}
-                max={REQUEST_DELAY_MS_MAX}
-                step={100}
-                value={settings.baiduPoiMatchDelayMs}
-                onChange={(e) => setSettings({ ...settings, baiduPoiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT })}
-              />
-              <small>仅影响导入到百度时的 POI 搜索；范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX} ms。</small>
-            </label>
-            <label className="field">
-              <span>百度 POI 最大匹配距离（米）</span>
-              <input
-                type="number"
-                min={50}
-                max={10000}
-                step={50}
-                value={settings.baiduPoiMatchDistanceMeters}
-                onChange={(e) => setSettings({ ...settings, baiduPoiMatchDistanceMeters: Number(e.target.value) || 3000 })}
-              />
-              <small>仅影响导入到百度时的 POI 匹配；默认 3000 米，范围 50–10000 米。</small>
-            </label>
-            </>}
-            {settingsTab === 'amap' && <>
-            <label className="field">
-              <span>高德 POI 最大匹配距离（米）</span>
-              <input
-                type="number"
-                min={POI_MATCH_DISTANCE_METERS_MIN}
-                max={POI_MATCH_DISTANCE_METERS_MAX}
-                step={10}
-                value={settings.poiMatchDistanceMeters}
-                onChange={(e) => setSettings({ ...settings, poiMatchDistanceMeters: Number(e.target.value) || POI_MATCH_DISTANCE_METERS_DEFAULT })}
-              />
-              <small>仅影响导入到高德时的 POI 匹配。默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围 {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX} 米；范围越大越容易误匹配。</small>
-            </label>
-            </>}
-            {settingsTab === 'amap' && <>
-            <label className="field">
-              <span>高德收藏同步批次大小</span>
-              <input
-                type="number"
-                min={AMAP_SYNC_BATCH_SIZE_MIN}
-                max={AMAP_SYNC_BATCH_SIZE_MAX}
-                step={1}
-                value={settings.amapSyncBatchSize}
-                onChange={(e) => setSettings({ ...settings, amapSyncBatchSize: Number(e.target.value) || AMAP_SYNC_BATCH_SIZE_MIN })}
-              />
-              <small>仅影响高德地点和兼容旧路线的批量同步；范围 {AMAP_SYNC_BATCH_SIZE_MIN}–{AMAP_SYNC_BATCH_SIZE_MAX} 条，仍受高德接口参数上限约束。</small>
-            </label>
-            </>}
-            {settingsTab === 'baidu' && <>
-            <label className="field">
-              <span>百度收藏同步批次大小</span>
-              <input
-                type="number"
-                min={1}
-                max={200}
-                step={1}
-                value={settings.baiduSyncBatchSize}
-                onChange={(e) => setSettings({ ...settings, baiduSyncBatchSize: Number(e.target.value) || 1 })}
-              />
-              <small>百度接口仍按单条请求提交；每完成此数量后额外等待一次导入间隔，范围 1–200 条。</small>
-            </label>
-            </>}
-            {settingsTab === 'general' && <>
-            <label className="field">
-              <span>重复判断距离容差（米）</span>
-              <input
-                type="number"
-                min={DEDUP_DISTANCE_METERS_MIN}
-                max={DEDUP_DISTANCE_METERS_MAX}
-                step={1}
-                value={settings.dedupDistanceMeters}
-                onChange={(e) => setSettings({ ...settings, dedupDistanceMeters: Number(e.target.value) || DEDUP_DISTANCE_METERS_DEFAULT })}
-              />
-              <small>影响百度和高德的跨地图重复判断；默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围 {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米，不改变导入坐标。</small>
-            </label>
-            </>}
-            {settingsTab === 'general' && <>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={settings.skipExisting}
-                onChange={(e) => setSettings({ ...settings, skipExisting: e.target.checked })}
-              />
-              <span>跳过与目标已有收藏重复的项</span>
-            </label>
-            </>}
+            {settingsTab === 'general' && (
+              <>
+                <label className="field">
+                  <span>导入请求间隔（ms）</span>
+                  <input
+                    type="number"
+                    min={REQUEST_DELAY_MS_MIN}
+                    max={REQUEST_DELAY_MS_MAX}
+                    step={100}
+                    value={settings.importDelayMs}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        importDelayMs: Number(e.target.value) || IMPORT_DELAY_MS_DEFAULT,
+                      })
+                    }
+                  />
+                  <small>
+                    范围 {REQUEST_DELAY_MS_MIN}–{REQUEST_DELAY_MS_MAX}{' '}
+                    ms；影响百度和高德导入时的连续请求间隔。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'amap' && (
+              <>
+                <label className="field">
+                  <span>高德 POI 匹配请求间隔（ms）</span>
+                  <input
+                    type="number"
+                    min={REQUEST_DELAY_MS_MIN}
+                    max={REQUEST_DELAY_MS_MAX}
+                    step={100}
+                    value={settings.poiMatchDelayMs}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT,
+                      })
+                    }
+                  />
+                  <small>
+                    仅影响导入到高德时的 POI 匹配；范围 {REQUEST_DELAY_MS_MIN}–
+                    {REQUEST_DELAY_MS_MAX} ms。请求越慢，对目标地图接口越温和。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'baidu' && (
+              <>
+                <label className="field">
+                  <span>百度 POI 匹配请求间隔（ms）</span>
+                  <input
+                    type="number"
+                    min={REQUEST_DELAY_MS_MIN}
+                    max={REQUEST_DELAY_MS_MAX}
+                    step={100}
+                    value={settings.baiduPoiMatchDelayMs}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        baiduPoiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT,
+                      })
+                    }
+                  />
+                  <small>
+                    仅影响导入到百度时的 POI 搜索；范围 {REQUEST_DELAY_MS_MIN}–
+                    {REQUEST_DELAY_MS_MAX} ms。
+                  </small>
+                </label>
+                <label className="field">
+                  <span>百度 POI 最大匹配距离（米）</span>
+                  <input
+                    type="number"
+                    min={50}
+                    max={10000}
+                    step={50}
+                    value={settings.baiduPoiMatchDistanceMeters}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        baiduPoiMatchDistanceMeters: Number(e.target.value) || 3000,
+                      })
+                    }
+                  />
+                  <small>仅影响导入到百度时的 POI 匹配；默认 3000 米，范围 50–10000 米。</small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'amap' && (
+              <>
+                <label className="field">
+                  <span>高德 POI 最大匹配距离（米）</span>
+                  <input
+                    type="number"
+                    min={POI_MATCH_DISTANCE_METERS_MIN}
+                    max={POI_MATCH_DISTANCE_METERS_MAX}
+                    step={10}
+                    value={settings.poiMatchDistanceMeters}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        poiMatchDistanceMeters:
+                          Number(e.target.value) || POI_MATCH_DISTANCE_METERS_DEFAULT,
+                      })
+                    }
+                  />
+                  <small>
+                    仅影响导入到高德时的 POI 匹配。默认 {POI_MATCH_DISTANCE_METERS_DEFAULT} 米，范围{' '}
+                    {POI_MATCH_DISTANCE_METERS_MIN}–{POI_MATCH_DISTANCE_METERS_MAX}{' '}
+                    米；范围越大越容易误匹配。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'amap' && (
+              <>
+                <label className="field">
+                  <span>高德收藏同步批次大小</span>
+                  <input
+                    type="number"
+                    min={AMAP_SYNC_BATCH_SIZE_MIN}
+                    max={AMAP_SYNC_BATCH_SIZE_MAX}
+                    step={1}
+                    value={settings.amapSyncBatchSize}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        amapSyncBatchSize: Number(e.target.value) || AMAP_SYNC_BATCH_SIZE_MIN,
+                      })
+                    }
+                  />
+                  <small>
+                    仅影响高德地点和兼容旧路线的批量同步；范围 {AMAP_SYNC_BATCH_SIZE_MIN}–
+                    {AMAP_SYNC_BATCH_SIZE_MAX} 条，仍受高德接口参数上限约束。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'baidu' && (
+              <>
+                <label className="field">
+                  <span>百度收藏同步批次大小</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    step={1}
+                    value={settings.baiduSyncBatchSize}
+                    onChange={(e) =>
+                      setSettings({ ...settings, baiduSyncBatchSize: Number(e.target.value) || 1 })
+                    }
+                  />
+                  <small>
+                    百度接口仍按单条请求提交；每完成此数量后额外等待一次导入间隔，范围 1–200 条。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'general' && (
+              <>
+                <label className="field">
+                  <span>重复判断距离容差（米）</span>
+                  <input
+                    type="number"
+                    min={DEDUP_DISTANCE_METERS_MIN}
+                    max={DEDUP_DISTANCE_METERS_MAX}
+                    step={1}
+                    value={settings.dedupDistanceMeters}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        dedupDistanceMeters:
+                          Number(e.target.value) || DEDUP_DISTANCE_METERS_DEFAULT,
+                      })
+                    }
+                  />
+                  <small>
+                    影响百度和高德的跨地图重复判断；默认 {DEDUP_DISTANCE_METERS_DEFAULT} 米，范围{' '}
+                    {DEDUP_DISTANCE_METERS_MIN}–{DEDUP_DISTANCE_METERS_MAX} 米，不改变导入坐标。
+                  </small>
+                </label>
+              </>
+            )}
+            {settingsTab === 'general' && (
+              <>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={settings.skipExisting}
+                    onChange={(e) => setSettings({ ...settings, skipExisting: e.target.checked })}
+                  />
+                  <span>跳过与目标已有收藏重复的项</span>
+                </label>
+              </>
+            )}
             <div>
               <button className="primary" onClick={() => void save()}>
                 {saved ? '已保存 ✓' : '保存设置'}
@@ -335,7 +473,9 @@ export default function App() {
             fullWidth
           >
             {msg && <p className="hint ok-tag">{msg}</p>}
-            {jobs.length === 0 && <p className="empty">暂无任务。在 popup 向导里新建第一个迁移任务。</p>}
+            {jobs.length === 0 && (
+              <p className="empty">暂无任务。在 popup 向导里新建第一个迁移任务。</p>
+            )}
             <table>
               <thead>
                 <tr>
@@ -355,7 +495,9 @@ export default function App() {
                       {PROVIDER_NAME[job.targetProvider] ?? job.targetProvider}
                     </td>
                     <td>
-                      <span className={`badge ${job.status}`}>{STATUS_LABEL[job.status] ?? job.status}</span>
+                      <span className={`badge ${job.status}`}>
+                        {STATUS_LABEL[job.status] ?? job.status}
+                      </span>
                     </td>
                     <td>{job.places.length}</td>
                     <td>
@@ -365,11 +507,17 @@ export default function App() {
                     </td>
                     <td className="mono">{new Date(job.updatedAt).toLocaleString()}</td>
                     <td>
-                      {job.status === 'done' && (job.report?.importedIds?.length ?? 0) > 0 && !job.report?.undone && (
-                        <button className="danger" disabled={undoingId === job.id} onClick={() => void undoJob(job)}>
-                          {undoingId === job.id ? '撤销中…' : '撤销'}
-                        </button>
-                      )}
+                      {job.status === 'done' &&
+                        (job.report?.importedIds?.length ?? 0) > 0 &&
+                        !job.report?.undone && (
+                          <button
+                            className="danger"
+                            disabled={undoingId === job.id}
+                            onClick={() => void undoJob(job)}
+                          >
+                            {undoingId === job.id ? '撤销中…' : '撤销'}
+                          </button>
+                        )}
                       {job.report?.undone && <span className="ok-tag">已撤销</span>}
                       <button className="ghost" onClick={() => void remove(job.id)}>
                         删除
@@ -381,7 +529,11 @@ export default function App() {
             </table>
           </SettingsBlock>
 
-          <SettingsBlock id="block-adapters" title="适配器状态" description="各平台当前支持的提取 / 导入能力。">
+          <SettingsBlock
+            id="block-adapters"
+            title="适配器状态"
+            description="各平台当前支持的提取 / 导入能力。"
+          >
             <ul className="adapter-list">
               {(['baidu', 'amap', 'tencent'] as const).map((id) => {
                 const a = getAdapter(id);
@@ -408,10 +560,18 @@ export default function App() {
               fullWidth
             >
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button className="danger" disabled={devBusy} onClick={() => void devBackupAndClear('amap')}>
+                <button
+                  className="danger"
+                  disabled={devBusy}
+                  onClick={() => void devBackupAndClear('amap')}
+                >
                   {devBusy ? '处理中…' : '备份并清空高德收藏'}
                 </button>
-                <button className="danger" disabled={devBusy} onClick={() => void devBackupAndClear('baidu')}>
+                <button
+                  className="danger"
+                  disabled={devBusy}
+                  onClick={() => void devBackupAndClear('baidu')}
+                >
                   {devBusy ? '处理中…' : '备份并清空百度收藏'}
                 </button>
               </div>

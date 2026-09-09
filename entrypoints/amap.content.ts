@@ -10,7 +10,8 @@ function readDomLoginStatus(): boolean | undefined {
     document.querySelector('.user-name') ||
     document.querySelector('.quit-login') ||
     document.querySelector('.user-panel .user-portrait')
-  ) return true;
+  )
+    return true;
   // 高德页面结构和登录组件会异步变化；没有命中选择器不能证明未登录。
   return undefined;
 }
@@ -20,7 +21,10 @@ async function detectLoginStatus(): Promise<boolean | undefined> {
     const response = await fetch('/service/fav/getFav?', {
       credentials: 'same-origin',
       cache: 'no-store',
-      headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+      headers: {
+        Accept: 'application/json, text/javascript, */*; q=0.01',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
     });
     const status = readAmapLoginStatus(parseMaybeJsonp(await response.text()), response.status);
     if (status !== undefined) return status;
@@ -51,7 +55,12 @@ export default defineContentScript({
         log('recv command, relay -> MAIN', request.command.type);
         if (request.command.type === 'ping' || request.command.type === 'whoami') {
           return detectLoginStatus().then((loggedIn) => {
-            const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'amap', loggedIn };
+            const reply: BridgeReply = {
+              mb: BRIDGE_CHANNEL,
+              type: 'whoami',
+              provider: 'amap',
+              loggedIn,
+            };
             log('reply to background', reply);
             return reply;
           });

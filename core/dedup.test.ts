@@ -3,8 +3,14 @@ import { placeFingerprint, placeIdentity } from '@/core/dedup';
 import type { CanonicalPlace } from '@/core/model';
 
 const place: CanonicalPlace = {
-  id: '1', name: 'Cafe', address: '', tags: [], note: '', wgs84: { lng: 104, lat: 30 },
-  source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
+  id: '1',
+  name: 'Cafe',
+  address: '',
+  tags: [],
+  note: '',
+  wgs84: { lng: 104, lat: 30 },
+  source: { provider: 'amap', crs: 'wgs84' },
+  metadata: {},
 };
 
 describe('POI identity', () => {

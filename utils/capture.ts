@@ -30,8 +30,7 @@ export function extractRecordsFromJson(json: unknown): unknown[] {
 
   const obj = json as Record<string, unknown>;
 
-  const collect = (v: unknown): unknown[] | null =>
-    Array.isArray(v) ? v : null;
+  const collect = (v: unknown): unknown[] | null => (Array.isArray(v) ? v : null);
 
   // 顶层直接数组字段
   for (const key of ['fav', 'newdata', 'items', 'list', 'records', 'favorites']) {
@@ -96,13 +95,13 @@ export function installResponseCapture(isRelevantUrl: RelevantUrlFn): ResponseCa
 
   // hook fetch
   const origFetch = window.fetch;
-  window.fetch = function (this: unknown, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  window.fetch = function (
+    this: unknown,
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
     const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof Request
-          ? input.url
-          : String(input);
+      typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
     const promise = origFetch.apply(this, arguments as never) as Promise<Response>;
     if (isRelevantUrl(url)) {
       promise

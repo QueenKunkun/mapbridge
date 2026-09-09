@@ -8,16 +8,52 @@ export type BgRequest =
   | { type: 'get-state' }
   | { type: 'list-jobs' }
   | { type: 'get-job'; id: string }
-  | { type: 'new-job'; source: ProviderId; target: ProviderId; workflow?: JobWorkflow; sourceTabId?: number; targetTabId?: number; ownerTabId?: number }
+  | {
+      type: 'new-job';
+      source: ProviderId;
+      target: ProviderId;
+      workflow?: JobWorkflow;
+      sourceTabId?: number;
+      targetTabId?: number;
+      ownerTabId?: number;
+    }
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
   | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
-  | { type: 'select-poi-match'; jobId: string; placeId: string; candidate: { poiid: string; name: string; address: string; location: { lng: number; lat: number }; cityCode?: string; cityName?: string; adcode?: string } }
+  | {
+      type: 'select-poi-match';
+      jobId: string;
+      placeId: string;
+      candidate: {
+        poiid: string;
+        name: string;
+        address: string;
+        location: { lng: number; lat: number };
+        cityCode?: string;
+        cityName?: string;
+        adcode?: string;
+      };
+    }
   | { type: 'clear-poi-match'; jobId: string; placeId: string }
   | { type: 'cancel-job'; jobId: string }
-  | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab']; phase?: 'extract' | 'preview' | 'import' }
+  | {
+      type: 'preview-update';
+      jobId: string;
+      places: CanonicalPlace[];
+      previewTab?: Job['previewTab'];
+      phase?: 'extract' | 'preview' | 'import';
+    }
   | { type: 'import'; jobId: string; tabId: number }
-  | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[]; targetTabId?: number; ownerTabId?: number }
+  | {
+      type: 'import-file';
+      source?: ProviderId;
+      target: ProviderId;
+      items: CanonicalItem[];
+      places: CanonicalPlace[];
+      warnings?: string[];
+      targetTabId?: number;
+      ownerTabId?: number;
+    }
   | { type: 'get-settings' }
   | { type: 'save-settings'; settings: AppSettings }
   | { type: 'open-tab'; url: string }
@@ -36,11 +72,32 @@ export type BgResponse =
   | { type: 'ok' }
   | { type: 'error'; message: string }
   | { type: 'active-tab'; tabId: number; url?: string; providerId?: ProviderId }
-  | { type: 'detected'; tabs: { providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[] }
+  | {
+      type: 'detected';
+      tabs: {
+        providerId: ProviderId;
+        tabId: number;
+        loggedIn?: boolean;
+        version?: 'new' | 'legacy';
+      }[];
+    }
   | { type: 'dev-fav-data'; data: { provider: 'amap' | 'baidu'; fav: unknown; error?: string } }
-  | { type: 'dev-fav-cleared'; data: { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
+  | {
+      type: 'dev-fav-cleared';
+      data: {
+        provider: 'amap' | 'baidu';
+        deleted: number;
+        failed: number;
+        remaining: number;
+        ok: boolean;
+        error?: string;
+      };
+    }
   | { type: 'dev-progress'; deleted: number; failed: number; total: number; done: number }
-  | { type: 'undo-result'; data: { deleted: number; failed: number; remaining: number; ok: boolean; error?: string } };
+  | {
+      type: 'undo-result';
+      data: { deleted: number; failed: number; remaining: number; ok: boolean; error?: string };
+    };
 
 /** background -> content (ISOLATED) 的消息。 */
 export type ContentRequest = { type: 'mb:command'; command: BridgeCommand };

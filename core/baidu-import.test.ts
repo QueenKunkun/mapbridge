@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { filterDuplicateBaiduImportItems } from '@/core/baidu-import';
 
-const route = (type: string) => ({ type, extdata: {
-  sfavnode: { geoptx: 100, geopty: 200 },
-  efavnode: { geoptx: 300, geopty: 400 },
-  wp: [],
-} });
+const route = (type: string) => ({
+  type,
+  extdata: {
+    sfavnode: { geoptx: 100, geopty: 200 },
+    efavnode: { geoptx: 300, geopty: 400 },
+    wp: [],
+  },
+});
 
 describe('Baidu target import deduplication', () => {
   it('deduplicates routes by mode and ordered stop coordinates', () => {
@@ -16,7 +19,9 @@ describe('Baidu target import deduplication', () => {
   });
 
   it('deduplicates POIs by normalized name and Baidu coordinates', () => {
-    const current = [{ type: '11', extdata: { name: ' 测试点 ', geoptx: '100.00', geopty: '200.00' } }];
+    const current = [
+      { type: '11', extdata: { name: ' 测试点 ', geoptx: '100.00', geopty: '200.00' } },
+    ];
     const result = filterDuplicateBaiduImportItems(current, [
       { type: '11', extdata: { name: '测试点', geoptx: 100.4, geopty: 200.4 } },
       { type: '11', extdata: { name: '新点', geoptx: 100, geopty: 200 } },
@@ -26,8 +31,13 @@ describe('Baidu target import deduplication', () => {
   });
 
   it('uses the configured distance tolerance for converted Baidu coordinates', () => {
-    const current = [{ type: '11', extdata: { name: '测试点', geoptx: 13448418.38, geopty: 2489245.42 } }];
-    const nearby = { type: '11', extdata: { name: '测试点', geoptx: 13448428.38, geopty: 2489245.42 } };
+    const current = [
+      { type: '11', extdata: { name: '测试点', geoptx: 13448418.38, geopty: 2489245.42 } },
+    ];
+    const nearby = {
+      type: '11',
+      extdata: { name: '测试点', geoptx: 13448428.38, geopty: 2489245.42 },
+    };
     expect(filterDuplicateBaiduImportItems(current, [nearby], 1).items).toHaveLength(1);
     expect(filterDuplicateBaiduImportItems(current, [nearby], 100).duplicates).toHaveLength(1);
   });

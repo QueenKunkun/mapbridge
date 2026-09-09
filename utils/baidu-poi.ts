@@ -31,7 +31,9 @@ function records(response: unknown): Record<string, unknown>[] {
   if (!response || typeof response !== 'object') return [];
   const content = (response as Record<string, unknown>)['content'];
   return Array.isArray(content)
-    ? content.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    ? content.filter(
+        (item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object',
+      )
     : [];
 }
 
@@ -54,29 +56,36 @@ export function parseBaiduPoiCandidates(response: unknown): BaiduPoiMatch[] {
     const x = Math.abs(rawX) > 100_000_000 ? rawX / 100 : rawX;
     const y = Math.abs(rawY) > 100_000_000 ? rawY / 100 : rawY;
     if (!uid || !name || !Number.isFinite(x) || !Number.isFinite(y)) return [];
-    const admin = item['admin_info'] && typeof item['admin_info'] === 'object'
-      ? item['admin_info'] as Record<string, unknown>
-      : undefined;
-    const apiAdmin = item['api_admin_info'] && typeof item['api_admin_info'] === 'object'
-      ? item['api_admin_info'] as Record<string, unknown>
-      : undefined;
-    return [{
-      uid,
-      name,
-      x,
-      y,
-      address: text(item, 'addr', 'poi_address') || undefined,
-      cityCode: text(apiAdmin ?? {}, 'city_code') || text(admin ?? {}, 'city_id') || undefined,
-      cityName: text(apiAdmin ?? {}, 'city_name') || text(admin ?? {}, 'city_name') || undefined,
-      districtCode: text(admin ?? {}, 'area_id') || undefined,
-      districtName: text(admin ?? {}, 'area_name') || undefined,
-      category: text(item, 'std_tag', 'di_tag') || undefined,
-    }];
+    const admin =
+      item['admin_info'] && typeof item['admin_info'] === 'object'
+        ? (item['admin_info'] as Record<string, unknown>)
+        : undefined;
+    const apiAdmin =
+      item['api_admin_info'] && typeof item['api_admin_info'] === 'object'
+        ? (item['api_admin_info'] as Record<string, unknown>)
+        : undefined;
+    return [
+      {
+        uid,
+        name,
+        x,
+        y,
+        address: text(item, 'addr', 'poi_address') || undefined,
+        cityCode: text(apiAdmin ?? {}, 'city_code') || text(admin ?? {}, 'city_id') || undefined,
+        cityName: text(apiAdmin ?? {}, 'city_name') || text(admin ?? {}, 'city_name') || undefined,
+        districtCode: text(admin ?? {}, 'area_id') || undefined,
+        districtName: text(admin ?? {}, 'area_name') || undefined,
+        category: text(item, 'std_tag', 'di_tag') || undefined,
+      },
+    ];
   });
 }
 
 /** 从全国搜索的城市聚合结果中选取离目标坐标最近的城市。 */
-export function chooseBaiduSearchCity(response: unknown, target: BaiduMercatorPoint): number | undefined {
+export function chooseBaiduSearchCity(
+  response: unknown,
+  target: BaiduMercatorPoint,
+): number | undefined {
   let best: { code: number; distance: number } | undefined;
   for (const item of records(response)) {
     const code = Number(item['code']);

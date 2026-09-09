@@ -45,7 +45,12 @@ export function mergeImportItems(
   for (const item of currentItems) {
     const key = getKey(item);
     if (key && item.data) {
-      merged.set(key, { id: item.id ?? key, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
+      merged.set(key, {
+        id: item.id ?? key,
+        type: item.type || 101,
+        act: 'c',
+        data: item.data as Record<string, unknown>,
+      });
     }
   }
 
@@ -66,7 +71,12 @@ export function mergeImportItems(
       detail.push({ id: item.id, status: 'duplicate' });
       continue;
     }
-    merged.set(key, { id: item.id, type: item.type || 101, act: 'c', data: item.data as Record<string, unknown> });
+    merged.set(key, {
+      id: item.id,
+      type: item.type || 101,
+      act: 'c',
+      data: item.data as Record<string, unknown>,
+    });
     imported += 1;
     detail.push({ id: item.id, status: 'imported' });
   }

@@ -2,10 +2,7 @@ import type { CanonicalPlace, CanonicalRoute } from './model';
 
 /** 规整化名称：去空白、转小写、折叠内部空格，用于指纹比对。 */
 export function normalizeName(name: string): string {
-  return name
-    .replace(/\s+/g, '')
-    .toLowerCase()
-    .trim();
+  return name.replace(/\s+/g, '').toLowerCase().trim();
 }
 
 /**
@@ -24,7 +21,10 @@ export function placeIdentity(place: CanonicalPlace): string {
 }
 
 /** Quantize a WGS-84 point into a provider-independent distance cell. */
-export function distancePointKey(point: { lng: number; lat: number }, toleranceMeters: number): string {
+export function distancePointKey(
+  point: { lng: number; lat: number },
+  toleranceMeters: number,
+): string {
   const tolerance = Math.max(1, Number.isFinite(toleranceMeters) ? toleranceMeters : 1);
   const latMeters = point.lat * 110_540;
   const lngMeters = point.lng * 111_320 * Math.cos((point.lat * Math.PI) / 180);
@@ -35,7 +35,10 @@ export function distancePointKey(point: { lng: number; lat: number }, toleranceM
 /** Route identity：保留 stop 顺序，避免把相同端点但不同途经点的路线合并。 */
 export function routeIdentity(route: CanonicalRoute): string {
   const stops = route.stops
-    .map((stop) => `${normalizeName(stop.name)}@${stop.point.lng.toFixed(5)},${stop.point.lat.toFixed(5)}`)
+    .map(
+      (stop) =>
+        `${normalizeName(stop.name)}@${stop.point.lng.toFixed(5)},${stop.point.lat.toFixed(5)}`,
+    )
     .join('>');
   return `${normalizeName(route.name)}|${stops}`;
 }
@@ -51,7 +54,10 @@ export interface DedupResult {
  * 去重。existing 可作为"已存在集合"（如目标地图现有收藏），
  * 指纹命中即视为重复。否则仅在传入集合内部去重。
  */
-export function dedupPlaces(places: CanonicalPlace[], existing: CanonicalPlace[] = []): DedupResult {
+export function dedupPlaces(
+  places: CanonicalPlace[],
+  existing: CanonicalPlace[] = [],
+): DedupResult {
   const seen = new Set(existing.map(placeIdentity));
   const unique: CanonicalPlace[] = [];
   const duplicates: CanonicalPlace[] = [];

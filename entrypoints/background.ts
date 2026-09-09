@@ -2,8 +2,34 @@ import { getAdapter, getAdapterForHost } from '@/adapters';
 import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
-import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, clearActiveJobId, clearActiveJobTab, getActiveJobIds, setActiveJobId, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
-import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, applyAmapPoiMatchProgress, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
+import {
+  getSettings,
+  saveSettings,
+  saveJob,
+  getJob,
+  listJobs,
+  deleteJob,
+  clearActiveJobId,
+  clearActiveJobTab,
+  getActiveJobIds,
+  setActiveJobId,
+  DEFAULT_SETTINGS,
+  type AppSettings,
+} from '@/storage/db';
+import {
+  createJob,
+  applyExtraction,
+  applyExtractionItems,
+  applyPreviewPlaces,
+  startImport,
+  progressImport,
+  applyAmapPoiMatchProgress,
+  finalizeImport,
+  type Job,
+  type JobProgress,
+  type AmapPoiMatchRecord,
+  type AmapPoiResolution,
+} from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
 
@@ -25,7 +51,19 @@ interface PendingExtract {
 }
 
 let pendingExtract: PendingExtract | undefined;
-let pendingAmapMatch: { jobId: string; placeIds: string[]; resolve: (result: { ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | undefined;
+let pendingAmapMatch:
+  | {
+      jobId: string;
+      placeIds: string[];
+      resolve: (result: {
+        ok: boolean;
+        resolutions?: Record<string, AmapPoiResolution>;
+        matches?: Record<string, AmapPoiMatchRecord>;
+        error?: string;
+      }) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  | undefined;
 
 async function resolvePendingExtract(ok: boolean, error?: string): Promise<void> {
   const pending = pendingExtract;
@@ -53,12 +91,22 @@ async function applyExtractData(data: RawExtract): Promise<void> {
   }
   log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
   const warnings = result.skipped.map((item) => `第 ${item.index + 1} 条：${item.reason}`);
-  const updated = applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings, result.skipped);
+  const updated = applyExtractionItems(
+    { ...job, existingPlaces: job.existingPlaces },
+    result.items,
+    places,
+    result.rawCount,
+    warnings,
+    result.skipped,
+  );
   await saveJob(updated);
   if (job.workflow === 'export') {
     await clearActiveJobId(job.id);
   } else {
-    await setActiveJobId(job.id, [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined));
+    await setActiveJobId(
+      job.id,
+      [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined),
+    );
   }
   await resolvePendingExtract(true);
 }
@@ -72,7 +120,12 @@ interface PendingDev {
 
 let pendingDev: PendingDev | undefined;
 let devClearProgress: { deleted: number; failed: number; total: number; done: number } | undefined;
-let pendingUndo: { resolve: (r: { ok: boolean; data?: unknown; error?: string }) => void; timer?: ReturnType<typeof setTimeout> } | undefined;
+let pendingUndo:
+  | {
+      resolve: (r: { ok: boolean; data?: unknown; error?: string }) => void;
+      timer?: ReturnType<typeof setTimeout>;
+    }
+  | undefined;
 
 browser.tabs.onRemoved.addListener((tabId) => {
   void clearActiveJobTab(tabId);
@@ -88,7 +141,28 @@ function resolvePendingDev(ok: boolean, data?: unknown, error?: string): void {
 
 async function sendCommandToTab(
   tabId: number,
-  command: { type: 'extract' | 'import' | 'match-poi' | 'ping' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids'; payload?: unknown; ids?: string[]; options?: { importDelayMs?: number; poiMatchDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number } },
+  command: {
+    type:
+      | 'extract'
+      | 'import'
+      | 'match-poi'
+      | 'ping'
+      | 'dev-read-fav'
+      | 'dev-clear-fav'
+      | 'delete-fav-ids';
+    payload?: unknown;
+    ids?: string[];
+    options?: {
+      importDelayMs?: number;
+      poiMatchDelayMs?: number;
+      baiduPoiMatchDelayMs?: number;
+      baiduPoiMatchDistanceMeters?: number;
+      poiMatchDistanceMeters?: number;
+      amapSyncBatchSize?: number;
+      baiduSyncBatchSize?: number;
+      dedupDistanceMeters?: number;
+    };
+  },
 ): Promise<void> {
   log('sendCommandToTab -> tab', tabId, command.type);
   await browser.tabs.sendMessage(tabId, {
@@ -108,7 +182,10 @@ async function handleExtract(jobId: string, tabId: number): Promise<BgResponse> 
 
   const extractPhase = job.workflow === 'export' ? 'exporting' : 'extract';
   await saveJob({ ...job, status: 'extracting', phase: extractPhase, updatedAt: now() });
-  await setActiveJobId(job.id, [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined));
+  await setActiveJobId(
+    job.id,
+    [job.ownerTabId ?? job.sourceTabId].filter((id): id is number => id !== undefined),
+  );
 
   const outcome = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
     pendingExtract = {
@@ -127,7 +204,14 @@ async function handleExtract(jobId: string, tabId: number): Promise<BgResponse> 
   log('extract outcome', jobId, outcome);
   if (!outcome.ok) {
     const failed = await getJob(jobId);
-    if (failed) await saveJob({ ...failed, status: 'failed', phase: 'report', error: outcome.error ?? '提取失败', updatedAt: now() });
+    if (failed)
+      await saveJob({
+        ...failed,
+        status: 'failed',
+        phase: 'report',
+        error: outcome.error ?? '提取失败',
+        updatedAt: now(),
+      });
     await clearActiveJobId(jobId);
     return { type: 'error', message: outcome.error ?? '提取失败' };
   }
@@ -143,11 +227,17 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
   if (!target.capabilities.canImport) {
     return { type: 'error', message: `${target.name} 暂不支持自动导入` };
   }
-  const unsupportedKinds = [...new Set(job.items.map((item) => item.kind))]
-    .filter((kind) => !target.capabilities.importKinds.includes(kind));
-  const supportedItems = job.items.filter((item) => target.capabilities.importKinds.includes(item.kind));
+  const unsupportedKinds = [...new Set(job.items.map((item) => item.kind))].filter(
+    (kind) => !target.capabilities.importKinds.includes(kind),
+  );
+  const supportedItems = job.items.filter((item) =>
+    target.capabilities.importKinds.includes(item.kind),
+  );
   if (unsupportedKinds.length > 0 && supportedItems.length === 0) {
-    return { type: 'error', message: `${target.name} 暂不支持导入：${unsupportedKinds.join('、')}` };
+    return {
+      type: 'error',
+      message: `${target.name} 暂不支持导入：${unsupportedKinds.join('、')}`,
+    };
   }
 
   try {
@@ -157,7 +247,9 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
       throw new Error(`${target.name} 暂不支持导入路线`);
     }
     const payload = hasRoutes
-      ? target.buildImportItemsPayload!(supportedItems, job.places, { amapPoiResolutions: job.amapPoiResolutions })
+      ? target.buildImportItemsPayload!(supportedItems, job.places, {
+          amapPoiResolutions: job.amapPoiResolutions,
+        })
       : target.buildImportPayload(job.places, { amapPoiResolutions: job.amapPoiResolutions });
     // 取消此前卡住的导入任务，避免 import-result 关联到错误的 job
     const jobs = await listJobs();
@@ -168,7 +260,10 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     }
     const started = startImport(job, payload);
     await saveJob(started);
-    await setActiveJobId(job.id, [job.targetTabId ?? job.ownerTabId].filter((id): id is number => id !== undefined));
+    await setActiveJobId(
+      job.id,
+      [job.targetTabId ?? job.ownerTabId].filter((id): id is number => id !== undefined),
+    );
     await sendCommandToTab(tabId, {
       type: 'import',
       payload,
@@ -184,7 +279,13 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     });
     return { type: 'ok' };
   } catch (e) {
-    await saveJob({ ...job, status: 'failed', phase: 'report', error: String(e instanceof Error ? e.message : e), updatedAt: now() });
+    await saveJob({
+      ...job,
+      status: 'failed',
+      phase: 'report',
+      error: String(e instanceof Error ? e.message : e),
+      updatedAt: now(),
+    });
     await clearActiveJobId(jobId);
     return { type: 'error', message: String(e instanceof Error ? e.message : e) };
   }
@@ -226,27 +327,44 @@ async function handleExtractData(event: ContentEvent['event'], data: RawExtract)
           provider: job.sourceProvider,
           records: best,
           exhausted: true,
-          hint: best.length === 0 ? '未捕获到收藏数据。请打开 https://ditu.amap.com/faves 并确认已登录后重试。' : undefined,
+          hint:
+            best.length === 0
+              ? '未捕获到收藏数据。请打开 https://ditu.amap.com/faves 并确认已登录后重试。'
+              : undefined,
         });
       })();
     }, 4000);
   }
 }
 
-async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceIds?: string[]): Promise<BgResponse> {
+async function handleMatchAmapPoi(
+  jobId: string,
+  tabId: number,
+  requestedPlaceIds?: string[],
+): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持 POI 匹配' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider))
+    return { type: 'error', message: '当前目标地图暂不支持 POI 匹配' };
   if (job.places.length === 0) return { type: 'error', message: '没有可匹配的地点' };
-  const placeIds = requestedPlaceIds?.length ? requestedPlaceIds.filter((id) => job.places.some((place) => place.id === id)) : job.places.map((place) => place.id);
+  const placeIds = requestedPlaceIds?.length
+    ? requestedPlaceIds.filter((id) => job.places.some((place) => place.id === id))
+    : job.places.map((place) => place.id);
   if (placeIds.length === 0) return { type: 'error', message: '没有找到要匹配的地点' };
   const settings = await getSettings();
-  await saveJob(progressImport(job, {
-    phase: 'match-poi',
-    processed: 0,
-    total: placeIds.length,
-    message: `正在连接${job.targetProvider === 'baidu' ? '百度' : '高德'}页面…`,
-  } as Partial<JobProgress>));
-  const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }>((resolve) => {
+  await saveJob(
+    progressImport(job, {
+      phase: 'match-poi',
+      processed: 0,
+      total: placeIds.length,
+      message: `正在连接${job.targetProvider === 'baidu' ? '百度' : '高德'}页面…`,
+    } as Partial<JobProgress>),
+  );
+  const result = await new Promise<{
+    ok: boolean;
+    resolutions?: Record<string, AmapPoiResolution>;
+    matches?: Record<string, AmapPoiMatchRecord>;
+    error?: string;
+  }>((resolve) => {
     pendingAmapMatch = {
       jobId,
       placeIds,
@@ -256,20 +374,43 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
         resolve({ ok: false, error: 'POI 匹配超时' });
       }, 30000),
     };
-    sendCommandToTab(tabId, { type: 'match-poi', payload: job.places.filter((place) => placeIds.includes(place.id)), options: { poiMatchDelayMs: settings.poiMatchDelayMs, poiMatchDistanceMeters: settings.poiMatchDistanceMeters, baiduPoiMatchDelayMs: settings.baiduPoiMatchDelayMs, baiduPoiMatchDistanceMeters: settings.baiduPoiMatchDistanceMeters } }).catch((e) => {
+    sendCommandToTab(tabId, {
+      type: 'match-poi',
+      payload: job.places.filter((place) => placeIds.includes(place.id)),
+      options: {
+        poiMatchDelayMs: settings.poiMatchDelayMs,
+        poiMatchDistanceMeters: settings.poiMatchDistanceMeters,
+        baiduPoiMatchDelayMs: settings.baiduPoiMatchDelayMs,
+        baiduPoiMatchDistanceMeters: settings.baiduPoiMatchDistanceMeters,
+      },
+    }).catch((e) => {
       if (pendingAmapMatch) {
         clearTimeout(pendingAmapMatch.timer);
         pendingAmapMatch = undefined;
       }
-      resolve({ ok: false, error: '无法连接高德页面：' + String(e instanceof Error ? e.message : e) });
+      resolve({
+        ok: false,
+        error: '无法连接高德页面：' + String(e instanceof Error ? e.message : e),
+      });
     });
   });
   const latest = await getJob(jobId);
   if (!result.ok) {
     if (latest) {
       const failed = { ...(latest.amapPoiMatches ?? {}) };
-      for (const placeId of placeIds) failed[placeId] = { status: 'failed', error: result.error ?? 'POI 匹配失败' };
-      await saveJob({ ...latest, amapPoiMatches: failed, progress: { ...latest.progress, processed: 0, total: placeIds.length, message: result.error ?? 'POI 匹配失败' }, updatedAt: now() });
+      for (const placeId of placeIds)
+        failed[placeId] = { status: 'failed', error: result.error ?? 'POI 匹配失败' };
+      await saveJob({
+        ...latest,
+        amapPoiMatches: failed,
+        progress: {
+          ...latest.progress,
+          processed: 0,
+          total: placeIds.length,
+          message: result.error ?? 'POI 匹配失败',
+        },
+        updatedAt: now(),
+      });
     }
     return { type: 'error', message: result.error ?? 'POI 匹配失败' };
   }
@@ -284,10 +425,16 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
   return { type: 'job', job: await getJob(jobId) };
 }
 
-async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: AmapPoiResolution): Promise<BgResponse> {
+async function handleSelectAmapPoi(
+  jobId: string,
+  placeId: string,
+  candidate: AmapPoiResolution,
+): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持选择 POI' };
-  if (!job.places.some((place) => place.id === placeId) || !candidate.poiid) return { type: 'error', message: '地点或 POI 候选不存在' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider))
+    return { type: 'error', message: '当前目标地图暂不支持选择 POI' };
+  if (!job.places.some((place) => place.id === placeId) || !candidate.poiid)
+    return { type: 'error', message: '地点或 POI 候选不存在' };
   await saveJob({
     ...job,
     amapPoiResolutions: { ...(job.amapPoiResolutions ?? {}), [placeId]: candidate },
@@ -302,8 +449,10 @@ async function handleSelectAmapPoi(jobId: string, placeId: string, candidate: Am
 
 async function handleClearAmapPoi(jobId: string, placeId: string): Promise<BgResponse> {
   const job = await getJob(jobId);
-  if (!job || !['amap', 'baidu'].includes(job.targetProvider)) return { type: 'error', message: '当前目标地图暂不支持清除 POI 选择' };
-  if (!job.places.some((place) => place.id === placeId)) return { type: 'error', message: '地点不存在' };
+  if (!job || !['amap', 'baidu'].includes(job.targetProvider))
+    return { type: 'error', message: '当前目标地图暂不支持清除 POI 选择' };
+  if (!job.places.some((place) => place.id === placeId))
+    return { type: 'error', message: '地点不存在' };
   const resolutions = { ...(job.amapPoiResolutions ?? {}) };
   delete resolutions[placeId];
   const previous = job.amapPoiMatches?.[placeId];
@@ -322,8 +471,10 @@ async function handleClearAmapPoi(jobId: string, placeId: string): Promise<BgRes
 async function handleCancelJob(jobId: string): Promise<BgResponse> {
   const job = await getJob(jobId);
   if (!job) return { type: 'error', message: '任务不存在' };
-  if (job.status === 'importing') return { type: 'error', message: '导入已经开始，不能取消；请等待完成后再撤销已写入记录' };
-  if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return { type: 'error', message: '当前任务已经结束' };
+  if (job.status === 'importing')
+    return { type: 'error', message: '导入已经开始，不能取消；请等待完成后再撤销已写入记录' };
+  if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled')
+    return { type: 'error', message: '当前任务已经结束' };
   const cancelled: Job = { ...job, status: 'cancelled', updatedAt: now() };
   await saveJob(cancelled);
   await clearActiveJobId(jobId);
@@ -334,21 +485,40 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
   const jobs = await listJobs();
   const activeJobIds = await getActiveJobIds();
   const activeIds = new Set(Object.values(activeJobIds));
-  const job = jobs.find((j) => j.status === 'importing' && (activeIds.size === 0 || activeIds.has(j.id)));
-  log('handleImportEvent', 'importingJob=', job?.id, 'done=', data.done, 'error=', data.error, 'targetCount=', data.targetCount);
+  const job = jobs.find(
+    (j) => j.status === 'importing' && (activeIds.size === 0 || activeIds.has(j.id)),
+  );
+  log(
+    'handleImportEvent',
+    'importingJob=',
+    job?.id,
+    'done=',
+    data.done,
+    'error=',
+    data.error,
+    'targetCount=',
+    data.targetCount,
+  );
   if (!job) return;
   const target = getAdapter(job.targetProvider);
   const report = target.summarizeImportResult(data);
   // 记录实际写入的目标收藏 id，供"撤销导入"使用
-  const detail = data.raw && typeof data.raw === 'object'
-    ? (data.raw as { detail?: Array<{ id?: string; status?: string }> }).detail
-    : undefined;
+  const detail =
+    data.raw && typeof data.raw === 'object'
+      ? (data.raw as { detail?: Array<{ id?: string; status?: string }> }).detail
+      : undefined;
   if (Array.isArray(detail)) {
     report.importedIds = detail
       .filter((d) => d.status === 'imported' && d.id)
       .map((d) => d.id as string);
-  } else if (data.raw && typeof data.raw === 'object' && Array.isArray((data.raw as { importedIds?: unknown }).importedIds)) {
-    report.importedIds = (data.raw as { importedIds: unknown[] }).importedIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
+  } else if (
+    data.raw &&
+    typeof data.raw === 'object' &&
+    Array.isArray((data.raw as { importedIds?: unknown }).importedIds)
+  ) {
+    report.importedIds = (data.raw as { importedIds: unknown[] }).importedIds.filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
   }
   await saveJob(finalizeImport(job, data, report));
   await clearActiveJobId(job.id);
@@ -359,21 +529,35 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
   if (!pending) return;
   const job = await getJob(pending.jobId);
   if (job) {
-    await saveJob(progressImport(job, {
-      phase: 'match-poi',
-      processed: job.progress.total,
-      total: job.progress.total,
-      message: `${job.targetProvider === 'baidu' ? '百度' : '高德'} POI 匹配完成`,
-    }));
+    await saveJob(
+      progressImport(job, {
+        phase: 'match-poi',
+        processed: job.progress.total,
+        total: job.progress.total,
+        message: `${job.targetProvider === 'baidu' ? '百度' : '高德'} POI 匹配完成`,
+      }),
+    );
   }
   pendingAmapMatch = undefined;
   clearTimeout(pending.timer);
-  const value = data && typeof data === 'object' ? data as { done?: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string } : {};
+  const value =
+    data && typeof data === 'object'
+      ? (data as {
+          done?: boolean;
+          resolutions?: Record<string, AmapPoiResolution>;
+          matches?: Record<string, AmapPoiMatchRecord>;
+          error?: string;
+        })
+      : {};
   if (value.error) {
     pending.resolve({ ok: false, matches: value.matches, error: value.error });
     return;
   }
-  pending.resolve(value.done ? { ok: true, resolutions: value.resolutions ?? {}, matches: value.matches ?? {} } : { ok: false, matches: value.matches, error: 'POI 匹配未完成' });
+  pending.resolve(
+    value.done
+      ? { ok: true, resolutions: value.resolutions ?? {}, matches: value.matches ?? {} }
+      : { ok: false, matches: value.matches, error: 'POI 匹配未完成' },
+  );
 }
 
 async function handleDevFavRead(tabId: number): Promise<BgResponse> {
@@ -391,7 +575,12 @@ async function handleDevFavRead(tabId: number): Promise<BgResponse> {
       resolvePendingDev(false, undefined, '无法连接页面脚本：' + String(e?.message ?? e));
     });
   });
-  return result.ok ? { type: 'dev-fav-data', data: result.data as { provider: 'amap' | 'baidu'; fav: unknown; error?: string } } : { type: 'error', message: result.error ?? '读取失败' };
+  return result.ok
+    ? {
+        type: 'dev-fav-data',
+        data: result.data as { provider: 'amap' | 'baidu'; fav: unknown; error?: string },
+      }
+    : { type: 'error', message: result.error ?? '读取失败' };
 }
 
 async function handleDevFavClear(tabId: number): Promise<BgResponse> {
@@ -410,9 +599,29 @@ async function handleDevFavClear(tabId: number): Promise<BgResponse> {
     });
   });
   return result.ok
-    ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
+    ? {
+        type: 'dev-fav-cleared',
+        data: result.data as {
+          provider: 'amap' | 'baidu';
+          deleted: number;
+          failed: number;
+          remaining: number;
+          ok: boolean;
+          error?: string;
+        },
+      }
     : result.data
-      ? { type: 'dev-fav-cleared', data: result.data as { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
+      ? {
+          type: 'dev-fav-cleared',
+          data: result.data as {
+            provider: 'amap' | 'baidu';
+            deleted: number;
+            failed: number;
+            remaining: number;
+            ok: boolean;
+            error?: string;
+          },
+        }
       : { type: 'error', message: result.error ?? '清空失败' };
 }
 
@@ -436,7 +645,13 @@ async function handleUndoImport(jobId: string, tabId: number): Promise<BgRespons
     });
   });
   if (!result.ok) return { type: 'error', message: result.error ?? '撤销失败' };
-  const data = result.data as { deleted: number; failed: number; remaining: number; ok: boolean; error?: string };
+  const data = result.data as {
+    deleted: number;
+    failed: number;
+    remaining: number;
+    ok: boolean;
+    error?: string;
+  };
   const updated = {
     ...job,
     report: {
@@ -469,19 +684,41 @@ export default defineBackground(() => {
         if (job) {
           // 完成事件可能与最后一次进度事件乱序到达；完成后丢弃迟到的旧进度。
           if (!pendingAmapMatch || pendingAmapMatch.jobId !== job.id) return undefined;
-          const p = event.data as { currentPlaceId?: string; completedPlaceId?: string; match?: AmapPoiMatchRecord; resolution?: AmapPoiResolution; processed?: number; total?: number; message?: string };
-          await saveJob(applyAmapPoiMatchProgress(job, {
-            ...p,
-            processed: Math.max(job.progress.processed, p.processed ?? 0),
-            total: p.total ?? job.progress.total,
-          }));
+          const p = event.data as {
+            currentPlaceId?: string;
+            completedPlaceId?: string;
+            match?: AmapPoiMatchRecord;
+            resolution?: AmapPoiResolution;
+            processed?: number;
+            total?: number;
+            message?: string;
+          };
+          await saveJob(
+            applyAmapPoiMatchProgress(job, {
+              ...p,
+              processed: Math.max(job.progress.processed, p.processed ?? 0),
+              total: p.total ?? job.progress.total,
+            }),
+          );
         }
       } else if (event.type === 'import-progress') {
         const jobs = await listJobs();
         const job = jobs.find((j) => j.status === 'importing');
         if (job) {
-          const p = event.data as { phase?: JobProgress['phase']; processed?: number; total?: number; message?: string };
-          await saveJob(progressImport(job, { phase: p?.phase, processed: p?.processed, total: p?.total, message: p?.message }));
+          const p = event.data as {
+            phase?: JobProgress['phase'];
+            processed?: number;
+            total?: number;
+            message?: string;
+          };
+          await saveJob(
+            progressImport(job, {
+              phase: p?.phase,
+              processed: p?.processed,
+              total: p?.total,
+              message: p?.message,
+            }),
+          );
         }
       } else if (event.type === 'import-result') {
         await handleImportEvent(event.data as RawImportResult);
@@ -500,7 +737,12 @@ export default defineBackground(() => {
           resolvePendingDev(d.ok !== false, event.data, d.ok === false ? d.error : undefined);
         }
       } else if (event.type === 'dev-fav-progress') {
-        devClearProgress = event.data as { deleted: number; failed: number; total: number; done: number };
+        devClearProgress = event.data as {
+          deleted: number;
+          failed: number;
+          total: number;
+          done: number;
+        };
       } else if (event.type === 'fav-ids-deleted') {
         if (pendingUndo) {
           pendingUndo.resolve({ ok: true, data: event.data });
@@ -513,7 +755,12 @@ export default defineBackground(() => {
     log('recv req', req.type, (req as { jobId?: string }).jobId ?? '');
     switch (req.type) {
       case 'get-state': {
-        return { type: 'state', jobs: await listJobs(), settings: await getSettings(), activeJobIds: await getActiveJobIds() };
+        return {
+          type: 'state',
+          jobs: await listJobs(),
+          settings: await getSettings(),
+          activeJobIds: await getActiveJobIds(),
+        };
       }
       case 'list-jobs': {
         return { type: 'jobs', jobs: await listJobs() };
@@ -529,7 +776,12 @@ export default defineBackground(() => {
           ownerTabId: req.ownerTabId,
         };
         await saveJob(job);
-        await setActiveJobId(job.id, [req.sourceTabId, req.targetTabId, req.ownerTabId].filter((id): id is number => id !== undefined));
+        await setActiveJobId(
+          job.id,
+          [req.sourceTabId, req.targetTabId, req.ownerTabId].filter(
+            (id): id is number => id !== undefined,
+          ),
+        );
         return { type: 'job', job };
       }
       case 'delete-job': {
@@ -564,14 +816,29 @@ export default defineBackground(() => {
       }
       case 'import-file': {
         // 从 MapBridge/GPX/KML 导出文件导入；v2 文件的 Route 也必须进入任务。
-        const src = req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
+        const src =
+          req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
         const job = createJob(src, req.target, 'import-file');
         const tabbedJob = { ...job, targetTabId: req.targetTabId, ownerTabId: req.ownerTabId };
         await saveJob(tabbedJob);
-        await setActiveJobId(tabbedJob.id, [req.targetTabId, req.ownerTabId].filter((id): id is number => id !== undefined));
-        const applied = applyExtractionItems({ ...tabbedJob }, req.items, req.places, req.items.length, req.warnings ?? []);
+        await setActiveJobId(
+          tabbedJob.id,
+          [req.targetTabId, req.ownerTabId].filter((id): id is number => id !== undefined),
+        );
+        const applied = applyExtractionItems(
+          { ...tabbedJob },
+          req.items,
+          req.places,
+          req.items.length,
+          req.warnings ?? [],
+        );
         await saveJob(applied);
-        await setActiveJobId(applied.id, [applied.ownerTabId ?? applied.targetTabId].filter((id): id is number => id !== undefined));
+        await setActiveJobId(
+          applied.id,
+          [applied.ownerTabId ?? applied.targetTabId].filter(
+            (id): id is number => id !== undefined,
+          ),
+        );
         return { type: 'job', job: applied };
       }
       case 'get-settings': {
@@ -603,19 +870,32 @@ export default defineBackground(() => {
       case 'detect-map-tabs': {
         // 无需读取标签页 URL 权限：向所有标签页广播 whoami，能应答的就是已打开的地图收藏页
         const tabs = await browser.tabs.query({});
-        const detected: { providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[] = [];
+        const detected: {
+          providerId: ProviderId;
+          tabId: number;
+          loggedIn?: boolean;
+          version?: 'new' | 'legacy';
+        }[] = [];
         for (const t of tabs) {
           if (!t.id) continue;
           try {
-            const resp = (await browser.tabs.sendMessage(
-              t.id,
-              { type: 'mb:command', command: { mb: BRIDGE_CHANNEL, type: 'whoami' } } as never,
-            )) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
+            const resp = (await browser.tabs.sendMessage(t.id, {
+              type: 'mb:command',
+              command: { mb: BRIDGE_CHANNEL, type: 'whoami' },
+            } as never)) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
             if (resp?.provider) {
-              const version = resp.provider === 'amap'
-                ? (t.url?.includes('/ssr/') ? 'new' : 'legacy')
-                : undefined;
-              detected.push({ providerId: resp.provider, tabId: t.id, loggedIn: resp.loggedIn, version });
+              const version =
+                resp.provider === 'amap'
+                  ? t.url?.includes('/ssr/')
+                    ? 'new'
+                    : 'legacy'
+                  : undefined;
+              detected.push({
+                providerId: resp.provider,
+                tabId: t.id,
+                loggedIn: resp.loggedIn,
+                version,
+              });
             }
           } catch {
             /* 无内容脚本的标签页 */
@@ -633,7 +913,13 @@ export default defineBackground(() => {
         return await handleDevFavClear(req.tabId);
       }
       case 'dev-fav-progress': {
-        return { type: 'dev-progress', deleted: devClearProgress?.deleted ?? 0, failed: devClearProgress?.failed ?? 0, total: devClearProgress?.total ?? 0, done: devClearProgress?.done ?? 0 };
+        return {
+          type: 'dev-progress',
+          deleted: devClearProgress?.deleted ?? 0,
+          failed: devClearProgress?.failed ?? 0,
+          total: devClearProgress?.total ?? 0,
+          done: devClearProgress?.done ?? 0,
+        };
       }
       case 'undo-import': {
         return await handleUndoImport(req.jobId, req.tabId);

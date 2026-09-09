@@ -4,13 +4,30 @@ export const BRIDGE_CHANNEL = '__mapbridge_v1__';
 export interface BridgeCommand {
   mb: typeof BRIDGE_CHANNEL;
   /** 命令类型。dev-* 仅开发版注册。 */
-  type: 'extract' | 'import' | 'match-poi' | 'ping' | 'whoami' | 'dev-read-fav' | 'dev-clear-fav' | 'delete-fav-ids';
+  type:
+    | 'extract'
+    | 'import'
+    | 'match-poi'
+    | 'ping'
+    | 'whoami'
+    | 'dev-read-fav'
+    | 'dev-clear-fav'
+    | 'delete-fav-ids';
   /** delete-fav-ids 时的目标 id 列表。 */
   ids?: string[];
   /** import 时为 provider 特有 payload。 */
   payload?: unknown;
   /** import 时的可选 provider 参数。 */
-  options?: { importDelayMs?: number; poiMatchDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number; poiMatchDistanceMeters?: number; amapSyncBatchSize?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number };
+  options?: {
+    importDelayMs?: number;
+    poiMatchDelayMs?: number;
+    baiduPoiMatchDelayMs?: number;
+    baiduPoiMatchDistanceMeters?: number;
+    poiMatchDistanceMeters?: number;
+    amapSyncBatchSize?: number;
+    baiduSyncBatchSize?: number;
+    dedupDistanceMeters?: number;
+  };
 }
 
 export interface BridgeReply {
@@ -22,7 +39,18 @@ export interface BridgeReply {
 
 export interface BridgeEvent {
   mb: typeof BRIDGE_CHANNEL;
-  type: 'ready' | 'pong' | 'extract-data' | 'poi-match-progress' | 'poi-match-result' | 'import-progress' | 'import-result' | 'dev-fav-data' | 'dev-fav-cleared' | 'dev-fav-progress' | 'fav-ids-deleted';
+  type:
+    | 'ready'
+    | 'pong'
+    | 'extract-data'
+    | 'poi-match-progress'
+    | 'poi-match-result'
+    | 'import-progress'
+    | 'import-result'
+    | 'dev-fav-data'
+    | 'dev-fav-cleared'
+    | 'dev-fav-progress'
+    | 'fav-ids-deleted';
   data?: unknown;
 }
 

@@ -53,7 +53,10 @@ export default defineContentScript({
         scroller.scrollTop = scroller.scrollHeight;
         scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
         await new Promise((r) => setTimeout(r, 700));
-        if (scroller.scrollTop === before || scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) {
+        if (
+          scroller.scrollTop === before ||
+          scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2
+        ) {
           break;
         }
       }
@@ -63,8 +66,14 @@ export default defineContentScript({
     function baiduFavSid(record: unknown): string | undefined {
       if (!record || typeof record !== 'object') return undefined;
       const r = record as Record<string, unknown>;
-      const detail = r.detail && typeof r.detail === 'object' ? r.detail as Record<string, unknown> : undefined;
-      const data = detail?.data && typeof detail.data === 'object' ? detail.data as Record<string, unknown> : undefined;
+      const detail =
+        r.detail && typeof r.detail === 'object'
+          ? (r.detail as Record<string, unknown>)
+          : undefined;
+      const data =
+        detail?.data && typeof detail.data === 'object'
+          ? (detail.data as Record<string, unknown>)
+          : undefined;
       const id = r.sid ?? r.cid ?? r.id ?? data?.sid ?? data?.cid ?? data?.id;
       return id == null || id === '' ? undefined : String(id);
     }
@@ -106,16 +115,31 @@ export default defineContentScript({
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'dev-fav-cleared',
-          data: { provider: 'baidu', deleted: 0, failed: 0, remaining: -1, ok: false, error: '未捕获到收藏列表请求，请先在收藏页滚动加载后重试' },
+          data: {
+            provider: 'baidu',
+            deleted: 0,
+            failed: 0,
+            remaining: -1,
+            ok: false,
+            error: '未捕获到收藏列表请求，请先在收藏页滚动加载后重试',
+          },
         });
         return;
       }
       const records = capture.getRecords();
       const sids = records.map(baiduFavSid).filter((s): s is string => Boolean(s));
       const total = sids.length;
-      postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted: 0, failed: 0, total, done: 0 } });
+      postEvent({
+        mb: BRIDGE_CHANNEL,
+        type: 'dev-fav-progress',
+        data: { deleted: 0, failed: 0, total, done: 0 },
+      });
       if (total === 0) {
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-cleared', data: { provider: 'baidu', deleted: 0, failed: 0, remaining: 0, ok: true } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-cleared',
+          data: { provider: 'baidu', deleted: 0, failed: 0, remaining: 0, ok: true },
+        });
         return;
       }
       try {
@@ -123,8 +147,10 @@ export default defineContentScript({
         deleteUrl.searchParams.set('mode', 'delete');
         const validate = readCookie('validate') ?? '';
         const body =
-          'data=' + encodeURIComponent(JSON.stringify(sids.map((s) => ({ sid: s, action: 'del' })))) +
-          '&validate=' + encodeURIComponent(validate);
+          'data=' +
+          encodeURIComponent(JSON.stringify(sids.map((s) => ({ sid: s, action: 'del' })))) +
+          '&validate=' +
+          encodeURIComponent(validate);
         const res = await fetch(deleteUrl.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -138,14 +164,18 @@ export default defineContentScript({
         let remaining = -1;
         try {
           const r2 = await fetch(syncUrl.toString(), { method: 'GET', credentials: 'include' });
-            const json = parseMaybeJsonp(await r2.text());
-            remaining = extractRecordsFromJson(json).length;
+          const json = parseMaybeJsonp(await r2.text());
+          remaining = extractRecordsFromJson(json).length;
         } catch {
           /* ignore */
         }
         const deleted = remaining >= 0 ? Math.max(0, total - remaining) : total;
         const failed = remaining >= 0 ? Math.max(0, remaining) : 0;
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'dev-fav-progress', data: { deleted, failed, total, done: total } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'dev-fav-progress',
+          data: { deleted, failed, total, done: total },
+        });
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'dev-fav-cleared',
@@ -155,7 +185,14 @@ export default defineContentScript({
         postEvent({
           mb: BRIDGE_CHANNEL,
           type: 'dev-fav-cleared',
-          data: { provider: 'baidu', deleted: 0, failed: total, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) },
+          data: {
+            provider: 'baidu',
+            deleted: 0,
+            failed: total,
+            remaining: -1,
+            ok: false,
+            error: String(e instanceof Error ? e.message : e),
+          },
         });
       }
     }
@@ -163,13 +200,17 @@ export default defineContentScript({
     async function runDeleteFavIds(ids: string[]): Promise<void> {
       log('delete-fav-ids', ids.length);
       try {
-        if (!location.hostname.includes('map.baidu.com')) throw new Error('请在已登录的百度收藏页执行撤销');
+        if (!location.hostname.includes('map.baidu.com'))
+          throw new Error('请在已登录的百度收藏页执行撤销');
         const base = capture.lastUrl;
         if (!base) throw new Error('未捕获到百度收藏列表请求');
         const deleteUrl = new URL(base);
         deleteUrl.searchParams.set('mode', 'delete');
-        const body = 'data=' + encodeURIComponent(JSON.stringify(ids.map((sid) => ({ sid, action: 'del' })))) +
-          '&validate=' + encodeURIComponent(readCookie('validate') ?? '');
+        const body =
+          'data=' +
+          encodeURIComponent(JSON.stringify(ids.map((sid) => ({ sid, action: 'del' })))) +
+          '&validate=' +
+          encodeURIComponent(readCookie('validate') ?? '');
         await fetch(deleteUrl.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -177,19 +218,47 @@ export default defineContentScript({
           credentials: 'include',
         });
         const remainingRecords = await fetchBaiduRecords(base);
-        const remainingIds = new Set(remainingRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
+        const remainingIds = new Set(
+          remainingRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)),
+        );
         const deleted = ids.filter((id) => !remainingIds.has(id)).length;
         const failed = ids.length - deleted;
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: {
-          deleted, failed, remaining: remainingRecords.length, ok: failed === 0,
-          error: failed > 0 ? `撤销后仍有 ${failed} 条收藏未删除` : undefined,
-        } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'fav-ids-deleted',
+          data: {
+            deleted,
+            failed,
+            remaining: remainingRecords.length,
+            ok: failed === 0,
+            error: failed > 0 ? `撤销后仍有 ${failed} 条收藏未删除` : undefined,
+          },
+        });
       } catch (e) {
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'fav-ids-deleted', data: { deleted: 0, failed: ids.length, remaining: -1, ok: false, error: String(e instanceof Error ? e.message : e) } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'fav-ids-deleted',
+          data: {
+            deleted: 0,
+            failed: ids.length,
+            remaining: -1,
+            ok: false,
+            error: String(e instanceof Error ? e.message : e),
+          },
+        });
       }
     }
 
-    async function runImport(payload: unknown, options?: { importDelayMs?: number; baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number; baiduSyncBatchSize?: number; dedupDistanceMeters?: number }): Promise<void> {
+    async function runImport(
+      payload: unknown,
+      options?: {
+        importDelayMs?: number;
+        baiduPoiMatchDelayMs?: number;
+        baiduPoiMatchDistanceMeters?: number;
+        baiduSyncBatchSize?: number;
+        dedupDistanceMeters?: number;
+      },
+    ): Promise<void> {
       const items = (payload ?? []) as Array<Record<string, unknown>>;
       const emit = (ev: { phase: string; processed?: number; total?: number; message?: string }) =>
         postEvent({ mb: BRIDGE_CHANNEL, type: 'import-progress', data: ev });
@@ -203,7 +272,12 @@ export default defineContentScript({
       }
       const favUrl: string = base;
       const validate = readCookie('validate') ?? '';
-      emit({ phase: 'read-existing', processed: 0, total: items.length, message: '读取百度现有收藏…' });
+      emit({
+        phase: 'read-existing',
+        processed: 0,
+        total: items.length,
+        message: '读取百度现有收藏…',
+      });
       let currentRecords: unknown[];
       try {
         // 必须每次从服务端读取最新列表；页面捕获缓存不会包含上一次导入刚写入的记录。
@@ -214,21 +288,46 @@ export default defineContentScript({
         currentRecords = capture.getRecords();
       }
       const configuredTolerance = Number(options?.dedupDistanceMeters);
-      const dedupTolerance = Number.isFinite(configuredTolerance) ? Math.min(100, Math.max(1, Math.floor(configuredTolerance))) : 1;
+      const dedupTolerance = Number.isFinite(configuredTolerance)
+        ? Math.min(100, Math.max(1, Math.floor(configuredTolerance)))
+        : 1;
       const configuredDelay = Number(options?.importDelayMs);
-      const importDelayMs = Number.isFinite(configuredDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay))) : 500;
+      const importDelayMs = Number.isFinite(configuredDelay)
+        ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay)))
+        : 500;
       const configuredPoiDelay = Number(options?.baiduPoiMatchDelayMs);
-      const poiMatchDelayMs = Number.isFinite(configuredPoiDelay) ? Math.min(10_000, Math.max(300, Math.floor(configuredPoiDelay))) : 1_000;
+      const poiMatchDelayMs = Number.isFinite(configuredPoiDelay)
+        ? Math.min(10_000, Math.max(300, Math.floor(configuredPoiDelay)))
+        : 1_000;
       const configuredBatch = Number(options?.baiduSyncBatchSize);
-      const syncBatchSize = Number.isFinite(configuredBatch) ? Math.min(200, Math.max(1, Math.floor(configuredBatch))) : 20;
+      const syncBatchSize = Number.isFinite(configuredBatch)
+        ? Math.min(200, Math.max(1, Math.floor(configuredBatch)))
+        : 20;
       const configuredMatchDistance = Number(options?.baiduPoiMatchDistanceMeters);
-      const matchDistance = Number.isFinite(configuredMatchDistance) ? Math.min(10_000, Math.max(50, Math.floor(configuredMatchDistance))) : 3_000;
-      const deduped = filterDuplicateBaiduImportItems(currentRecords as never[], items, dedupTolerance);
-      const beforeIds = new Set(currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)));
-      emit({ phase: 'sync', processed: 0, total: items.length, message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…` });
-      const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(() => ({ ok: true, duplicate: true }));
+      const matchDistance = Number.isFinite(configuredMatchDistance)
+        ? Math.min(10_000, Math.max(50, Math.floor(configuredMatchDistance)))
+        : 3_000;
+      const deduped = filterDuplicateBaiduImportItems(
+        currentRecords as never[],
+        items,
+        dedupTolerance,
+      );
+      const beforeIds = new Set(
+        currentRecords.map(baiduFavSid).filter((id): id is string => Boolean(id)),
+      );
+      emit({
+        phase: 'sync',
+        processed: 0,
+        total: items.length,
+        message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…`,
+      });
+      const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(
+        () => ({ ok: true, duplicate: true }),
+      );
 
-      async function searchBaiduPoi(item: Record<string, unknown>): Promise<Record<string, unknown>> {
+      async function searchBaiduPoi(
+        item: Record<string, unknown>,
+      ): Promise<Record<string, unknown>> {
         const extdata = item['extdata'] as Record<string, unknown> | undefined;
         const name = typeof extdata?.['name'] === 'string' ? extdata['name'] : '';
         const x = Number(extdata?.['geoptx']);
@@ -240,9 +339,13 @@ export default defineContentScript({
           searchUrl.searchParams.set('qt', 's');
           searchUrl.searchParams.set('wd', name);
           searchUrl.searchParams.set('c', String(cityCode));
-          searchUrl.searchParams.set('b', `(${x - 10_000},${y - 10_000};${x + 10_000},${y + 10_000})`);
+          searchUrl.searchParams.set(
+            'b',
+            `(${x - 10_000},${y - 10_000};${x + 10_000},${y + 10_000})`,
+          );
           searchUrl.searchParams.set('nn', '0');
-          for (const key of ['mode', 'type', 'limit', 'lastver']) searchUrl.searchParams.delete(key);
+          for (const key of ['mode', 'type', 'limit', 'lastver'])
+            searchUrl.searchParams.delete(key);
           const text = await (await fetch(searchUrl, { credentials: 'include' })).text();
           return parseMaybeJsonp(text);
         };
@@ -279,10 +382,18 @@ export default defineContentScript({
         const routeItem = ['20', '21', '22', '23'].includes(String(it['type'] ?? ''));
         const importItem = routeItem ? it : await searchBaiduPoi(it);
         const importKey = baiduImportKey(importItem);
-        if (importKey && currentRecords.some((record) => baiduImportKey(record as BaiduImportRecord) === importKey)) {
+        if (
+          importKey &&
+          currentRecords.some((record) => baiduImportKey(record as BaiduImportRecord) === importKey)
+        ) {
           results.push({ ok: true, duplicate: true });
           processed++;
-          emit({ phase: 'sync', processed, total: items.length, message: `已处理 ${processed}/${items.length}，跳过重复…` });
+          emit({
+            phase: 'sync',
+            processed,
+            total: items.length,
+            message: `已处理 ${processed}/${items.length}，跳过重复…`,
+          });
           continue;
         }
         if (importKey) currentRecords.push(importItem);
@@ -290,7 +401,11 @@ export default defineContentScript({
         u.searchParams.set('mode', 'add');
         u.searchParams.set('type', 'favdata');
         u.searchParams.delete('action');
-        const body = 'data=' + encodeURIComponent(JSON.stringify(importItem)) + '&validate=' + encodeURIComponent(validate);
+        const body =
+          'data=' +
+          encodeURIComponent(JSON.stringify(importItem)) +
+          '&validate=' +
+          encodeURIComponent(validate);
         try {
           const res = await fetch(u.toString(), {
             method: 'POST',
@@ -307,10 +422,16 @@ export default defineContentScript({
           results.push({ ok: false, info: String(e instanceof Error ? e.message : e) });
         }
         processed++;
-        emit({ phase: 'sync', processed, total: items.length, message: `已写入 ${processed}/${items.length}` });
+        emit({
+          phase: 'sync',
+          processed,
+          total: items.length,
+          message: `已写入 ${processed}/${items.length}`,
+        });
         if (processed < items.length) {
           await new Promise((r) => setTimeout(r, importDelayMs));
-          if (processed % syncBatchSize === 0) await new Promise((r) => setTimeout(r, importDelayMs));
+          if (processed % syncBatchSize === 0)
+            await new Promise((r) => setTimeout(r, importDelayMs));
         }
       }
       emit({ phase: 'verify', message: '验证结果…' });
@@ -319,11 +440,19 @@ export default defineContentScript({
       try {
         const afterRecords = await fetchBaiduRecords(favUrl);
         targetCount = afterRecords.length;
-        const writtenKeys = new Set(deduped.items.map((item) => baiduImportKey(item)).filter((key): key is string => Boolean(key)));
+        const writtenKeys = new Set(
+          deduped.items
+            .map((item) => baiduImportKey(item))
+            .filter((key): key is string => Boolean(key)),
+        );
         importedIds = afterRecords
           .filter((record) => {
             const id = baiduFavSid(record);
-            return id && !beforeIds.has(id) && writtenKeys.has(baiduImportKey(record as BaiduImportRecord) ?? '');
+            return (
+              id &&
+              !beforeIds.has(id) &&
+              writtenKeys.has(baiduImportKey(record as BaiduImportRecord) ?? '')
+            );
           })
           .map((record) => baiduFavSid(record))
           .filter((id): id is string => Boolean(id));
@@ -336,51 +465,158 @@ export default defineContentScript({
       postEvent({
         mb: BRIDGE_CHANNEL,
         type: 'import-result',
-        data: { provider: 'baidu', done: true, targetCount, raw: { imported, duplicates, failed, results, importedIds } },
+        data: {
+          provider: 'baidu',
+          done: true,
+          targetCount,
+          raw: { imported, duplicates, failed, results, importedIds },
+        },
       });
     }
 
-    async function runMatchPoi(payload: unknown, options?: { baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number }): Promise<void> {
-      const places = Array.isArray(payload) ? payload as Array<{ id: string; name: string; wgs84: { lng: number; lat: number } }> : [];
+    async function runMatchPoi(
+      payload: unknown,
+      options?: { baiduPoiMatchDelayMs?: number; baiduPoiMatchDistanceMeters?: number },
+    ): Promise<void> {
+      const places = Array.isArray(payload)
+        ? (payload as Array<{ id: string; name: string; wgs84: { lng: number; lat: number } }>)
+        : [];
       const delay = Number(options?.baiduPoiMatchDelayMs);
-      const delayMs = Number.isFinite(delay) ? Math.min(10_000, Math.max(300, Math.floor(delay))) : 1_000;
+      const delayMs = Number.isFinite(delay)
+        ? Math.min(10_000, Math.max(300, Math.floor(delay)))
+        : 1_000;
       const distance = Number(options?.baiduPoiMatchDistanceMeters);
-      const maxDistance = Number.isFinite(distance) ? Math.min(10_000, Math.max(50, Math.floor(distance))) : 3_000;
-      const resolutions: Record<string, { poiid: string; location: { lng: number; lat: number }; name: string; address?: string; cityCode?: string; cityName?: string }> = {};
-      const matches: Record<string, { status: 'matched' | 'not-found' | 'failed'; candidates: Array<{ poiid: string; name: string; address: string; location: { lng: number; lat: number }; distanceMeters: number; nameScore: number; cityCode?: string; cityName?: string }>; reason?: string; error?: string }> = {};
+      const maxDistance = Number.isFinite(distance)
+        ? Math.min(10_000, Math.max(50, Math.floor(distance)))
+        : 3_000;
+      const resolutions: Record<
+        string,
+        {
+          poiid: string;
+          location: { lng: number; lat: number };
+          name: string;
+          address?: string;
+          cityCode?: string;
+          cityName?: string;
+        }
+      > = {};
+      const matches: Record<
+        string,
+        {
+          status: 'matched' | 'not-found' | 'failed';
+          candidates: Array<{
+            poiid: string;
+            name: string;
+            address: string;
+            location: { lng: number; lat: number };
+            distanceMeters: number;
+            nameScore: number;
+            cityCode?: string;
+            cityName?: string;
+          }>;
+          reason?: string;
+          error?: string;
+        }
+      > = {};
       const base = capture.lastUrl;
       if (!base) throw new Error('未捕获到百度搜索请求，请先打开百度地图页面后重试');
-      const request = async (place: typeof places[number], city: number): Promise<unknown> => {
+      const request = async (place: (typeof places)[number], city: number): Promise<unknown> => {
         const point = wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat);
         const url = new URL(base);
-        url.searchParams.set('qt', 's'); url.searchParams.set('wd', place.name); url.searchParams.set('c', String(city));
-        url.searchParams.set('b', `(${point.x - 10_000},${point.y - 10_000};${point.x + 10_000},${point.y + 10_000})`);
+        url.searchParams.set('qt', 's');
+        url.searchParams.set('wd', place.name);
+        url.searchParams.set('c', String(city));
+        url.searchParams.set(
+          'b',
+          `(${point.x - 10_000},${point.y - 10_000};${point.x + 10_000},${point.y + 10_000})`,
+        );
         url.searchParams.set('nn', '0');
         for (const key of ['mode', 'type', 'limit', 'lastver']) url.searchParams.delete(key);
         return parseMaybeJsonp(await (await fetch(url, { credentials: 'include' })).text());
       };
-      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配百度 POI…' } });
+      postEvent({
+        mb: BRIDGE_CHANNEL,
+        type: 'poi-match-progress',
+        data: { processed: 0, total: places.length, message: '准备匹配百度 POI…' },
+      });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { currentPlaceId: place.id, processed: index, total: places.length, message: `匹配百度 POI：${index + 1} / ${places.length}` } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'poi-match-progress',
+          data: {
+            currentPlaceId: place.id,
+            processed: index,
+            total: places.length,
+            message: `匹配百度 POI：${index + 1} / ${places.length}`,
+          },
+        });
         try {
           const first = await request(place, 0);
-          const city = chooseBaiduSearchCity(first, wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat)) ?? 0;
+          const city =
+            chooseBaiduSearchCity(first, wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat)) ?? 0;
           if (city !== 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
-          const match = chooseBaiduPoiMatch(await request(place, city), { name: place.name, ...wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat) }, maxDistance);
+          const match = chooseBaiduPoiMatch(
+            await request(place, city),
+            { name: place.name, ...wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat) },
+            maxDistance,
+          );
           if (match) {
             const location = toWgs84({ crs: 'bd09mc', lng: match.x, lat: match.y });
-            const candidate = { poiid: match.uid, name: match.name, address: match.address ?? '', location, distanceMeters: Math.hypot(match.x - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).x, match.y - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).y), nameScore: 1, cityCode: match.cityCode, cityName: match.cityName };
-            resolutions[place.id] = { poiid: match.uid, location, name: match.name, address: match.address, cityCode: match.cityCode, cityName: match.cityName };
+            const candidate = {
+              poiid: match.uid,
+              name: match.name,
+              address: match.address ?? '',
+              location,
+              distanceMeters: Math.hypot(
+                match.x - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).x,
+                match.y - wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat).y,
+              ),
+              nameScore: 1,
+              cityCode: match.cityCode,
+              cityName: match.cityName,
+            };
+            resolutions[place.id] = {
+              poiid: match.uid,
+              location,
+              name: match.name,
+              address: match.address,
+              cityCode: match.cityCode,
+              cityName: match.cityName,
+            };
             matches[place.id] = { status: 'matched', candidates: [candidate] };
-          } else matches[place.id] = { status: 'not-found', candidates: [], reason: `未找到与“${place.name}”同名且距离不超过 ${maxDistance} 米的百度 POI` };
+          } else
+            matches[place.id] = {
+              status: 'not-found',
+              candidates: [],
+              reason: `未找到与“${place.name}”同名且距离不超过 ${maxDistance} 米的百度 POI`,
+            };
         } catch (error) {
-          matches[place.id] = { status: 'failed', candidates: [], error: String(error instanceof Error ? error.message : error) };
+          matches[place.id] = {
+            status: 'failed',
+            candidates: [],
+            error: String(error instanceof Error ? error.message : error),
+          };
         }
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { completedPlaceId: place.id, match: matches[place.id], resolution: resolutions[place.id], processed: index + 1, total: places.length, message: `匹配百度 POI：${index + 1} / ${places.length}` } });
+        postEvent({
+          mb: BRIDGE_CHANNEL,
+          type: 'poi-match-progress',
+          data: {
+            completedPlaceId: place.id,
+            match: matches[place.id],
+            resolution: resolutions[place.id],
+            processed: index + 1,
+            total: places.length,
+            message: `匹配百度 POI：${index + 1} / ${places.length}`,
+          },
+        });
         if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
-      postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'baidu', resolutions, matches, done: true } });
+      postEvent({
+        mb: BRIDGE_CHANNEL,
+        type: 'poi-match-result',
+        data: { provider: 'baidu', resolutions, matches, done: true },
+      });
     }
 
     window.addEventListener('message', async (event) => {
@@ -420,7 +656,17 @@ export default defineContentScript({
         });
       } else if (cmd.type === 'match-poi') {
         void runMatchPoi(cmd.payload, cmd.options).catch((error) => {
-          postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'baidu', resolutions: {}, matches: {}, done: true, error: String(error instanceof Error ? error.message : error) } });
+          postEvent({
+            mb: BRIDGE_CHANNEL,
+            type: 'poi-match-result',
+            data: {
+              provider: 'baidu',
+              resolutions: {},
+              matches: {},
+              done: true,
+              error: String(error instanceof Error ? error.message : error),
+            },
+          });
         });
       } else if (cmd.type === 'import') {
         log('recv import command');

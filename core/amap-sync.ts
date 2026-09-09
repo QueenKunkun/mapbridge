@@ -7,7 +7,8 @@ export interface AmapSyncItem {
 
 /** Count leaf values that become urlencoded form parameters. */
 export function countFormParameters(value: unknown): number {
-  if (Array.isArray(value)) return value.reduce((total, item) => total + countFormParameters(item), 0);
+  if (Array.isArray(value))
+    return value.reduce((total, item) => total + countFormParameters(item), 0);
   if (value && typeof value === 'object') {
     const entries = Object.values(value as Record<string, unknown>);
     let total = 0;
@@ -18,13 +19,20 @@ export function countFormParameters(value: unknown): number {
 }
 
 /** Split an incremental Amap sync into batches below the server parameter limit. */
-export function batchAmapSyncItems(items: AmapSyncItem[], maxParameters = 700, maxItems = Number.POSITIVE_INFINITY): AmapSyncItem[][] {
+export function batchAmapSyncItems(
+  items: AmapSyncItem[],
+  maxParameters = 700,
+  maxItems = Number.POSITIVE_INFINITY,
+): AmapSyncItem[][] {
   const batches: AmapSyncItem[][] = [];
   let batch: AmapSyncItem[] = [];
   let parameters = 0;
   for (const item of items) {
     const itemParameters = countFormParameters(item);
-    if (batch.length > 0 && (parameters + itemParameters > maxParameters || batch.length >= maxItems)) {
+    if (
+      batch.length > 0 &&
+      (parameters + itemParameters > maxParameters || batch.length >= maxItems)
+    ) {
       batches.push(batch);
       batch = [];
       parameters = 0;

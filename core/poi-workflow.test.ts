@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { amapAdapter } from '@/adapters/amap';
 import { dedupPlaces } from '@/core/dedup';
 import { migratePlaceToPoi, parseMapBridgeDocument, serializeItems } from '@/core/export';
-import { applyExtractionItems, applyPreviewPlaces, createJob, updatePreviewPlace } from '@/core/jobs';
+import {
+  applyExtractionItems,
+  applyPreviewPlaces,
+  createJob,
+  updatePreviewPlace,
+} from '@/core/jobs';
 import type { CanonicalPlace } from '@/core/model';
 
 const sourcePlace: CanonicalPlace = {
@@ -33,7 +38,9 @@ describe('POI migration workflow', () => {
     const job = applyExtractionItems(createJob('baidu', 'amap'), document.items, [imported], 1);
     const renamed = updatePreviewPlace(imported, { name: 'Renamed Coffee Shop' });
     const preview = applyPreviewPlaces(job, [renamed]);
-    const payload = amapAdapter.buildImportPayload(preview.places) as Array<Record<string, unknown>>;
+    const payload = amapAdapter.buildImportPayload(preview.places) as Array<
+      Record<string, unknown>
+    >;
 
     expect(preview.items[0]!.kind).toBe('poi');
     expect(preview.places[0]!.identity).toBeUndefined();

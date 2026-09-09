@@ -12,7 +12,14 @@ interface Props {
   children: ReactNode;
 }
 
-export default function SettingsBlock({ id, title, description, fullWidth, doubleWidth, children }: Props) {
+export default function SettingsBlock({
+  id,
+  title,
+  description,
+  fullWidth,
+  doubleWidth,
+  children,
+}: Props) {
   return (
     <section
       className={`settings-block${fullWidth ? ' settings-block--full' : ''}${doubleWidth ? ' settings-block--double' : ''}`}

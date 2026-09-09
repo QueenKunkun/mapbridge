@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAmap, normalizeAmapRoute, normalizeAmapLegacyRoute, amapAdapter, amapFavoriteId, amapRideFavoriteId, buildAmapRoutePayload, buildAmapLegacyRoutePayload, buildAmapRoutePayloadForImport } from '@/adapters/amap';
+import {
+  normalizeAmap,
+  normalizeAmapRoute,
+  normalizeAmapLegacyRoute,
+  amapAdapter,
+  amapFavoriteId,
+  amapRideFavoriteId,
+  buildAmapRoutePayload,
+  buildAmapLegacyRoutePayload,
+  buildAmapRoutePayloadForImport,
+} from '@/adapters/amap';
 import { normalizeBaiduRoute } from '@/adapters/baidu';
 import { fromWgs84, gcj02ToAmapPixel, toWgs84 } from '@/core/coords';
 import { md5 } from '@/utils/md5';
@@ -63,8 +73,22 @@ describe('amap adapter', () => {
       type: 117,
       data: {
         rideType: 0,
-        startPoi: { name: 'Start', poiid: 'start-1', lon: 120.741393, lat: 21.919339, x: 224249036, y: 117459570 },
-        endPoi: { name: 'End', poiid: '', lon: 120.741353, lat: 21.917311, x: 224249006, y: 117461198 },
+        startPoi: {
+          name: 'Start',
+          poiid: 'start-1',
+          lon: 120.741393,
+          lat: 21.919339,
+          x: 224249036,
+          y: 117459570,
+        },
+        endPoi: {
+          name: 'End',
+          poiid: '',
+          lon: 120.741353,
+          lat: 21.917311,
+          x: 224249006,
+          y: 117461198,
+        },
         midPois: [],
         length: 523,
         time: 167,
@@ -74,7 +98,12 @@ describe('amap adapter', () => {
     expect(route).not.toBeNull();
     expect(route!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
     expect(route!.stops[0]!.sourceRecordId).toBe('start-1');
-    expect(route!.routing).toMatchObject({ routeType: '13', rideType: 0, distanceMeters: 523, durationSeconds: 167 });
+    expect(route!.routing).toMatchObject({
+      routeType: '13',
+      rideType: 0,
+      distanceMeters: 523,
+      durationSeconds: 167,
+    });
     expect(route!.source.recordId).toBe('route-117');
     expect(route!.source.crs).toBe('amap_pixel');
   });
@@ -82,7 +111,17 @@ describe('amap adapter', () => {
   it('includes type 117 routes in items without adding them to POI places', () => {
     const result = amapAdapter.buildExtractResult({
       provider: 'amap',
-      records: [{ type: 117, data: { startPoi: { name: 'A', lon: 120.1, lat: 30.1 }, endPoi: { name: 'B', lon: 120.2, lat: 30.2 }, midPois: [], routeType: '13' } }],
+      records: [
+        {
+          type: 117,
+          data: {
+            startPoi: { name: 'A', lon: 120.1, lat: 30.1 },
+            endPoi: { name: 'B', lon: 120.2, lat: 30.2 },
+            midPois: [],
+            routeType: '13',
+          },
+        },
+      ],
       exhausted: true,
     });
     expect(result.items.map((item) => item.kind)).toEqual(['route']);
@@ -92,16 +131,32 @@ describe('amap adapter', () => {
   it('normalizes legacy route records returned by the new favorites page', () => {
     const result = amapAdapter.buildExtractResult({
       provider: 'amap',
-      records: [{ id: 'legacy-route-1', type: 102, data: {
-        route_name: '旧版自驾路线', route_type: '1', method: '1', route_len: '1200', mCostTime: '300',
-        from_poi: { mId: 'start', mName: '起点', mx: '211796584', my: '110201320' },
-        to_poi: { mId: 'end', mName: '终点', mx: '211800000', my: '110205000' },
-      } }],
+      records: [
+        {
+          id: 'legacy-route-1',
+          type: 102,
+          data: {
+            route_name: '旧版自驾路线',
+            route_type: '1',
+            method: '1',
+            route_len: '1200',
+            mCostTime: '300',
+            from_poi: { mId: 'start', mName: '起点', mx: '211796584', my: '110201320' },
+            to_poi: { mId: 'end', mName: '终点', mx: '211800000', my: '110205000' },
+          },
+        },
+      ],
       exhausted: true,
     });
     expect(result.skipped).toHaveLength(0);
-    expect(result.items[0]).toMatchObject({ kind: 'route', name: '旧版自驾路线', travelMode: 'driving' });
-    expect(result.items[0]!.kind === 'route' && result.items[0]!.stops.map((stop) => stop.role)).toEqual(['start', 'end']);
+    expect(result.items[0]).toMatchObject({
+      kind: 'route',
+      name: '旧版自驾路线',
+      travelMode: 'driving',
+    });
+    expect(
+      result.items[0]!.kind === 'route' && result.items[0]!.stops.map((stop) => stop.role),
+    ).toEqual(['start', 'end']);
   });
 
   it('builds a deterministic SSR type 117 route payload with converted points', () => {
@@ -109,8 +164,22 @@ describe('amap adapter', () => {
       id: 'route-117',
       type: 117,
       data: {
-        startPoi: { name: 'Start', poiid: 'start-1', lon: 120.741393, lat: 21.919339, x: 224249036, y: 117459570 },
-        endPoi: { name: 'End', poiid: '', lon: 120.741353, lat: 21.917311, x: 224249006, y: 117461198 },
+        startPoi: {
+          name: 'Start',
+          poiid: 'start-1',
+          lon: 120.741393,
+          lat: 21.919339,
+          x: 224249036,
+          y: 117459570,
+        },
+        endPoi: {
+          name: 'End',
+          poiid: '',
+          lon: 120.741353,
+          lat: 21.917311,
+          x: 224249006,
+          y: 117461198,
+        },
         midPois: [],
         routeType: '13',
         rideType: 0,
@@ -123,7 +192,13 @@ describe('amap adapter', () => {
     expect(item.type).toBe(117);
     expect(item.id).toBe(amapRideFavoriteId(route, 0));
     expect(item.id).toBe(buildAmapRoutePayload(route, 1788574307).id);
-    expect(data).toMatchObject({ id: item.id, rideType: 0, length: 523, time: 167, routeType: '13' });
+    expect(data).toMatchObject({
+      id: item.id,
+      rideType: 0,
+      length: 523,
+      time: 167,
+      routeType: '13',
+    });
     expect(data.startPoi).toMatchObject({ name: 'Start', poiid: 'start-1' });
     expect(data.endPoi).toMatchObject({ name: 'End', typeCode: '' });
     expect(data.midPois).toEqual([]);
@@ -144,11 +219,19 @@ describe('amap adapter', () => {
       },
     });
     expect(route).not.toBeNull();
-    const rideRoute = { ...route!, travelMode: '13', routing: { ...route!.routing, routeType: '13', rideType: 0 } };
+    const rideRoute = {
+      ...route!,
+      travelMode: '13',
+      routing: { ...route!.routing, routeType: '13', rideType: 0 },
+    };
     const item = buildAmapRoutePayload(rideRoute, 1788574307);
     const data = item.data as Record<string, unknown>;
     const startPoi = data.startPoi as Record<string, unknown>;
-    const converted = toWgs84({ crs: 'gcj02', lng: Number(startPoi.lon), lat: Number(startPoi.lat) });
+    const converted = toWgs84({
+      crs: 'gcj02',
+      lng: Number(startPoi.lon),
+      lat: Number(startPoi.lat),
+    });
     expect(Math.abs(converted.lng - route!.stops[0]!.point.lng)).toBeLessThan(1e-5);
     expect(Math.abs(converted.lat - route!.stops[0]!.point.lat)).toBeLessThan(1e-5);
     expect(startPoi.poiid).toBe('start');
@@ -180,8 +263,16 @@ describe('amap adapter', () => {
     const item = buildAmapLegacyRoutePayload(route, 'driving', 1788574307);
     const data = item.data as Record<string, unknown>;
     expect(item.type).toBe(102);
-    expect(item.id).toBe(btoa(`${data.start_x}-${data.start_y}-${data.end_x}-${data.end_y}-102`).replace(/[+/=]/g, ''));
-    expect(data).toMatchObject({ version: '1', route_type: '1', method: '1', has_mid_poi: 'false', create_time: '1788574307' });
+    expect(item.id).toBe(
+      btoa(`${data.start_x}-${data.start_y}-${data.end_x}-${data.end_y}-102`).replace(/[+/=]/g, ''),
+    );
+    expect(data).toMatchObject({
+      version: '1',
+      route_type: '1',
+      method: '1',
+      has_mid_poi: 'false',
+      create_time: '1788574307',
+    });
     expect(data.from_poi).toMatchObject({ mId: 'start', mName: 'Start' });
     expect(data.to_poi).toMatchObject({ mId: 'end', mName: 'End' });
   });
@@ -199,7 +290,12 @@ describe('amap adapter', () => {
     const data = buildAmapLegacyRoutePayload(route, 'bus').data as Record<string, unknown>;
     expect(data.has_mid_poi).toBe('true');
     expect(data.mid_pois).toHaveLength(1);
-    expect(data).toMatchObject({ mSectionNum: '0', taxi_price: '0', expense: '0', mDataLength: '0' });
+    expect(data).toMatchObject({
+      mSectionNum: '0',
+      taxi_price: '0',
+      expense: '0',
+      mDataLength: '0',
+    });
   });
 
   it('dispatches only explicit travel modes to verified Amap payloads', () => {
@@ -214,7 +310,9 @@ describe('amap adapter', () => {
     })!;
     const item = buildAmapRoutePayloadForImport(route, 1788574307);
     expect(item.type).toBe(102);
-    expect(() => buildAmapRoutePayloadForImport({ ...route, travelMode: undefined })).toThrow(/explicit supported travel mode/);
+    expect(() => buildAmapRoutePayloadForImport({ ...route, travelMode: undefined })).toThrow(
+      /explicit supported travel mode/,
+    );
   });
 
   it('maps Baidu cycling routes to the verified Amap ride payload', () => {
@@ -242,7 +340,9 @@ describe('amap adapter', () => {
         routeType: '13',
       },
     })!;
-    const payload = amapAdapter.buildImportItemsPayload!([route], []) as Array<Record<string, unknown>>;
+    const payload = amapAdapter.buildImportItemsPayload!([route], []) as Array<
+      Record<string, unknown>
+    >;
     expect(payload).toHaveLength(1);
     expect((payload[0] as Record<string, unknown>).type).toBe(117);
   });
@@ -264,7 +364,11 @@ describe('amap adapter', () => {
 
   it('buildExtractResult collects places', () => {
     const items = (amapGetFav.data as { items: unknown[] }).items;
-    const result = amapAdapter.buildExtractResult({ provider: 'amap', records: items, exhausted: true });
+    const result = amapAdapter.buildExtractResult({
+      provider: 'amap',
+      records: items,
+      exhausted: true,
+    });
     expect(result.items).toHaveLength(2);
     expect(result.items.every((item) => item.kind === 'poi')).toBe(true);
     expect(result.places).toHaveLength(2);
@@ -272,7 +376,7 @@ describe('amap adapter', () => {
   });
 
   it('buildImportPayload reproduces the verified amap favorite payload', () => {
-    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[0]!)!;
+    const place = normalizeAmap((amapGetFav.data as { items: unknown[] }).items[0]!)!;
     const payload = amapAdapter.buildImportPayload([place]) as Array<Record<string, unknown>>;
     expect(payload).toHaveLength(1);
     const item = payload[0]!;
@@ -289,9 +393,11 @@ describe('amap adapter', () => {
   });
 
   it('uses only an explicitly resolved Amap POI id for native favorite fields', () => {
-    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[0]!)!;
+    const place = normalizeAmap((amapGetFav.data as { items: unknown[] }).items[0]!)!;
     const payload = amapAdapter.buildImportPayload([place], {
-      amapPoiResolutions: { [place.id]: { poiid: 'B-RESOLVED', cityCode: '510100', cityName: '成都' } },
+      amapPoiResolutions: {
+        [place.id]: { poiid: 'B-RESOLVED', cityCode: '510100', cityName: '成都' },
+      },
     }) as Array<Record<string, unknown>>;
     const data = payload[0]!.data as Record<string, unknown>;
     expect(data.poiid).toBe('B-RESOLVED');
@@ -305,13 +411,16 @@ describe('amap adapter', () => {
   });
 
   it('uses the selected POI coordinate instead of the converted source coordinate', () => {
-    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[0]!)!;
+    const place = normalizeAmap((amapGetFav.data as { items: unknown[] }).items[0]!)!;
     const selectedLocation = { lng: 104.050001, lat: 30.650002 };
     const payload = amapAdapter.buildImportPayload([place], {
       amapPoiResolutions: { [place.id]: { poiid: 'B-SELECTED', location: selectedLocation } },
     }) as Array<Record<string, unknown>>;
     const data = payload[0]!.data as Record<string, unknown>;
-    const expected = gcj02ToAmapPixel(fromWgs84(selectedLocation, 'gcj02').lng, fromWgs84(selectedLocation, 'gcj02').lat);
+    const expected = gcj02ToAmapPixel(
+      fromWgs84(selectedLocation, 'gcj02').lng,
+      fromWgs84(selectedLocation, 'gcj02').lat,
+    );
     expect(data.point_x).toBe(expected.x);
     expect(data.point_y).toBe(expected.y);
   });
@@ -325,12 +434,17 @@ describe('amap adapter', () => {
       address: '',
       tags: [],
       note: '',
-      wgs84: { lng: 104.03890, lat: 30.63746 },
+      wgs84: { lng: 104.0389, lat: 30.63746 },
       source: { provider: 'amap', crs: 'wgs84' },
       metadata: {},
     };
     // 模拟另一条转换链带来 <1m 的浮点漂移（落在同一 5 位小数桶内）
-    const fromBaidu: CanonicalPlace = { ...base, id: 'y', wgs84: { lng: 104.038905, lat: 30.637464 }, metadata: {} };
+    const fromBaidu: CanonicalPlace = {
+      ...base,
+      id: 'y',
+      wgs84: { lng: 104.038905, lat: 30.637464 },
+      metadata: {},
+    };
     expect(placeFingerprint(base)).toBe(placeFingerprint(fromBaidu));
     expect(amapFavoriteId(base)).toBe(amapFavoriteId(fromBaidu));
     // 旧方案（像素坐标）在亚像素漂移下可能给出不同 id —— 此处确认新方案不再受其影响
@@ -339,18 +453,30 @@ describe('amap adapter', () => {
 
   it('amapFavoriteId differs for genuinely different places', () => {
     const a: CanonicalPlace = {
-      id: 'a', name: 'Place A', address: '', tags: [], note: '',
-      wgs84: { lng: 104.0, lat: 30.0 }, source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
+      id: 'a',
+      name: 'Place A',
+      address: '',
+      tags: [],
+      note: '',
+      wgs84: { lng: 104.0, lat: 30.0 },
+      source: { provider: 'amap', crs: 'wgs84' },
+      metadata: {},
     };
     const b: CanonicalPlace = {
-      id: 'b', name: 'Place B', address: '', tags: [], note: '',
-      wgs84: { lng: 105.0, lat: 31.0 }, source: { provider: 'amap', crs: 'wgs84' }, metadata: {},
+      id: 'b',
+      name: 'Place B',
+      address: '',
+      tags: [],
+      note: '',
+      wgs84: { lng: 105.0, lat: 31.0 },
+      source: { provider: 'amap', crs: 'wgs84' },
+      metadata: {},
     };
     expect(amapFavoriteId(a)).not.toBe(amapFavoriteId(b));
   });
 
   it('buildImportPayload converts wgs84 -> gcj02 pixel round trip', () => {
-    const place = normalizeAmap(((amapGetFav.data as { items: unknown[] }).items)[1]!)!;
+    const place = normalizeAmap((amapGetFav.data as { items: unknown[] }).items[1]!)!;
     const payload = amapAdapter.buildImportPayload([place]) as Array<Record<string, unknown>>;
     const data = payload[0]!.data as Record<string, unknown>;
     expect(Math.abs(Number(data.point_x) - 212370112)).toBeLessThanOrEqual(PX_TOLERANCE);

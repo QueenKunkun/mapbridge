@@ -195,7 +195,11 @@ section {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: #475569;
-  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    11px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
 }
 
 .match-candidate-select {
@@ -652,7 +656,9 @@ button {
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.25s, background-color 0.2s;
+  transition:
+    border-color 0.25s,
+    background-color 0.2s;
 }
 
 button:disabled {
@@ -788,8 +794,13 @@ button.remove {
 }
 
 @keyframes mb-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .bar {

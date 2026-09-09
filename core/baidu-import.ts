@@ -10,7 +10,7 @@ export interface BaiduImportRecord {
 
 function unwrap(record: BaiduImportRecord): BaiduImportRecord {
   const data = record.detail?.data;
-  return data && typeof data === 'object' ? data as BaiduImportRecord : record;
+  return data && typeof data === 'object' ? (data as BaiduImportRecord) : record;
 }
 
 function pointKey(point: unknown, toleranceMeters: number): string {
@@ -33,16 +33,31 @@ export function baiduImportKey(raw: BaiduImportRecord, toleranceMeters = 1): str
     const start = pointKey(ext.sfavnode, toleranceMeters);
     const end = pointKey(ext.efavnode, toleranceMeters);
     if (!start || !end) return undefined;
-    const middle = Array.isArray(ext.wp) ? ext.wp.map((value) => pointKey(value, toleranceMeters)).filter(Boolean).join('>') : '';
+    const middle = Array.isArray(ext.wp)
+      ? ext.wp
+          .map((value) => pointKey(value, toleranceMeters))
+          .filter(Boolean)
+          .join('>')
+      : '';
     return `route|${type}|${start}>${middle}>${end}`;
   }
   const point = pointKey(ext, toleranceMeters);
-  const name = String(ext.name ?? '').replace(/\s+/g, '').toLowerCase();
+  const name = String(ext.name ?? '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
   return name && point ? `poi|${name}|${point}` : undefined;
 }
 
-export function filterDuplicateBaiduImportItems<T extends BaiduImportRecord>(current: BaiduImportRecord[], payload: T[], toleranceMeters = 1): { items: T[]; duplicates: T[] } {
-  const seen = new Set(current.map((item) => baiduImportKey(item, toleranceMeters)).filter((key): key is string => Boolean(key)));
+export function filterDuplicateBaiduImportItems<T extends BaiduImportRecord>(
+  current: BaiduImportRecord[],
+  payload: T[],
+  toleranceMeters = 1,
+): { items: T[]; duplicates: T[] } {
+  const seen = new Set(
+    current
+      .map((item) => baiduImportKey(item, toleranceMeters))
+      .filter((key): key is string => Boolean(key)),
+  );
   const items: T[] = [];
   const duplicates: T[] = [];
   for (const item of payload) {

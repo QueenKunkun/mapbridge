@@ -5,7 +5,8 @@ export function readAmapLoginStatus(payload: unknown, httpStatus = 200): boolean
   const status = (payload as { status?: unknown }).status;
   if (String(status) === '1') return true;
   const data = (payload as { data?: unknown }).data;
-  if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown }).items)) return true;
+  if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown }).items))
+    return true;
   if (status !== undefined && status !== null) return false;
   return undefined;
 }

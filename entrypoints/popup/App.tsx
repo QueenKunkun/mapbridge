@@ -23,11 +23,9 @@ const SELECTABLE_PROVIDERS = PROVIDERS.filter((p) => p.id !== 'tencent');
 type Step = 'setup' | 'extract' | 'preview' | 'import' | 'report';
 type ExportFormat = 'mapbridge' | 'gpx' | 'kml';
 
-
 function providerName(id: ProviderId): string {
   return PROVIDERS.find((p) => p.id === id)?.name ?? id;
 }
-
 
 export default function App() {
   const [source, setSource] = useState<ProviderId>('baidu');
@@ -39,7 +37,9 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [matching, setMatching] = useState(false);
   const [matchingPlaceIds, setMatchingPlaceIds] = useState<Set<string>>(new Set());
-  const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[]>([]);
+  const [detected, setDetected] = useState<
+    { providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[]
+  >([]);
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
   const [exportedCount, setExportedCount] = useState(0);
@@ -55,12 +55,17 @@ export default function App() {
   // cannot make the entry tab and task phase disagree.
   useEffect(() => {
     let disposed = false;
-    void Promise.all([sendBg({ type: 'get-state' }), getUiSelection(), sendBg({ type: 'get-active-tab' })]).then(([state, selection, active]) => {
+    void Promise.all([
+      sendBg({ type: 'get-state' }),
+      getUiSelection(),
+      sendBg({ type: 'get-active-tab' }),
+    ]).then(([state, selection, active]) => {
       if (disposed || state.type !== 'state') return;
       if (active.type === 'active-tab' && active.tabId >= 0) setTabId(active.tabId);
       if (selection.source) setSource(selection.source);
       if (selection.target) setTarget(selection.target);
-      const currentTabId = active.type === 'active-tab' && active.tabId >= 0 ? active.tabId : undefined;
+      const currentTabId =
+        active.type === 'active-tab' && active.tabId >= 0 ? active.tabId : undefined;
       const restored = restorePopupState(
         state.jobs,
         selection,
@@ -70,20 +75,24 @@ export default function App() {
       setMode(restored.mode);
       setStep(restored.kind === 'active' ? restored.step : 'setup');
       setJob(restored.kind === 'active' ? restored.job : undefined);
-      const restoredMatchingIds = restored.kind === 'active'
-        ? Object.entries(restored.job.amapPoiMatches ?? {}).filter(([, result]) => result.status === 'matching').map(([placeId]) => placeId)
-        : [];
+      const restoredMatchingIds =
+        restored.kind === 'active'
+          ? Object.entries(restored.job.amapPoiMatches ?? {})
+              .filter(([, result]) => result.status === 'matching')
+              .map(([placeId]) => placeId)
+          : [];
       setMatchingPlaceIds(new Set(restoredMatchingIds));
       setMatching(restoredMatchingIds.length > 0);
       setSelectionReady(true);
     });
-    return () => { disposed = true; };
+    return () => {
+      disposed = true;
+    };
   }, []);
   useEffect(() => {
     if (!selectionReady) return;
     void saveUiSelection({ source, target, mode });
   }, [source, target, mode, selectionReady]);
-
 
   useEffect(() => {
     if (!job || (job.status !== 'importing' && !matching)) return;
@@ -124,8 +133,10 @@ export default function App() {
     void refreshDetection();
   }, [source, target]);
 
-  const detectedTab = (provider: ProviderId): number | undefined => detected.find((t) => t.providerId === provider)?.tabId;
-  const isProviderLoggedIn = (provider: ProviderId): boolean | undefined => detected.find((t) => t.providerId === provider)?.loggedIn;
+  const detectedTab = (provider: ProviderId): number | undefined =>
+    detected.find((t) => t.providerId === provider)?.tabId;
+  const isProviderLoggedIn = (provider: ProviderId): boolean | undefined =>
+    detected.find((t) => t.providerId === provider)?.loggedIn;
 
   // 当前激活标签页对应的地图平台（仅当在地图页上时有效）
   const activeProvider = detected.find((d) => d.tabId === tabId)?.providerId;
@@ -134,12 +145,22 @@ export default function App() {
   const effectiveTarget = mode === 'import-file' && activeProvider ? activeProvider : target;
 
   const canStart = source !== target;
-  const previewRoutes = job?.items.filter((item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route') ?? [];
-  const activePreviewTab = previewTab === 'routes' && previewRoutes.length === 0 ? 'places' : previewTab;
+  const previewRoutes =
+    job?.items.filter(
+      (item): item is Extract<Job['items'][number], { kind: 'route' }> => item.kind === 'route',
+    ) ?? [];
+  const activePreviewTab =
+    previewTab === 'routes' && previewRoutes.length === 0 ? 'places' : previewTab;
   const targetCapabilities = job ? getAdapter(job.targetProvider).capabilities : undefined;
-  const reportRoutes = job?.items.filter((item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
-  const reportImportable = job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
-  const reportSkipped = job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ?? 0;
+  const reportRoutes =
+    job?.items.filter(
+      (item) => item.kind === 'route' && !targetCapabilities?.importKinds.includes(item.kind),
+    ).length ?? 0;
+  const reportImportable =
+    job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
+  const reportSkipped =
+    job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ??
+    0;
 
   async function newJob(): Promise<Job | undefined> {
     const res = await sendBg({
@@ -185,17 +206,19 @@ export default function App() {
   }
 
   function downloadItems(items: Job['items'], provider: ProviderId): string[] {
-    const exported = exportFormat === 'gpx'
-      ? exportGpx(items)
-      : exportFormat === 'kml'
-        ? exportKml(items)
-        : { text: serializeItems(items, provider), warnings: [] };
+    const exported =
+      exportFormat === 'gpx'
+        ? exportGpx(items)
+        : exportFormat === 'kml'
+          ? exportKml(items)
+          : { text: serializeItems(items, provider), warnings: [] };
     const extension = exportFormat === 'mapbridge' ? 'json' : exportFormat;
-    const mime = exportFormat === 'mapbridge'
-      ? 'application/json'
-      : exportFormat === 'gpx'
-        ? 'application/gpx+xml'
-        : 'application/vnd.google-earth.kml+xml';
+    const mime =
+      exportFormat === 'mapbridge'
+        ? 'application/json'
+        : exportFormat === 'gpx'
+          ? 'application/gpx+xml'
+          : 'application/vnd.google-earth.kml+xml';
     const blob = new Blob([exported.text], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -215,7 +238,14 @@ export default function App() {
     setExportedCount(0);
     setExportWarnings([]);
     try {
-      const res = await sendBg({ type: 'new-job', source: effectiveSource, target: effectiveSource, workflow: 'export', sourceTabId: detectedTab(effectiveSource) ?? tabId, ownerTabId: tabId });
+      const res = await sendBg({
+        type: 'new-job',
+        source: effectiveSource,
+        target: effectiveSource,
+        workflow: 'export',
+        sourceTabId: detectedTab(effectiveSource) ?? tabId,
+        ownerTabId: tabId,
+      });
       if (res.type !== 'job' || !res.job) {
         setError('无法创建导出任务');
         return;
@@ -255,8 +285,18 @@ export default function App() {
       const res = await sendBg({ type: 'undo-import', jobId: job.id, tabId });
       if (res.type === 'undo-result') {
         const data = res.data;
-        setJob({ ...job, report: { ...job.report!, undone: data.failed === 0, undoDeleted: data.deleted, undoFailed: data.failed } });
-        setUndoMsg(`已撤销导入 ${data.deleted} 条${data.failed > 0 ? `，${data.failed} 条失败` : ''}`);
+        setJob({
+          ...job,
+          report: {
+            ...job.report!,
+            undone: data.failed === 0,
+            undoDeleted: data.deleted,
+            undoFailed: data.failed,
+          },
+        });
+        setUndoMsg(
+          `已撤销导入 ${data.deleted} 条${data.failed > 0 ? `，${data.failed} 条失败` : ''}`,
+        );
       } else if (res.type === 'error') {
         setError(res.message);
       }
@@ -275,7 +315,7 @@ export default function App() {
     try {
       const text = await file.text();
       const parsed = parsePortableFile(text, effectiveTarget);
-      setFileWarnings('warnings' in parsed ? parsed.warnings ?? [] : []);
+      setFileWarnings('warnings' in parsed ? (parsed.warnings ?? []) : []);
       const source = 'provider' in parsed ? parsed.provider : undefined;
       const res = await sendBg({
         type: 'import-file',
@@ -333,9 +373,19 @@ export default function App() {
     }
   }
 
-  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab, phase: 'extract' | 'preview' | 'import' = 'preview'): Promise<void> {
+  async function savePreview(
+    places: Job['places'],
+    tab: Job['previewTab'] = previewTab,
+    phase: 'extract' | 'preview' | 'import' = 'preview',
+  ): Promise<void> {
     if (!job) return;
-    const res = await sendBg({ type: 'preview-update', jobId: job.id, places, previewTab: tab, phase });
+    const res = await sendBg({
+      type: 'preview-update',
+      jobId: job.id,
+      places,
+      previewTab: tab,
+      phase,
+    });
     if (res.type === 'job' && res.job) setJob(res.job);
   }
 
@@ -409,11 +459,16 @@ export default function App() {
     }
   }
 
-  async function selectAmapPoi(placeId: string, candidate?: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number]): Promise<void> {
+  async function selectAmapPoi(
+    placeId: string,
+    candidate?: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number],
+  ): Promise<void> {
     if (!job) return;
-    const res = await sendBg(candidate
-      ? { type: 'select-poi-match', jobId: job.id, placeId, candidate }
-      : { type: 'clear-poi-match', jobId: job.id, placeId });
+    const res = await sendBg(
+      candidate
+        ? { type: 'select-poi-match', jobId: job.id, placeId, candidate }
+        : { type: 'clear-poi-match', jobId: job.id, placeId },
+    );
     if (res.type === 'job') setJob(res.job);
     else if (res.type === 'error') setError(res.message);
   }
@@ -421,7 +476,11 @@ export default function App() {
   const [ver, setVer] = useState('');
   const dev = import.meta.env.DEV;
   useEffect(() => {
-    try { setVer(browser.runtime.getManifest().version); } catch { setVer('dev'); }
+    try {
+      setVer(browser.runtime.getManifest().version);
+    } catch {
+      setVer('dev');
+    }
   }, []);
 
   function switchMode(nextMode: 'migrate' | 'export' | 'import-file'): void {
@@ -434,61 +493,63 @@ export default function App() {
     }
   }
 
-  return <PopupView
-    providers={PROVIDERS}
-    selectableProviders={SELECTABLE_PROVIDERS}
-    providerName={providerName}
-    dev={dev}
-    ver={ver}
-    error={error}
-    mode={mode}
-    step={step}
-    switchMode={switchMode}
-    source={source}
-    target={target}
-    detected={detected}
-    isProviderLoggedIn={isProviderLoggedIn}
-    detecting={detecting}
-    refreshDetection={refreshDetection}
-    openPage={openPage}
-    canStart={canStart}
-    busy={busy}
-    newJob={newJob}
-    activeProvider={activeProvider}
-    exportFormat={exportFormat}
-    setExportFormat={setExportFormat}
-    startExport={startExport}
-    exportedCount={exportedCount}
-    exportWarnings={exportWarnings}
-    fileWarnings={fileWarnings}
-    onImportFile={onImportFile}
-    onSourceChange={setSource}
-    onTargetChange={setTarget}
-    onPreviewPlacesChange={setPreviewPlaces}
-    onStepChange={setStep}
-    cancelCurrentJob={cancelCurrentJob}
-    job={job}
-    targetCapabilities={targetCapabilities}
-    detectedTab={detectedTab}
-    refreshJob={refreshJob}
-    sourcePage={sourcePage}
-    targetPage={targetPage}
-    startExtract={startExtract}
-    previewRoutes={previewRoutes}
-    activePreviewTab={activePreviewTab}
-    previewTab={previewTab}
-    setPreviewTab={setPreviewTab}
-    previewPlaces={previewPlaces}
-    savePreview={savePreview}
-    matchingPlaceIds={matchingPlaceIds}
-    matching={matching}
-    startAmapMatch={startAmapMatch}
-    selectAmapPoi={selectAmapPoi}
-    reportImportable={reportImportable}
-    reportRoutes={reportRoutes}
-    startImport={startImport}
-    undoMsg={undoMsg}
-    reportSkipped={reportSkipped}
-    undoImport={undoImport}
-  />;
+  return (
+    <PopupView
+      providers={PROVIDERS}
+      selectableProviders={SELECTABLE_PROVIDERS}
+      providerName={providerName}
+      dev={dev}
+      ver={ver}
+      error={error}
+      mode={mode}
+      step={step}
+      switchMode={switchMode}
+      source={source}
+      target={target}
+      detected={detected}
+      isProviderLoggedIn={isProviderLoggedIn}
+      detecting={detecting}
+      refreshDetection={refreshDetection}
+      openPage={openPage}
+      canStart={canStart}
+      busy={busy}
+      newJob={newJob}
+      activeProvider={activeProvider}
+      exportFormat={exportFormat}
+      setExportFormat={setExportFormat}
+      startExport={startExport}
+      exportedCount={exportedCount}
+      exportWarnings={exportWarnings}
+      fileWarnings={fileWarnings}
+      onImportFile={onImportFile}
+      onSourceChange={setSource}
+      onTargetChange={setTarget}
+      onPreviewPlacesChange={setPreviewPlaces}
+      onStepChange={setStep}
+      cancelCurrentJob={cancelCurrentJob}
+      job={job}
+      targetCapabilities={targetCapabilities}
+      detectedTab={detectedTab}
+      refreshJob={refreshJob}
+      sourcePage={sourcePage}
+      targetPage={targetPage}
+      startExtract={startExtract}
+      previewRoutes={previewRoutes}
+      activePreviewTab={activePreviewTab}
+      previewTab={previewTab}
+      setPreviewTab={setPreviewTab}
+      previewPlaces={previewPlaces}
+      savePreview={savePreview}
+      matchingPlaceIds={matchingPlaceIds}
+      matching={matching}
+      startAmapMatch={startAmapMatch}
+      selectAmapPoi={selectAmapPoi}
+      reportImportable={reportImportable}
+      reportRoutes={reportRoutes}
+      startImport={startImport}
+      undoMsg={undoMsg}
+      reportSkipped={reportSkipped}
+      undoImport={undoImport}
+    />
+  );
 }

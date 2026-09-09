@@ -17,7 +17,8 @@ function asArray<T>(value: T | T[] | undefined): T[] {
 }
 
 function text(value: unknown): string {
-  if (value && typeof value === 'object' && '#text' in value) return text((value as Record<string, unknown>)['#text']);
+  if (value && typeof value === 'object' && '#text' in value)
+    return text((value as Record<string, unknown>)['#text']);
   return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
 }
 
@@ -32,13 +33,18 @@ function coordinates(value: unknown): { lng: number; lat: number } | null {
   return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
 }
 
-function collectKmlPlacemarks(value: unknown, result: Record<string, unknown>[] = []): Record<string, unknown>[] {
+function collectKmlPlacemarks(
+  value: unknown,
+  result: Record<string, unknown>[] = [],
+): Record<string, unknown>[] {
   if (Array.isArray(value)) {
     for (const entry of value) collectKmlPlacemarks(entry, result);
   } else if (value && typeof value === 'object') {
     for (const [key, entry] of Object.entries(value)) {
       if (key === 'Placemark') {
-        for (const placemark of asArray(entry as Record<string, unknown> | Record<string, unknown>[])) {
+        for (const placemark of asArray(
+          entry as Record<string, unknown> | Record<string, unknown>[],
+        )) {
           if (placemark && typeof placemark === 'object') result.push(placemark);
         }
       } else {
@@ -85,22 +91,31 @@ function parseGpx(raw: Record<string, unknown>, provider: ProviderId): PortableI
   const gpx = raw.gpx as Record<string, unknown> | undefined;
   const items: CanonicalPoi[] = [];
   const warnings: string[] = [];
-  for (const waypoint of asArray(gpx?.wpt as Record<string, unknown> | Record<string, unknown>[] | undefined)) {
+  for (const waypoint of asArray(
+    gpx?.wpt as Record<string, unknown> | Record<string, unknown>[] | undefined,
+  )) {
     const point = coordinates(`${text(waypoint['@_lon'])},${text(waypoint['@_lat'])}`);
     if (!point) {
       warnings.push('GPX 中有 waypoint 缺少有效坐标，已跳过');
       continue;
     }
     const extension = waypoint.extensions as Record<string, unknown> | undefined;
-    items.push(createPoi(
-      text(waypoint.name), point, text(waypoint.desc), provider, 'gpx', {
-        tags: extensionValue(extension, 'tags'), phone: extensionValue(extension, 'phone'), folder: extensionValue(extension, 'folder'),
-        identity: extensionValue(extension, 'identity'), sourceRecordId: extensionValue(extension, 'sourceRecordId'),
-      },
-    ));
+    items.push(
+      createPoi(text(waypoint.name), point, text(waypoint.desc), provider, 'gpx', {
+        tags: extensionValue(extension, 'tags'),
+        phone: extensionValue(extension, 'phone'),
+        folder: extensionValue(extension, 'folder'),
+        identity: extensionValue(extension, 'identity'),
+        sourceRecordId: extensionValue(extension, 'sourceRecordId'),
+      }),
+    );
   }
-  if (asArray(gpx?.rte as unknown).length > 0) warnings.push('GPX 中包含 Route，当前仅支持导入 waypoint，Route 已跳过');
-  if (items.length === 0) throw new Error(`没有可导入的 GPX waypoint${warnings.length ? `：${warnings.join('；')}` : ''}`);
+  if (asArray(gpx?.rte as unknown).length > 0)
+    warnings.push('GPX 中包含 Route，当前仅支持导入 waypoint，Route 已跳过');
+  if (items.length === 0)
+    throw new Error(
+      `没有可导入的 GPX waypoint${warnings.length ? `：${warnings.join('；')}` : ''}`,
+    );
   return { items, places: items.map(poiToPlace), warnings };
 }
 
@@ -113,20 +128,43 @@ function parseKml(raw: Record<string, unknown>, provider: ProviderId): PortableI
     const pointNode = placemark.Point as Record<string, unknown> | undefined;
     const point = coordinates(pointNode?.coordinates);
     if (!point) {
-      if (placemark.LineString) warnings.push('KML 中包含 LineString，当前仅支持导入 Point，路线已跳过');
+      if (placemark.LineString)
+        warnings.push('KML 中包含 LineString，当前仅支持导入 Point，路线已跳过');
       else warnings.push('KML 中有 Placemark 缺少有效 Point 坐标，已跳过');
       continue;
     }
-    const data = asArray(((placemark.ExtendedData as Record<string, unknown> | undefined)?.Data) as Record<string, unknown> | Record<string, unknown>[] | undefined);
+    const data = asArray(
+      (placemark.ExtendedData as Record<string, unknown> | undefined)?.Data as
+        | Record<string, unknown>
+        | Record<string, unknown>[]
+        | undefined,
+    );
     const metadata: Record<string, string | undefined> = {};
     for (const entry of data) {
       const key = text(entry['@_name']);
-      const value = text((entry.value as unknown));
-      if (key === 'tags' || key === 'phone' || key === 'folder' || key === 'identity' || key === 'sourceRecordId') metadata[key] = value;
+      const value = text(entry.value as unknown);
+      if (
+        key === 'tags' ||
+        key === 'phone' ||
+        key === 'folder' ||
+        key === 'identity' ||
+        key === 'sourceRecordId'
+      )
+        metadata[key] = value;
     }
-    items.push(createPoi(text(placemark.name), point, text(placemark.description), provider, 'kml', metadata));
+    items.push(
+      createPoi(
+        text(placemark.name),
+        point,
+        text(placemark.description),
+        provider,
+        'kml',
+        metadata,
+      ),
+    );
   }
-  if (items.length === 0) throw new Error(`没有可导入的 KML Point${warnings.length ? `：${warnings.join('；')}` : ''}`);
+  if (items.length === 0)
+    throw new Error(`没有可导入的 KML Point${warnings.length ? `：${warnings.join('；')}` : ''}`);
   return { items, places: items.map(poiToPlace), warnings };
 }
 
@@ -159,5 +197,7 @@ export function parsePortableImport(textValue: string, provider: ProviderId): Po
 }
 
 export function parsePortableFile(textValue: string, provider: ProviderId): PortableFileResult {
-  return textValue.trimStart().startsWith('<') ? parsePortableImport(textValue, provider) : parsePlacesFile(textValue);
+  return textValue.trimStart().startsWith('<')
+    ? parsePortableImport(textValue, provider)
+    : parsePlacesFile(textValue);
 }

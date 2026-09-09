@@ -1,5 +1,15 @@
-import type { CanonicalItem, CanonicalPlace, CanonicalPoi, MapBridgeDocument, ProviderId } from './model';
-import { CanonicalItem as CanonicalItemSchema, CanonicalPlace as CanonicalPlaceSchema, MapBridgeDocument as MapBridgeDocumentSchema } from './model';
+import type {
+  CanonicalItem,
+  CanonicalPlace,
+  CanonicalPoi,
+  MapBridgeDocument,
+  ProviderId,
+} from './model';
+import {
+  CanonicalItem as CanonicalItemSchema,
+  CanonicalPlace as CanonicalPlaceSchema,
+  MapBridgeDocument as MapBridgeDocumentSchema,
+} from './model';
 import { placeIdentity } from './dedup';
 
 export interface PlacesExport {
@@ -74,9 +84,11 @@ export function parseMapBridgeDocument(text: string): MapBridgeDocument {
   const result = MapBridgeDocumentSchema.safeParse(raw);
   if (!result.success) {
     const issue = result.error.issues[0];
-    throw new Error(issue?.path[0] === 'version'
-      ? `不支持的 MapBridge 文件版本：${String((raw as Record<string, unknown>)?.version ?? '')}`
-      : `MapBridge 文件格式不正确：${issue?.message ?? '字段缺失'}`);
+    throw new Error(
+      issue?.path[0] === 'version'
+        ? `不支持的 MapBridge 文件版本：${String((raw as Record<string, unknown>)?.version ?? '')}`
+        : `MapBridge 文件格式不正确：${issue?.message ?? '字段缺失'}`,
+    );
   }
   return result.data;
 }

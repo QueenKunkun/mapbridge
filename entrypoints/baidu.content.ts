@@ -34,7 +34,12 @@ export default defineContentScript({
         log('recv command, relay -> MAIN', request.command.type);
         window.postMessage(request.command, '*');
         if (request.command.type === 'ping' || request.command.type === 'whoami') {
-          const reply: BridgeReply = { mb: BRIDGE_CHANNEL, type: 'whoami', provider: 'baidu', loggedIn: isLoggedIn() };
+          const reply: BridgeReply = {
+            mb: BRIDGE_CHANNEL,
+            type: 'whoami',
+            provider: 'baidu',
+            loggedIn: isLoggedIn(),
+          };
           log('reply to background', reply);
           return Promise.resolve(reply);
         }

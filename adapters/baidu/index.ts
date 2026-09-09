@@ -1,5 +1,11 @@
 import { randomUUID } from '@/utils/uuid';
-import type { CanonicalItem, CanonicalPlace, CanonicalRoute, Collection, RouteStop } from '@/core/model';
+import type {
+  CanonicalItem,
+  CanonicalPlace,
+  CanonicalRoute,
+  Collection,
+  RouteStop,
+} from '@/core/model';
 import { Crs } from '@/core/model';
 import { placeIdentity, routeIdentity } from '@/core/dedup';
 import { migratePlaceToPoi } from '@/core/export';
@@ -36,7 +42,9 @@ function readMercator(raw: Record<string, unknown>): BaiduMercator | null {
     return Number.isFinite(n) ? n : NaN;
   };
 
-  const ext = pick(raw, [['extdata'], ['detail', 'data', 'extdata']]) as Record<string, unknown> | undefined;
+  const ext = pick(raw, [['extdata'], ['detail', 'data', 'extdata']]) as
+    | Record<string, unknown>
+    | undefined;
   const detailPoint = pick(raw, [
     ['sourcedata', 'ext', 'detail_info', 'point'],
     ['detail', 'data', 'sourcedata', 'ext', 'detail_info', 'point'],
@@ -104,7 +112,10 @@ function readFromContent(content: unknown): { address: string; phone: string } {
 
 function readAddress(raw: Record<string, unknown>): string {
   const content = readFromContent(
-    pick(raw, [['extdata', 'content'], ['detail', 'data', 'extdata', 'content']]),
+    pick(raw, [
+      ['extdata', 'content'],
+      ['detail', 'data', 'extdata', 'content'],
+    ]),
   );
   return (
     String(
@@ -124,7 +135,11 @@ function readTags(raw: Record<string, unknown>): string[] {
   const tags = pick(raw, [['tags'], ['detail', 'data', 'tags']]);
   if (Array.isArray(tags)) {
     return tags
-      .map((t) => (t && typeof t === 'object' && 'name' in t ? String((t as { name: unknown }).name) : String(t ?? '')))
+      .map((t) =>
+        t && typeof t === 'object' && 'name' in t
+          ? String((t as { name: unknown }).name)
+          : String(t ?? ''),
+      )
       .filter(Boolean);
   }
   return String(tags ?? '')
@@ -150,7 +165,10 @@ function readUid(raw: Record<string, unknown>): string {
 
 function readPhone(raw: Record<string, unknown>): string {
   const content = readFromContent(
-    pick(raw, [['extdata', 'content'], ['detail', 'data', 'extdata', 'content']]),
+    pick(raw, [
+      ['extdata', 'content'],
+      ['detail', 'data', 'extdata', 'content'],
+    ]),
   );
   return (
     String(
@@ -207,7 +225,10 @@ interface BaiduRouteNode {
   uid?: string;
 }
 
-function readRouteNode(extdata: Record<string, unknown>, key: 'sfavnode' | 'efavnode'): BaiduRouteNode | null {
+function readRouteNode(
+  extdata: Record<string, unknown>,
+  key: 'sfavnode' | 'efavnode',
+): BaiduRouteNode | null {
   const node = extdata[key];
   if (!node || typeof node !== 'object') return null;
   const record = node as Record<string, unknown>;
@@ -226,14 +247,37 @@ function readOptionalNumber(record: Record<string, unknown>, key: string): numbe
 function baiduRecordLabel(raw: unknown): string | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const record = raw as Record<string, unknown>;
-  const detail = record['detail'] && typeof record['detail'] === 'object' ? record['detail'] as Record<string, unknown> : undefined;
-  const data = detail?.['data'] && typeof detail['data'] === 'object' ? detail['data'] as Record<string, unknown> : record;
-  const ext = data['extdata'] && typeof data['extdata'] === 'object' ? data['extdata'] as Record<string, unknown> : undefined;
+  const detail =
+    record['detail'] && typeof record['detail'] === 'object'
+      ? (record['detail'] as Record<string, unknown>)
+      : undefined;
+  const data =
+    detail?.['data'] && typeof detail['data'] === 'object'
+      ? (detail['data'] as Record<string, unknown>)
+      : record;
+  const ext =
+    data['extdata'] && typeof data['extdata'] === 'object'
+      ? (data['extdata'] as Record<string, unknown>)
+      : undefined;
   const type = data['type'];
-  const name = ext?.['pathname'] ?? ext?.['name'] ?? record['name'];
-  const id = record['sid'] ?? record['cid'] ?? data['fid'];
-  const parts = [type != null ? `type:${String(type)}` : '', name ? String(name).trim() : '', id ? `ID:${String(id)}` : ''].filter(Boolean);
-  return parts.join(' · ') || undefined;
+  const start =
+    ext?.['sfavnode'] && typeof ext['sfavnode'] === 'object'
+      ? (ext['sfavnode'] as Record<string, unknown>)['name']
+      : undefined;
+  const end =
+    ext?.['efavnode'] && typeof ext['efavnode'] === 'object'
+      ? (ext['efavnode'] as Record<string, unknown>)['name']
+      : undefined;
+  const name =
+    ext?.['pathname'] ??
+    ext?.['name'] ??
+    record['name'] ??
+    (readName(record) || (start && end ? `${String(start)} → ${String(end)}` : undefined));
+  const trimmedName = name ? String(name).trim() : '';
+  if (trimmedName) {
+    return [type != null ? `type:${String(type)}` : '', trimmedName].filter(Boolean).join(' · ');
+  }
+  return type != null ? `未命名地点（类型 ${String(type)}）` : '未命名记录';
 }
 
 /** 将百度 type 20/21/22/23 路线收藏归一化为有序 stops，不将 stops 伪装成道路几何。 */
@@ -241,9 +285,8 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
   const detail = record['detail'];
-  const data = detail && typeof detail === 'object'
-    ? (detail as Record<string, unknown>)['data']
-    : record;
+  const data =
+    detail && typeof detail === 'object' ? (detail as Record<string, unknown>)['data'] : record;
   if (!data || typeof data !== 'object') return null;
   const routeData = data as Record<string, unknown>;
   const routeType = String(routeData['type'] ?? '');
@@ -275,7 +318,13 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
     name: pathname,
     stops: [toStop(start, 'start'), toStop(end, 'end')],
     // Baidu route favorite types identify the mode even when transkind is empty.
-    travelMode: ({ '20': 'driving', '21': 'transit', '22': 'walking', '23': 'cycling' } as Record<string, string>)[routeType] ?? routing.transitKind,
+    travelMode:
+      (
+        { '20': 'driving', '21': 'transit', '22': 'walking', '23': 'cycling' } as Record<
+          string,
+          string
+        >
+      )[routeType] ?? routing.transitKind,
     routing,
     source: {
       provider: 'baidu',
@@ -298,7 +347,12 @@ export const baiduAdapter: ProviderAdapter = {
   extractPage: 'https://map.baidu.com/fav/',
   importPage: 'https://map.baidu.com/fav/',
   crs: 'bd09mc',
-  capabilities: { canExtract: true, canImport: true, extractKinds: ['poi', 'route'], importKinds: ['poi', 'route'] },
+  capabilities: {
+    canExtract: true,
+    canImport: true,
+    extractKinds: ['poi', 'route'],
+    importKinds: ['poi', 'route'],
+  },
 
   normalize: normalizeBaidu,
 
@@ -316,7 +370,11 @@ export const baiduAdapter: ProviderAdapter = {
       const r = record as Record<string, unknown>;
       const detail = r['detail'] as Record<string, unknown> | undefined;
       if (r['action'] === 'del' || detail?.data === false) {
-        skipped.push({ index, reason: '源地图已标记为删除，已跳过', label: baiduRecordLabel(record) });
+        skipped.push({
+          index,
+          reason: '源地图已标记为删除，已跳过',
+          label: baiduRecordLabel(record),
+        });
         return;
       }
       const route = normalizeBaiduRoute(record);
@@ -326,7 +384,11 @@ export const baiduAdapter: ProviderAdapter = {
       }
       const place = normalizeBaidu(record);
       if (!place) {
-        skipped.push({ index, reason: '缺少名称或百度墨卡托坐标', label: baiduRecordLabel(record) });
+        skipped.push({
+          index,
+          reason: '缺少名称或百度墨卡托坐标',
+          label: baiduRecordLabel(record),
+        });
         return;
       }
       const dedupKey = `${place.name}|${place.wgs84.lng.toFixed(5)}|${place.wgs84.lat.toFixed(5)}`;
@@ -350,7 +412,10 @@ export const baiduAdapter: ProviderAdapter = {
     return { collection, items, places, skipped, rawCount: raw.records.length };
   },
 
-  buildImportPayload(places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown {
+  buildImportPayload(
+    places: CanonicalPlace[],
+    options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> },
+  ): unknown {
     return places.map((p) => {
       const native = options?.amapPoiResolutions?.[p.id];
       if (native?.poiid && native.location) {
@@ -378,7 +443,10 @@ export const baiduAdapter: ProviderAdapter = {
       };
       // 跨地图导入没有百度 POI uid，不能伪装成 type 10（百度原生 POI 收藏）。
       // 百度页面对无 uid 的地点使用 type 11，并将可显示的信息放入 content。
-      const content = [p.address ? `地址:${p.address}` : '', p.metadata.phone ? `电话:${p.metadata.phone}` : '']
+      const content = [
+        p.address ? `地址:${p.address}` : '',
+        p.metadata.phone ? `电话:${p.metadata.phone}` : '',
+      ]
         .filter(Boolean)
         .join('<br/>');
       if (content) extdata.content = content;
@@ -392,7 +460,11 @@ export const baiduAdapter: ProviderAdapter = {
     });
   },
 
-  buildImportItemsPayload(items: CanonicalItem[], places: CanonicalPlace[], options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> }): unknown[] {
+  buildImportItemsPayload(
+    items: CanonicalItem[],
+    places: CanonicalPlace[],
+    options?: { amapPoiResolutions?: Record<string, AmapPoiResolution> },
+  ): unknown[] {
     const payload = this.buildImportPayload(places, options) as unknown[];
     const routeTypes: Record<string, string> = {
       driving: '20',
@@ -449,7 +521,9 @@ export const baiduAdapter: ProviderAdapter = {
   },
 
   summarizeImportResult(result: RawImportResult) {
-    const raw = result.raw as { imported?: number; duplicates?: number; failed?: number } | undefined;
+    const raw = result.raw as
+      | { imported?: number; duplicates?: number; failed?: number }
+      | undefined;
     const imported = raw?.imported ?? (result.done ? 1 : 0);
     const failed = raw?.failed ?? (result.error ? 1 : 0);
     return {

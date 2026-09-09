@@ -21,8 +21,18 @@ const visitshareFav = {
   favdatas: {
     tag: { name: '咖啡店', status: '1' },
     fav: [
-      { name: 'Alpha Tech Park', bd_mercator_x: '11582672.01', bd_mercator_y: '3564275.74', tags: [{ name: '咖啡店' }] },
-      { name: 'Gamma Coffee', bd_mercator_x: '11582000.00', bd_mercator_y: '3563000.00', tags: [{ name: '咖啡店' }] },
+      {
+        name: 'Alpha Tech Park',
+        bd_mercator_x: '11582672.01',
+        bd_mercator_y: '3564275.74',
+        tags: [{ name: '咖啡店' }],
+      },
+      {
+        name: 'Gamma Coffee',
+        bd_mercator_x: '11582000.00',
+        bd_mercator_y: '3563000.00',
+        tags: [{ name: '咖啡店' }],
+      },
     ],
   },
 };
@@ -31,17 +41,150 @@ const favdataReal = {
   sync: {
     newdata: [
       {
-        sid: 's1', cid: 'c1', status: '100',
-        detail: { data: { type: '10', fid: 'f1', extdata: { name: 'Delta Seaside Hotel', content: '地址:No.1 Ocean Rd, Sanya<br/>电话:(0898)66600832', geoptx: '12192640.01', geopty: '2050703' } } },
-        action: 'add', ver: 'v1',
+        sid: 's1',
+        cid: 'c1',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            fid: 'f1',
+            extdata: {
+              name: 'Delta Seaside Hotel',
+              content: '地址:No.1 Ocean Rd, Sanya<br/>电话:(0898)66600832',
+              geoptx: '12192640.01',
+              geopty: '2050703',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
       },
-      { sid: 's2', cid: 'c2', status: '100', detail: { data: { type: '10', extdata: { name: 'Epsilon Resort', content: '地址:No.2 Bay Rd, Sanya<br/>电话:(0898)66601111', geoptx: '12190084.42', geopty: '2051648.76' } } }, action: 'add', ver: 'v1' },
-      { sid: 's5', cid: 'c5', status: '100', detail: { data: { type: '10', extdata: { name: 'Zeta Mountain Lodge', content: '地址:No.5 Hill Rd, Sanya', geoptx: '12187000.00', geopty: '2052500.00' } } }, action: 'add', ver: 'v1' },
-      { sid: 's6', cid: 'c6', status: '100', detail: { data: { type: '10', extdata: { name: 'Eta Plaza', content: '地址:No.6 Plaza St, Sanya', geoptx: '12184000.00', geopty: '2053000.00' } } }, action: 'add', ver: 'v1' },
-      { sid: 's7', cid: 'c7', status: '100', detail: { data: { type: '10', extdata: { name: 'Theta Garden', content: '地址:No.7 Garden Rd, Sanya', geoptx: '12181000.00', geopty: '2054000.00' } } }, action: 'add', ver: 'v1' },
-      { sid: 's8', cid: 'c8', status: '100', detail: { data: { type: '10', extdata: { name: 'Iota Mall', content: '地址:No.8 Mall Rd, Sanya', geoptx: '12178000.00', geopty: '2055000.00' } } }, action: 'add', ver: 'v1' },
-      { sid: 's9', cid: 'c9', status: '100', detail: { data: { type: '10', extdata: { name: 'Kappa Park', content: '地址:No.9 Park Rd, Sanya', geoptx: '12175000.00', geopty: '2056000.00' } } }, action: 'add', ver: 'v1' },
-      { sid: 's10', cid: 'c10', status: '100', detail: { data: { type: '10', extdata: { name: 'Lambda Bay', content: '地址:No.10 Bay Rd, Sanya', geoptx: '12172000.00', geopty: '2057000.00' } } }, action: 'add', ver: 'v1' },
+      {
+        sid: 's2',
+        cid: 'c2',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Epsilon Resort',
+              content: '地址:No.2 Bay Rd, Sanya<br/>电话:(0898)66601111',
+              geoptx: '12190084.42',
+              geopty: '2051648.76',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's5',
+        cid: 'c5',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Zeta Mountain Lodge',
+              content: '地址:No.5 Hill Rd, Sanya',
+              geoptx: '12187000.00',
+              geopty: '2052500.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's6',
+        cid: 'c6',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Eta Plaza',
+              content: '地址:No.6 Plaza St, Sanya',
+              geoptx: '12184000.00',
+              geopty: '2053000.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's7',
+        cid: 'c7',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Theta Garden',
+              content: '地址:No.7 Garden Rd, Sanya',
+              geoptx: '12181000.00',
+              geopty: '2054000.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's8',
+        cid: 'c8',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Iota Mall',
+              content: '地址:No.8 Mall Rd, Sanya',
+              geoptx: '12178000.00',
+              geopty: '2055000.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's9',
+        cid: 'c9',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Kappa Park',
+              content: '地址:No.9 Park Rd, Sanya',
+              geoptx: '12175000.00',
+              geopty: '2056000.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
+      {
+        sid: 's10',
+        cid: 'c10',
+        status: '100',
+        detail: {
+          data: {
+            type: '10',
+            extdata: {
+              name: 'Lambda Bay',
+              content: '地址:No.10 Bay Rd, Sanya',
+              geoptx: '12172000.00',
+              geopty: '2057000.00',
+            },
+          },
+        },
+        action: 'add',
+        ver: 'v1',
+      },
       { action: 'del', sid: 's3', detail: { data: false } },
       { action: 'del', sid: 's4', detail: { data: false } },
     ],
@@ -67,8 +210,22 @@ const routeFavorite = {
         transkind: 'driving',
         pagenumber: 0,
         busidx: 0,
-        sfavnode: { cityid: 1, geoptx: 11582672.01, geopty: 3564275.74, uid: 'start-1', name: '起点', type: 1 },
-        efavnode: { cityid: 1, geoptx: 11583000.01, geopty: 3564500.74, uid: 'end-1', name: '终点', type: 1 },
+        sfavnode: {
+          cityid: 1,
+          geoptx: 11582672.01,
+          geopty: 3564275.74,
+          uid: 'start-1',
+          name: '起点',
+          type: 1,
+        },
+        efavnode: {
+          cityid: 1,
+          geoptx: 11583000.01,
+          geopty: 3564500.74,
+          uid: 'end-1',
+          name: '终点',
+          type: 1,
+        },
       },
     },
   },
@@ -79,8 +236,22 @@ const routeAddPayload = {
   plateform: 3,
   fromapp: '百度地图',
   extdata: {
-    sfavnode: { cityid: 1, geoptx: 11582672.01, geopty: 3564275.74, uid: 'start-add', name: '起点测试', type: 1 },
-    efavnode: { cityid: 1, geoptx: 11583000.01, geopty: 3564500.74, uid: 'end-add', name: '终点测试', type: 1 },
+    sfavnode: {
+      cityid: 1,
+      geoptx: 11582672.01,
+      geopty: 3564275.74,
+      uid: 'start-add',
+      name: '起点测试',
+      type: 1,
+    },
+    efavnode: {
+      cityid: 1,
+      geoptx: 11583000.01,
+      geopty: 3564500.74,
+      uid: 'end-add',
+      name: '终点测试',
+      type: 1,
+    },
     pathname: '自驾路线：起点测试-终点测试',
     pathtype: 0,
     plankind: 0,
@@ -140,6 +311,16 @@ describe('baidu adapter', () => {
     expect(result.skipped[0]!.label).toBe('无名点');
   });
 
+  it('uses meaningful warning labels instead of internal record ids', () => {
+    const result = baiduAdapter.buildExtractResult({
+      provider: 'baidu',
+      records: [{ type: '10', name: '示例地点', sid: 'internal-record-id' }],
+      exhausted: true,
+    });
+    expect(result.skipped[0]!.label).toBe('type:10 · 示例地点');
+    expect(result.skipped[0]!.label).not.toContain('internal-record-id');
+  });
+
   it('deduplicates identical name+coords', () => {
     const record = shareItems[0]!;
     const result = baiduAdapter.buildExtractResult({
@@ -160,7 +341,12 @@ describe('baidu adapter', () => {
       note: '',
       tags: ['咖啡店'],
       wgs84: { lng: 104.038906, lat: 30.637465 },
-      source: { provider: 'baidu' as const, crs: 'bd09mc' as const, lng: 11582672.01, lat: 3564275.74 },
+      source: {
+        provider: 'baidu' as const,
+        crs: 'bd09mc' as const,
+        lng: 11582672.01,
+        lat: 3564275.74,
+      },
       metadata: {},
     };
     const payloads = baiduAdapter.buildImportPayload([place]) as Array<Record<string, unknown>>;
@@ -222,18 +408,37 @@ describe('baidu adapter', () => {
       ['walking', '22'],
       ['cycling', '23'],
     ] as const;
-    const items = modes.map(([travelMode]) => ({ ...sourceRoute, travelMode, name: `${travelMode} route` }));
-    const payload = baiduAdapter.buildImportItemsPayload!(items, []) as Array<Record<string, unknown>>;
+    const items = modes.map(([travelMode]) => ({
+      ...sourceRoute,
+      travelMode,
+      name: `${travelMode} route`,
+    }));
+    const payload = baiduAdapter.buildImportItemsPayload!(items, []) as Array<
+      Record<string, unknown>
+    >;
     expect(payload).toHaveLength(4);
-    expect(payload.map((item) => (item as Record<string, unknown>).type)).toEqual(['20', '21', '22', '23']);
-    expect((payload[0] as Record<string, unknown>).extdata).toMatchObject({ pathname: 'driving route', wp: [] });
+    expect(payload.map((item) => (item as Record<string, unknown>).type)).toEqual([
+      '20',
+      '21',
+      '22',
+      '23',
+    ]);
+    expect((payload[0] as Record<string, unknown>).extdata).toMatchObject({
+      pathname: 'driving route',
+      wp: [],
+    });
   });
 
   it('builds a native Baidu POI payload when a search match is selected', () => {
     const place = normalizeBaidu(shareItems[0])!;
     const payload = baiduAdapter.buildImportPayload([place], {
       amapPoiResolutions: {
-        [place.id]: { poiid: 'native-uid', name: 'Alpha Tech Park', location: place.wgs84, cityCode: '286' },
+        [place.id]: {
+          poiid: 'native-uid',
+          name: 'Alpha Tech Park',
+          location: place.wgs84,
+          cityCode: '286',
+        },
       },
     }) as Array<Record<string, unknown>>;
     expect(payload[0]).toMatchObject({ type: '10', sourceid: 'native-uid' });
@@ -249,7 +454,11 @@ describe('baidu adapter', () => {
   });
 
   it('includes confirmed routes in unified extraction items while keeping POI places compatible', () => {
-    const result = baiduAdapter.buildExtractResult({ provider: 'baidu', records: [routeFavorite, shareItems[0]!], exhausted: true });
+    const result = baiduAdapter.buildExtractResult({
+      provider: 'baidu',
+      records: [routeFavorite, shareItems[0]!],
+      exhausted: true,
+    });
     expect(result.items.map((item) => item.kind)).toEqual(['route', 'poi']);
     expect(result.places).toHaveLength(1);
     expect(result.collection.placeCount).toBe(2);
@@ -257,7 +466,10 @@ describe('baidu adapter', () => {
 
   it('rejects a type 20 route without a valid endpoint', () => {
     const invalid = structuredClone(routeFavorite) as Record<string, unknown>;
-    (((invalid.detail as Record<string, unknown>).data as Record<string, unknown>).extdata as Record<string, unknown>).efavnode = {};
+    (
+      ((invalid.detail as Record<string, unknown>).data as Record<string, unknown>)
+        .extdata as Record<string, unknown>
+    ).efavnode = {};
     expect(normalizeBaiduRoute(invalid)).toBeNull();
   });
 

@@ -1,4 +1,8 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 :root {
   --bg: #16161c;
@@ -25,7 +29,11 @@ body {
   min-height: 100vh;
 }
 
-.options-root { max-width: 100%; margin: 0 auto; padding: 0 16px 40px; }
+.options-root {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 16px 40px;
+}
 
 .options-header {
   display: flex;
@@ -36,9 +44,23 @@ body {
   margin-bottom: 28px;
 }
 
-.options-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.1px; }
-.options-version { font-size: 10px; color: var(--text-faint); opacity: 0.6; margin-left: -4px; }
-.options-subtitle { font-size: 14px; color: var(--text-subtle); margin-left: auto; }
+.options-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.1px;
+}
+.options-version {
+  font-size: 10px;
+  color: var(--text-faint);
+  opacity: 0.6;
+  margin-left: -4px;
+}
+.options-subtitle {
+  font-size: 14px;
+  color: var(--text-subtle);
+  margin-left: auto;
+}
 
 .dev-badge {
   font-size: 11px;
@@ -97,7 +119,9 @@ body {
   font-size: 13px;
   color: var(--text-muted);
   text-decoration: none;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   cursor: pointer;
 }
 
@@ -154,8 +178,15 @@ body {
     border-bottom: 1px solid var(--border);
     margin-bottom: 8px;
   }
-  .sidebar-group { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-  .sidebar-links { flex-direction: row; flex-wrap: wrap; }
+  .sidebar-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .sidebar-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 }
 
 /* ── 表单控件 ── */
@@ -184,9 +215,13 @@ body {
   transition: border-color 0.15s;
 }
 
-.field input:focus { border-color: var(--accent); }
+.field input:focus {
+  border-color: var(--accent);
+}
 
-.field input::placeholder { color: var(--text-faint); }
+.field input::placeholder {
+  color: var(--text-faint);
+}
 
 .check {
   display: flex;
@@ -198,7 +233,9 @@ body {
   user-select: none;
 }
 
-.check input { accent-color: var(--accent); }
+.check input {
+  accent-color: var(--accent);
+}
 
 /* ── 按钮 ── */
 button {
@@ -209,7 +246,10 @@ button {
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
 button.primary {
@@ -219,7 +259,10 @@ button.primary {
   font-weight: 600;
 }
 
-button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
 
 button.ghost {
   background: transparent;
@@ -228,7 +271,10 @@ button.ghost {
   padding: 4px 10px;
 }
 
-button.ghost:hover { border-color: var(--accent); color: var(--text); }
+button.ghost:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
 
 button.danger {
   background: transparent;
@@ -237,9 +283,15 @@ button.danger {
   font-weight: 600;
 }
 
-button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: var(--danger); }
+button.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: var(--danger);
+}
 
-button.danger:disabled { opacity: 0.5; cursor: default; }
+button.danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
 /* ── 历史任务表格 ── */
 .empty {
@@ -253,7 +305,8 @@ table {
   font-size: 13px;
 }
 
-th, td {
+th,
+td {
   text-align: left;
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
@@ -265,7 +318,9 @@ th {
   font-size: 12px;
 }
 
-tbody tr:hover { background: var(--bg-overlay); }
+tbody tr:hover {
+  background: var(--bg-overlay);
+}
 
 .badge {
   display: inline-block;
@@ -324,7 +379,9 @@ tbody tr:hover { background: var(--bg-overlay); }
   font-size: 12px;
 }
 
-.cap { color: var(--text-subtle); }
+.cap {
+  color: var(--text-subtle);
+}
 
 /* ── 开发工具 ── */
 .dev-log {
@@ -347,13 +404,19 @@ tbody tr:hover { background: var(--bg-overlay); }
   height: 8px;
 }
 
-::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-muted);
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover { background: var(--border); }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
 
-::-webkit-scrollbar-corner { background: var(--bg); }
+::-webkit-scrollbar-corner {
+  background: var(--bg);
+}

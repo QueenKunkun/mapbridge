@@ -20,7 +20,9 @@ export type AmapPoiMatch =
   | { status: 'ambiguous' | 'not-found'; candidates: AmapPoiCandidate[]; reason?: string };
 
 /** Convert a matcher result to the compact record persisted by the background job. */
-export function serializeAmapPoiMatch(match: AmapPoiMatch): Omit<AmapPoiMatchRecord, 'status'> & { status: Exclude<AmapPoiMatchStatus, 'idle' | 'matching'> } {
+export function serializeAmapPoiMatch(match: AmapPoiMatch): Omit<AmapPoiMatchRecord, 'status'> & {
+  status: Exclude<AmapPoiMatchStatus, 'idle' | 'matching'>;
+} {
   const candidates = match.candidates.slice(0, 5).map((candidate) => ({
     poiid: candidate.poiid,
     name: candidate.name,
@@ -40,7 +42,7 @@ export function serializeAmapPoiMatch(match: AmapPoiMatch): Omit<AmapPoiMatchRec
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
 }
 
 function readString(record: Record<string, unknown>, ...keys: string[]): string {
@@ -58,7 +60,8 @@ function readLocation(record: Record<string, unknown>): LngLat | undefined {
     const nested = nestedLocation as Record<string, unknown>;
     const nestedLng = Number(nested.lng ?? nested.lon ?? nested.longitude ?? nested.x);
     const nestedLat = Number(nested.lat ?? nested.latitude ?? nested.y);
-    if (Number.isFinite(nestedLng) && Number.isFinite(nestedLat)) return gcj02ToWgs84(nestedLng, nestedLat);
+    if (Number.isFinite(nestedLng) && Number.isFinite(nestedLat))
+      return gcj02ToWgs84(nestedLng, nestedLat);
   }
   const location = readString(record, 'location', 'locationStr', 'lonlat');
   if (location) {
@@ -103,9 +106,8 @@ function levenshtein(a: string, b: string): number {
     row[0] = i;
     for (let j = 1; j <= b.length; j++) {
       const previous = row[j]!;
-      row[j] = a[i - 1] === b[j - 1]
-        ? diagonal
-        : Math.min(row[j]! + 1, row[j - 1]! + 1, diagonal + 1);
+      row[j] =
+        a[i - 1] === b[j - 1] ? diagonal : Math.min(row[j]! + 1, row[j - 1]! + 1, diagonal + 1);
       diagonal = previous;
     }
   }
@@ -125,13 +127,17 @@ function distanceMeters(a: LngLat, b: LngLat): number {
   const rad = Math.PI / 180;
   const dLat = (b.lat - a.lat) * rad;
   const dLng = (b.lng - a.lng) * rad;
-  const h = Math.sin(dLat / 2) ** 2
-    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
   return 6_371_000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
 /** Extract the SSR search result list without depending on provider response wrappers elsewhere. */
-export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace): AmapPoiCandidate[] {
+export function parseAmapPoiCandidates(
+  response: unknown,
+  source: CanonicalPlace,
+): AmapPoiCandidate[] {
   const root = asRecord(response);
   const list = findCandidateList(root);
   if (!Array.isArray(list)) return [];
@@ -145,17 +151,19 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
     if (!poiid || !name || !location) return [];
     const district = readString(record, 'district_name', 'districtName');
     const city = readString(record, 'cityname', 'city_name', 'cityName', 'city');
-    return [{
-      poiid,
-      name,
-      address: readString(record, 'address', 'addr') || [district, city].filter(Boolean).join(''),
-      location,
-      cityCode: readString(record, 'adcode', 'citycode', 'city_code') || undefined,
-      cityName: city || undefined,
-      adcode: readString(record, 'adcode') || undefined,
-      distanceMeters: distanceMeters(source.wgs84, location),
-      nameScore: nameScore(source.name, name),
-    }];
+    return [
+      {
+        poiid,
+        name,
+        address: readString(record, 'address', 'addr') || [district, city].filter(Boolean).join(''),
+        location,
+        cityCode: readString(record, 'adcode', 'citycode', 'city_code') || undefined,
+        cityName: city || undefined,
+        adcode: readString(record, 'adcode') || undefined,
+        distanceMeters: distanceMeters(source.wgs84, location),
+        nameScore: nameScore(source.name, name),
+      },
+    ];
   });
 }
 
@@ -169,7 +177,9 @@ export function chooseAmapPoiMatch(
     .filter((candidate) => candidate.distanceMeters <= maxDistance && candidate.nameScore >= 0.85)
     .sort((a, b) => a.distanceMeters - b.distanceMeters || b.nameScore - a.nameScore);
   if (nearby.length === 0) {
-    const ranked = [...candidates].sort((a, b) => a.distanceMeters - b.distanceMeters || b.nameScore - a.nameScore);
+    const ranked = [...candidates].sort(
+      (a, b) => a.distanceMeters - b.distanceMeters || b.nameScore - a.nameScore,
+    );
     const best = ranked[0];
     const reason = !best
       ? '搜索接口没有返回可解析的 POI 候选'
@@ -178,8 +188,16 @@ export function chooseAmapPoiMatch(
   }
   const first = nearby[0]!;
   const second = nearby[1];
-  if (second && Math.abs(second.distanceMeters - first.distanceMeters) < 20 && second.nameScore >= first.nameScore - 0.03) {
-    return { status: 'ambiguous', candidates: nearby.slice(0, 5), reason: '存在距离和名称相似度都接近的多个候选' };
+  if (
+    second &&
+    Math.abs(second.distanceMeters - first.distanceMeters) < 20 &&
+    second.nameScore >= first.nameScore - 0.03
+  ) {
+    return {
+      status: 'ambiguous',
+      candidates: nearby.slice(0, 5),
+      reason: '存在距离和名称相似度都接近的多个候选',
+    };
   }
   return { status: 'matched', candidate: first, candidates: nearby.slice(0, 5) };
 }

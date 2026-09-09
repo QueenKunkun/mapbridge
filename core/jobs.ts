@@ -54,7 +54,13 @@ export interface AmapPoiResolution {
   address?: string;
 }
 
-export type AmapPoiMatchStatus = 'idle' | 'matching' | 'matched' | 'not-found' | 'ambiguous' | 'failed';
+export type AmapPoiMatchStatus =
+  | 'idle'
+  | 'matching'
+  | 'matched'
+  | 'not-found'
+  | 'ambiguous'
+  | 'failed';
 
 export interface AmapPoiCandidateSummary {
   poiid: string;
@@ -121,14 +127,18 @@ export interface Job {
   error?: string;
 }
 
-type PersistedJob = Omit<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>
-  & Partial<Pick<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
+type PersistedJob = Omit<
+  Job,
+  'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'
+> &
+  Partial<Pick<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
 
 /** Fill fields introduced after the first persisted Job format. */
 export function hydrateJob(job: PersistedJob): Job {
   return {
     ...job,
-    workflow: job.workflow ?? (job.sourceProvider === job.targetProvider ? 'import-file' : 'migrate'),
+    workflow:
+      job.workflow ?? (job.sourceProvider === job.targetProvider ? 'import-file' : 'migrate'),
     items: job.items ?? job.places.map(migratePlaceToPoi),
     warnings: job.warnings ?? [],
     extractionSkipped: job.extractionSkipped ?? [],
@@ -136,7 +146,11 @@ export function hydrateJob(job: PersistedJob): Job {
   };
 }
 
-export function createJob(sourceProvider: ProviderId, targetProvider: ProviderId, workflow: JobWorkflow = 'migrate'): Job {
+export function createJob(
+  sourceProvider: ProviderId,
+  targetProvider: ProviderId,
+  workflow: JobWorkflow = 'migrate',
+): Job {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
@@ -183,25 +197,38 @@ export function applyExtractionItems(
   };
 }
 
-export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTab?: 'places' | 'routes', phase: JobPhase = 'preview'): Job {
+export function applyPreviewPlaces(
+  job: Job,
+  places: CanonicalPlace[],
+  previewTab?: 'places' | 'routes',
+  phase: JobPhase = 'preview',
+): Job {
   const nextPlaces = new Map(places.map((place) => [place.id, place]));
   const previousPlaces = new Map(job.places.map((place) => [place.id, place]));
   const unchanged = (placeId: string): boolean => {
     const previous = previousPlaces.get(placeId);
     const next = nextPlaces.get(placeId);
-    return Boolean(previous && next
-      && previous.name === next.name
-      && previous.address === next.address
-      && previous.wgs84.lng === next.wgs84.lng
-      && previous.wgs84.lat === next.wgs84.lat);
+    return Boolean(
+      previous &&
+        next &&
+        previous.name === next.name &&
+        previous.address === next.address &&
+        previous.wgs84.lng === next.wgs84.lng &&
+        previous.wgs84.lat === next.wgs84.lat,
+    );
   };
-  const preservedResolutions = Object.fromEntries(Object.entries(job.amapPoiResolutions ?? {}).filter(([placeId]) => unchanged(placeId)));
-  const preservedMatches = Object.fromEntries(Object.entries(job.amapPoiMatches ?? {}).filter(([placeId]) => unchanged(placeId)));
+  const preservedResolutions = Object.fromEntries(
+    Object.entries(job.amapPoiResolutions ?? {}).filter(([placeId]) => unchanged(placeId)),
+  );
+  const preservedMatches = Object.fromEntries(
+    Object.entries(job.amapPoiMatches ?? {}).filter(([placeId]) => unchanged(placeId)),
+  );
   return {
     ...job,
     items: [...job.items.filter((item) => item.kind !== 'poi'), ...places.map(migratePlaceToPoi)],
     places,
-    amapPoiResolutions: Object.keys(preservedResolutions).length > 0 ? preservedResolutions : undefined,
+    amapPoiResolutions:
+      Object.keys(preservedResolutions).length > 0 ? preservedResolutions : undefined,
     amapPoiMatches: Object.keys(preservedMatches).length > 0 ? preservedMatches : undefined,
     previewTab: previewTab ?? job.previewTab,
     phase,
@@ -212,7 +239,10 @@ export function applyPreviewPlaces(job: Job, places: CanonicalPlace[], previewTa
 }
 
 /** Apply a preview edit; changing the name invalidates a derived canonical identity. */
-export function updatePreviewPlace(place: CanonicalPlace, patch: Partial<CanonicalPlace>): CanonicalPlace {
+export function updatePreviewPlace(
+  place: CanonicalPlace,
+  patch: Partial<CanonicalPlace>,
+): CanonicalPlace {
   return {
     ...place,
     ...patch,
@@ -252,10 +282,15 @@ export function applyAmapPoiMatchProgress(
   },
 ): Job {
   const matches = { ...(job.amapPoiMatches ?? {}) };
-  if (update.currentPlaceId) matches[update.currentPlaceId] = { ...(matches[update.currentPlaceId] ?? {}), status: 'matching' };
+  if (update.currentPlaceId)
+    matches[update.currentPlaceId] = {
+      ...(matches[update.currentPlaceId] ?? {}),
+      status: 'matching',
+    };
   if (update.completedPlaceId && update.match) matches[update.completedPlaceId] = update.match;
   const resolutions = { ...(job.amapPoiResolutions ?? {}) };
-  if (update.completedPlaceId && update.resolution) resolutions[update.completedPlaceId] = update.resolution;
+  if (update.completedPlaceId && update.resolution)
+    resolutions[update.completedPlaceId] = update.resolution;
   return {
     ...job,
     amapPoiMatches: matches,

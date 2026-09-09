@@ -32,7 +32,9 @@ const route: CanonicalItem = {
 describe('portable exporters', () => {
   it('exports POI as GPX waypoint with escaped content and metadata extensions', () => {
     const result = exportGpx([poi]);
-    expect(result.warnings).toContain('GPX 导出无法完整保留 POI 内部 id，未映射的 metadata 也可能丢失');
+    expect(result.warnings).toContain(
+      'GPX 导出无法完整保留 POI 内部 id，未映射的 metadata 也可能丢失',
+    );
     expect(result.text).toContain('<wpt lat="30" lon="104">');
     expect(result.text).toContain('A &amp; B &lt;测试&gt;');
     expect(result.text).toContain('<mapbridge:tags>food;成都</mapbridge:tags>');
@@ -41,7 +43,9 @@ describe('portable exporters', () => {
 
   it('exports POI as KML placemark with ExtendedData', () => {
     const result = exportKml([poi]);
-    expect(result.warnings).toContain('KML 导出无法完整保留 POI 内部 id，未映射的 metadata 也可能丢失');
+    expect(result.warnings).toContain(
+      'KML 导出无法完整保留 POI 内部 id，未映射的 metadata 也可能丢失',
+    );
     expect(result.text).toContain('<Placemark>');
     expect(result.text).toContain('<coordinates>104,30,0</coordinates>');
     expect(result.text).toContain('<Data name="sourceRecordId"><value>source-1</value></Data>');
@@ -55,12 +59,16 @@ describe('portable exporters', () => {
 
   it('exports Route stops as GPX rte and KML LineString', () => {
     const gpx = exportGpx([route]);
-    expect(gpx.warnings).toContain('GPX 导出会将 Route 转为 stops/线段，无法保留内部 id、routing、source 和 metadata');
+    expect(gpx.warnings).toContain(
+      'GPX 导出会将 Route 转为 stops/线段，无法保留内部 id、routing、source 和 metadata',
+    );
     expect(gpx.text).toContain('<rte>');
     expect(gpx.text).toContain('<rtept lat="30" lon="104"><name>Start</name></rtept>');
 
     const kml = exportKml([route]);
-    expect(kml.warnings).toContain('KML 导出会将 Route 转为 stops/线段，无法保留内部 id、routing、source 和 metadata');
+    expect(kml.warnings).toContain(
+      'KML 导出会将 Route 转为 stops/线段，无法保留内部 id、routing、source 和 metadata',
+    );
     expect(kml.text).toContain('<LineString>');
     expect(kml.text).toContain('<coordinates>104,30,0 105,31,0</coordinates>');
   });
