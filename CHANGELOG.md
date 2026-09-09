@@ -18,6 +18,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Routed legacy Amap driving, transit, and walking favorites through the compatible sync API during re-import.
 - Used the selected native Amap POI's coordinates for imports and skipped an existing favorite when its native POI ID already exists on the target map.
 - Improved Amap POI search parsing and added a fallback search when the nearby search returns no parseable candidates.
+- Accepted additional Amap suggestion POI ID and entrance-coordinate fields so returned suggestions are not incorrectly shown as zero candidates.
 - Improved Amap duplicate matching for small coordinate conversion differences and exposed HTTP status details for Route sync failures.
 - Added a configurable distance tolerance in meters for duplicate detection on supported map providers, with a safe default and maximum.
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.

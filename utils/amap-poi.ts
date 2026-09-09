@@ -47,8 +47,8 @@ function readLocation(record: Record<string, unknown>): LngLat | undefined {
   const lng = Number(record.longitude ?? record.lon ?? record.lng);
   const lat = Number(record.latitude ?? record.lat);
   if (Number.isFinite(lng) && Number.isFinite(lat)) return gcj02ToWgs84(lng, lat);
-  const x = Number(record.x);
-  const y = Number(record.y);
+  const x = Number(record.x ?? record.x_entr ?? record.longitude ?? record.lon ?? record.lng);
+  const y = Number(record.y ?? record.y_entr ?? record.latitude ?? record.lat);
   return Number.isFinite(x) && Number.isFinite(y) ? gcj02ToWgs84(x, y) : undefined;
 }
 
@@ -111,8 +111,8 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
   return list.flatMap((value) => {
     const record = unwrapCandidate(value);
     if (!record) return [];
-    const poiid = readString(record, 'poiid', 'id', 'uid');
-    const name = readString(record, 'name', 'title');
+    const poiid = readString(record, 'poiid', 'poi_id', 'poiId', 'id', 'uid');
+    const name = readString(record, 'name', 'name_ch', 'title');
     const location = readLocation(record);
     if (!poiid || !name || !location) return [];
     const district = readString(record, 'district_name', 'districtName');

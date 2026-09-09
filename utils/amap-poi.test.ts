@@ -118,4 +118,27 @@ describe('Amap POI matching', () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0]!.poiid).toBe('B-HOUSE');
   });
+
+  it('parses tip candidates that expose entrance coordinates instead of x/y', () => {
+    const candidates = parseAmapPoiCandidates({
+      data: {
+        result: 'true',
+        total: 10,
+        tip_list: [{ tip: {
+          id: 'B-HOUSE-ENTRANCE',
+          name: '住建佳苑',
+          x_entr: '116.3438',
+          y_entr: '35.0702',
+          city_name: '济宁市',
+        } }],
+      },
+      status: '1',
+    }, {
+      ...source,
+      name: '住建佳苑',
+      wgs84: { lng: 116.3438, lat: 35.0702 },
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]!.poiid).toBe('B-HOUSE-ENTRANCE');
+  });
 });
