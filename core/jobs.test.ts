@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { migratePlaceToPoi } from '@/core/export';
-import { applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, previewPreviousStep, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
+import { applyAmapPoiMatchProgress, applyExtractionItems, applyPreviewPlaces, createJob, finalizeImport, hydrateJob, previewPreviousStep, progressImport, startImport, updatePreviewPlace } from '@/core/jobs';
 import type { CanonicalItem, CanonicalPlace } from '@/core/model';
 import { restorePopupState } from '@/core/popup-state';
 
@@ -74,6 +74,22 @@ describe('core/jobs unified items', () => {
       amapPoiMatches: { 'poi-1': { status: 'not-found' } },
     });
     expect(hydrated.amapPoiMatches?.['poi-1']?.status).toBe('not-found');
+  });
+
+  it('updates only the current POI match row as matching and completes rows individually', () => {
+    const job = createJob('baidu', 'amap');
+    const first = applyAmapPoiMatchProgress(job, { currentPlaceId: 'poi-1', processed: 0, total: 2 });
+    expect(first.amapPoiMatches?.['poi-1']?.status).toBe('matching');
+    expect(first.amapPoiMatches?.['poi-2']).toBeUndefined();
+    const completed = applyAmapPoiMatchProgress(first, {
+      completedPlaceId: 'poi-1',
+      match: { status: 'matched', candidates: [] },
+      resolution: { poiid: 'amap-1' },
+      processed: 1,
+      total: 2,
+    });
+    expect(completed.amapPoiMatches?.['poi-1']?.status).toBe('matched');
+    expect(completed.amapPoiResolutions?.['poi-1']?.poiid).toBe('amap-1');
   });
 
   it('invalidates a POI match when the preview record changes', () => {

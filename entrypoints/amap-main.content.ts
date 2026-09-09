@@ -186,6 +186,7 @@ export default defineContentScript({
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' } });
       for (let index = 0; index < places.length; index++) {
         const place = places[index]!;
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { currentPlaceId: place.id, processed: index, total: places.length, message: `匹配高德 POI：${index + 1} / ${places.length}` } });
         const useSsrFirst = location.pathname.startsWith('/ssr');
         const searchers = useSsrFirst ? [searchAmapSsr, searchAmapSdk] : [searchAmapSdk, searchAmapSsr];
         for (const search of searchers) {
@@ -210,7 +211,14 @@ export default defineContentScript({
           }
         }
         if (!matches[place.id]) matches[place.id] = { status: 'failed', error: '高德 POI 搜索失败' };
-        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: { processed: index + 1, total: places.length, message: `匹配高德 POI：${index + 1} / ${places.length}` } });
+        postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-progress', data: {
+          completedPlaceId: place.id,
+          match: matches[place.id],
+          resolution: resolutions[place.id],
+          processed: index + 1,
+          total: places.length,
+          message: `匹配高德 POI：${index + 1} / ${places.length}`,
+        } });
         if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
       postEvent({ mb: BRIDGE_CHANNEL, type: 'poi-match-result', data: { provider: 'amap', resolutions, matches, done: true } });

@@ -3,7 +3,7 @@ import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
 import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, clearActiveJobId, clearActiveJobTab, getActiveJobIds, setActiveJobId, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
-import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
+import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, applyAmapPoiMatchProgress, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
 
@@ -240,15 +240,12 @@ async function handleMatchAmapPoi(jobId: string, tabId: number, requestedPlaceId
   const placeIds = requestedPlaceIds?.length ? requestedPlaceIds.filter((id) => job.places.some((place) => place.id === id)) : job.places.map((place) => place.id);
   if (placeIds.length === 0) return { type: 'error', message: '没有找到要匹配的地点' };
   const settings = await getSettings();
-  const currentMatches = { ...(job.amapPoiMatches ?? {}) };
-  for (const placeId of placeIds) currentMatches[placeId] = { status: 'matching' };
   await saveJob(progressImport(job, {
     phase: 'match-poi',
     processed: 0,
     total: placeIds.length,
     message: '正在连接高德页面…',
   } as Partial<JobProgress>));
-  await saveJob({ ...(await getJob(jobId) ?? job), amapPoiMatches: currentMatches, updatedAt: now() });
   const result = await new Promise<{ ok: boolean; resolutions?: Record<string, AmapPoiResolution>; matches?: Record<string, AmapPoiMatchRecord>; error?: string }>((resolve) => {
     pendingAmapMatch = {
       jobId,
@@ -472,12 +469,11 @@ export default defineBackground(() => {
         if (job) {
           // 完成事件可能与最后一次进度事件乱序到达；完成后丢弃迟到的旧进度。
           if (!pendingAmapMatch || pendingAmapMatch.jobId !== job.id) return undefined;
-          const p = event.data as { processed?: number; total?: number; message?: string };
-          await saveJob(progressImport(job, {
-            phase: 'match-poi',
+          const p = event.data as { currentPlaceId?: string; completedPlaceId?: string; match?: AmapPoiMatchRecord; resolution?: AmapPoiResolution; processed?: number; total?: number; message?: string };
+          await saveJob(applyAmapPoiMatchProgress(job, {
+            ...p,
             processed: Math.max(job.progress.processed, p.processed ?? 0),
             total: p.total ?? job.progress.total,
-            message: p.message,
           }));
         }
       } else if (event.type === 'import-progress') {

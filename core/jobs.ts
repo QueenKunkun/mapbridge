@@ -239,6 +239,38 @@ export function progressImport(job: Job, progress: Partial<JobProgress>): Job {
   };
 }
 
+export function applyAmapPoiMatchProgress(
+  job: Job,
+  update: {
+    currentPlaceId?: string;
+    completedPlaceId?: string;
+    match?: AmapPoiMatchRecord;
+    resolution?: AmapPoiResolution;
+    processed?: number;
+    total?: number;
+    message?: string;
+  },
+): Job {
+  const matches = { ...(job.amapPoiMatches ?? {}) };
+  if (update.currentPlaceId) matches[update.currentPlaceId] = { ...(matches[update.currentPlaceId] ?? {}), status: 'matching' };
+  if (update.completedPlaceId && update.match) matches[update.completedPlaceId] = update.match;
+  const resolutions = { ...(job.amapPoiResolutions ?? {}) };
+  if (update.completedPlaceId && update.resolution) resolutions[update.completedPlaceId] = update.resolution;
+  return {
+    ...job,
+    amapPoiMatches: matches,
+    amapPoiResolutions: Object.keys(resolutions).length > 0 ? resolutions : job.amapPoiResolutions,
+    progress: {
+      ...job.progress,
+      phase: 'match-poi',
+      processed: update.processed ?? job.progress.processed,
+      total: update.total ?? job.progress.total,
+      message: update.message ?? job.progress.message,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function finalizeImport(job: Job, rawResult: RawImportResult, report: ImportReport): Job {
   return {
     ...job,

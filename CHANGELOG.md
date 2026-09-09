@@ -29,6 +29,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Show per-place Amap POI matching progress so only the currently requested place is marked as matching.
 - Replaced popup search and settings text glyphs with consistent inline icons.
 - Added paginated place preview with 10/30/50 rows per page, compact full-list search, and a page-scoped Amap POI matching action.
 - Show whether the detected Amap favorites page is the new SSR version or the legacy version.
