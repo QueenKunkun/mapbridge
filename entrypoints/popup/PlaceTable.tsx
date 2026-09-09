@@ -57,6 +57,7 @@ export function PlaceTable({
 }) {
   const [filter, setFilter] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [matchHelpOpen, setMatchHelpOpen] = useState(false);
   const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
   const [page, setPage] = useState(1);
   const filtered = places.filter(
@@ -141,16 +142,26 @@ export function PlaceTable({
         {canMatchAmap && (
           <span className="match-heading">
             地址匹配{' '}
-            <span
+            <button
+              type="button"
               className="column-help"
-              title="通过目标地图的 POI 搜索，将导入地点关联到目标地图中的原生地点，以便显示正确的名称和地点信息。"
               aria-label="地址匹配说明"
+              aria-expanded={matchHelpOpen}
+              aria-describedby="place-table-match-help"
+              data-tooltip="将导入地点关联到目标地图的原生 POI，以便地图显示正确的名称和地点信息。"
+              onClick={() => setMatchHelpOpen((open) => !open)}
             >
               ?
-            </span>
+            </button>
           </span>
         )}
       </div>
+      {canMatchAmap && matchHelpOpen && (
+        <div id="place-table-match-help" className="column-help-popover" role="tooltip">
+          将导入地点关联到目标地图的原生
+          POI，以便地图显示正确的名称和地点信息；无法匹配时仍可作为自定义坐标地点导入。
+        </div>
+      )}
       <div className="table-body">
         {shown.map((place) => (
           <PlaceRow

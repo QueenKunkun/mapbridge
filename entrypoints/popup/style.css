@@ -969,7 +969,44 @@ button.remove {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+  padding: 0;
+  background: transparent;
   cursor: help;
+  position: relative;
+}
+
+.column-help:hover::after,
+.column-help:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 220px;
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 3px 12px rgb(15 23 42 / 14%);
+  pointer-events: none;
+}
+
+.column-help-popover {
+  margin: 4px 0 6px 30px;
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .row {
