@@ -32,6 +32,13 @@ function readString(record: Record<string, unknown>, ...keys: string[]): string 
 }
 
 function readLocation(record: Record<string, unknown>): LngLat | undefined {
+  const nestedLocation = record.location;
+  if (nestedLocation && typeof nestedLocation === 'object') {
+    const nested = nestedLocation as Record<string, unknown>;
+    const nestedLng = Number(nested.lng ?? nested.lon ?? nested.longitude ?? nested.x);
+    const nestedLat = Number(nested.lat ?? nested.latitude ?? nested.y);
+    if (Number.isFinite(nestedLng) && Number.isFinite(nestedLat)) return gcj02ToWgs84(nestedLng, nestedLat);
+  }
   const location = readString(record, 'location', 'locationStr', 'lonlat');
   if (location) {
     const [lng, lat] = location.split(',').map(Number);
@@ -43,6 +50,16 @@ function readLocation(record: Record<string, unknown>): LngLat | undefined {
   const x = Number(record.x);
   const y = Number(record.y);
   return Number.isFinite(x) && Number.isFinite(y) ? gcj02ToWgs84(x, y) : undefined;
+}
+
+function unwrapCandidate(value: unknown): Record<string, unknown> | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  for (const key of ['tip', 'poi', 'data']) {
+    const nested = asRecord(record[key]);
+    if (nested) return nested;
+  }
+  return record;
 }
 
 function levenshtein(a: string, b: string): number {
@@ -87,15 +104,12 @@ export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace
   const list = Array.isArray(data?.['poi_list'])
     ? data['poi_list']
     : Array.isArray(data?.['tip_list'])
-      ? data['tip_list'].flatMap((value) => {
-        const wrapper = asRecord(value);
-        return wrapper?.['tip'] ? [wrapper['tip']] : [];
-      })
+      ? data['tip_list'].flatMap((value) => unwrapCandidate(value) ? [value] : [])
       : [];
   if (!Array.isArray(list)) return [];
 
   return list.flatMap((value) => {
-    const record = asRecord(value);
+    const record = unwrapCandidate(value);
     if (!record) return [];
     const poiid = readString(record, 'poiid', 'id', 'uid');
     const name = readString(record, 'name', 'title');

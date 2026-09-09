@@ -106,4 +106,16 @@ describe('Amap POI matching', () => {
       cityName: '济宁市',
     });
   });
+
+  it('parses nested tip candidates with object coordinates', () => {
+    const candidates = parseAmapPoiCandidates({
+      data: { tip_list: [{ data: { poiid: 'B-HOUSE', name: '住建佳苑', location: { lng: 116.3438, lat: 35.0702 } } }] },
+    }, {
+      ...source,
+      name: '住建佳苑',
+      wgs84: { lng: 116.3438, lat: 35.0702 },
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]!.poiid).toBe('B-HOUSE');
+  });
 });

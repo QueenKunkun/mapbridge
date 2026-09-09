@@ -120,20 +120,21 @@ export default defineContentScript({
       const center = wgs84ToGcj02(place.wgs84.lng, place.wgs84.lat);
       const span = 0.05;
       const pageUrl = new URL(location.href);
-      const params = new URLSearchParams({
-        words: place.name,
-        geoobj: `${center.lng - span}|${center.lat - span}|${center.lng + span}|${center.lat + span}`,
-        user_loc: `${center.lng},${center.lat}`,
-      });
-      const city = pageUrl.searchParams.get('city');
-      if (city) params.set('city', city);
-      const response = await fetch(`/service/poiTipsSearchlite?${params.toString()}`, {
-        credentials: 'include',
-        cache: 'no-store',
-        headers: { Accept: 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
-      });
-      if (!response.ok) throw new Error(`SSR POI search HTTP ${response.status}`);
-      return parseAmapPoiCandidates(await response.json(), place);
+      const search = async (words: string, withGeoobj: boolean): Promise<ReturnType<typeof parseAmapPoiCandidates>> => {
+        const params = new URLSearchParams({ words, user_loc: `${center.lng},${center.lat}` });
+        if (withGeoobj) params.set('geoobj', `${center.lng - span}|${center.lat - span}|${center.lng + span}|${center.lat + span}`);
+        const city = pageUrl.searchParams.get('city');
+        if (city) params.set('city', city);
+        const response = await fetch(`/service/poiTipsSearchlite?${params.toString()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { Accept: 'application/json, text/plain, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (!response.ok) throw new Error(`SSR POI search HTTP ${response.status}`);
+        return parseAmapPoiCandidates(await response.json(), place);
+      };
+      const nearby = await search(place.name, true);
+      return nearby.length > 0 ? nearby : search(place.name, false);
     }
 
     async function searchAmapSdk(place: CanonicalPlace): Promise<ReturnType<typeof parseAmapPoiCandidates>> {
