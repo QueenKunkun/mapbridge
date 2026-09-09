@@ -854,6 +854,8 @@ button.remove {
   border-radius: 6px;
   font-size: 12px;
   background: #fff;
+  color: #1f2430;
+  color-scheme: light;
 }
 
 .page-size {
