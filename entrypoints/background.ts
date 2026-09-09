@@ -2,7 +2,7 @@ import { getAdapter, getAdapterForHost } from '@/adapters';
 import type { RawExtract, RawImportResult } from '@/adapters/types';
 import type { BgRequest, BgResponse, ContentEvent } from '@/utils/messaging';
 import { BRIDGE_CHANNEL } from '@/utils/bridge';
-import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
+import { getSettings, saveSettings, saveJob, getJob, listJobs, deleteJob, clearActiveJobId, getActiveJobId, setActiveJobId, DEFAULT_SETTINGS, type AppSettings } from '@/storage/db';
 import { createJob, applyExtraction, applyExtractionItems, applyPreviewPlaces, startImport, progressImport, finalizeImport, type Job, type JobProgress, type AmapPoiMatchRecord, type AmapPoiResolution } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
@@ -53,7 +53,9 @@ async function applyExtractData(data: RawExtract): Promise<void> {
   }
   log('applyExtractData: rawCount=', result.rawCount, 'places=', places.length);
   const warnings = result.skipped.map((item) => `第 ${item.index + 1} 条：${item.reason}`);
-  await saveJob(applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings, result.skipped));
+  const updated = applyExtractionItems({ ...job, existingPlaces: job.existingPlaces }, result.items, places, result.rawCount, warnings, result.skipped);
+  await saveJob(updated);
+  if (job.workflow === 'export') await clearActiveJobId(job.id);
   await resolvePendingExtract(true);
 }
 
@@ -96,7 +98,7 @@ async function handleExtract(jobId: string, tabId: number): Promise<BgResponse> 
     return { type: 'error', message: `${source.name} 暂不支持提取` };
   }
 
-  await saveJob({ ...job, status: 'extracting', updatedAt: now() });
+  await saveJob({ ...job, status: 'extracting', phase: job.workflow === 'export' ? 'exporting' : 'extract', updatedAt: now() });
 
   const outcome = await new Promise<{ ok: boolean; error?: string }>((resolve) => {
     pendingExtract = {
@@ -113,7 +115,13 @@ async function handleExtract(jobId: string, tabId: number): Promise<BgResponse> 
     });
   });
   log('extract outcome', jobId, outcome);
-  return outcome.ok ? { type: 'job', job: await getJob(jobId) } : { type: 'error', message: outcome.error ?? '提取失败' };
+  if (!outcome.ok) {
+    const failed = await getJob(jobId);
+    if (failed) await saveJob({ ...failed, status: 'failed', phase: 'report', error: outcome.error ?? '提取失败', updatedAt: now() });
+    await clearActiveJobId(jobId);
+    return { type: 'error', message: outcome.error ?? '提取失败' };
+  }
+  return { type: 'job', job: await getJob(jobId) };
 }
 
 async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
@@ -165,7 +173,8 @@ async function handleImport(jobId: string, tabId: number): Promise<BgResponse> {
     });
     return { type: 'ok' };
   } catch (e) {
-    await saveJob({ ...job, status: 'failed', error: String(e instanceof Error ? e.message : e), updatedAt: now() });
+    await saveJob({ ...job, status: 'failed', phase: 'report', error: String(e instanceof Error ? e.message : e), updatedAt: now() });
+    await clearActiveJobId(jobId);
     return { type: 'error', message: String(e instanceof Error ? e.message : e) };
   }
 }
@@ -309,6 +318,7 @@ async function handleCancelJob(jobId: string): Promise<BgResponse> {
   if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return { type: 'error', message: '当前任务已经结束' };
   const cancelled: Job = { ...job, status: 'cancelled', updatedAt: now() };
   await saveJob(cancelled);
+  await clearActiveJobId(jobId);
   return { type: 'job', job: cancelled };
 }
 
@@ -331,6 +341,7 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
     report.importedIds = (data.raw as { importedIds: unknown[] }).importedIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
   }
   await saveJob(finalizeImport(job, data, report));
+  await clearActiveJobId(job.id);
 }
 
 async function handleAmapMatchResult(data: unknown): Promise<void> {
@@ -493,7 +504,7 @@ export default defineBackground(() => {
     log('recv req', req.type, (req as { jobId?: string }).jobId ?? '');
     switch (req.type) {
       case 'get-state': {
-        return { type: 'state', jobs: await listJobs(), settings: await getSettings() };
+        return { type: 'state', jobs: await listJobs(), settings: await getSettings(), activeJobId: await getActiveJobId() };
       }
       case 'list-jobs': {
         return { type: 'jobs', jobs: await listJobs() };
@@ -504,6 +515,7 @@ export default defineBackground(() => {
       case 'new-job': {
         const job = createJob(req.source, req.target, req.workflow ?? 'migrate');
         await saveJob(job);
+        await setActiveJobId(job.id);
         return { type: 'job', job };
       }
       case 'delete-job': {
@@ -528,7 +540,7 @@ export default defineBackground(() => {
       case 'preview-update': {
         const job = await getJob(req.jobId);
         if (!job) return { type: 'error', message: '任务不存在' };
-        const updated: Job = applyPreviewPlaces(job, req.places, req.previewTab);
+        const updated: Job = applyPreviewPlaces(job, req.places, req.previewTab, req.phase);
         await saveJob(updated);
         return { type: 'job', job: updated };
       }
@@ -540,6 +552,7 @@ export default defineBackground(() => {
         const src = req.source ?? req.places[0]?.source.provider ?? req.items[0]?.source.provider ?? 'amap';
         const job = createJob(src, req.target, 'import-file');
         await saveJob(job);
+        await setActiveJobId(job.id);
         const applied = applyExtractionItems({ ...job }, req.items, req.places, req.items.length, req.warnings ?? []);
         await saveJob(applied);
         return { type: 'job', job: applied };

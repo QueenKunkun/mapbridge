@@ -5,6 +5,7 @@ import type { ProviderId } from '@/core/model';
 const store = createStore('mapbridge', 'kv');
 
 const JOB_PREFIX = 'job:';
+const ACTIVE_JOB_KEY = 'active-job-id';
 
 export async function saveJob(job: Job): Promise<void> {
   await set(`${JOB_PREFIX}${job.id}`, job, store);
@@ -27,6 +28,19 @@ export async function listJobs(): Promise<Job[]> {
 
 export async function deleteJob(id: string): Promise<void> {
   await del(`${JOB_PREFIX}${id}`, store);
+}
+
+export async function getActiveJobId(): Promise<string | undefined> {
+  const id = await get(ACTIVE_JOB_KEY, store);
+  return typeof id === 'string' && id.length > 0 ? id : undefined;
+}
+
+export async function setActiveJobId(id: string): Promise<void> {
+  await set(ACTIVE_JOB_KEY, id, store);
+}
+
+export async function clearActiveJobId(id?: string): Promise<void> {
+  if (id === undefined || (await getActiveJobId()) === id) await del(ACTIVE_JOB_KEY, store);
 }
 
 export interface AppSettings {

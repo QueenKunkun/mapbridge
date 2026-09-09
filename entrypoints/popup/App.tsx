@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { sendBg } from '@/utils/messaging';
 import { getAdapter } from '@/adapters';
 import type { ProviderId } from '@/core/model';
 import { previewPreviousStep, updatePreviewPlace, type Job } from '@/core/jobs';
+import { restorePopupState } from '@/core/popup-state';
 import { serializeItems } from '@/core/export';
 import { exportGpx, exportKml } from '@/core/exporters';
 import { parsePortableFile } from '@/core/portable-import';
@@ -117,65 +118,33 @@ export default function App() {
   const [selectionReady, setSelectionReady] = useState(false);
   const [previewTab, setPreviewTab] = useState<'places' | 'routes'>('places');
   const [previewPlaces, setPreviewPlaces] = useState<Job['places']>([]);
-  const restoredWorkflow = useRef<'migrate' | 'import-file' | 'export' | 'none' | undefined>(undefined);
 
-  // 记住上次的选择（来源 / 目标 / 模式）
+  // Restore the preference and active task together so async initialization
+  // cannot make the entry tab and task phase disagree.
   useEffect(() => {
-    void getUiSelection().then((sel) => {
-      if (sel.source) setSource(sel.source);
-      if (sel.target) setTarget(sel.target);
-      if (sel.mode && (restoredWorkflow.current === undefined || restoredWorkflow.current === 'none')) setMode(sel.mode);
+    let disposed = false;
+    void Promise.all([sendBg({ type: 'get-state' }), getUiSelection()]).then(([state, selection]) => {
+      if (disposed || state.type !== 'state') return;
+      if (selection.source) setSource(selection.source);
+      if (selection.target) setTarget(selection.target);
+      const restored = restorePopupState(state.jobs, selection, state.activeJobId);
+      setMode(restored.mode);
+      setStep(restored.kind === 'active' ? restored.step : 'setup');
+      setJob(restored.kind === 'active' ? restored.job : undefined);
+      const restoredMatchingIds = restored.kind === 'active'
+        ? Object.entries(restored.job.amapPoiMatches ?? {}).filter(([, result]) => result.status === 'matching').map(([placeId]) => placeId)
+        : [];
+      setMatchingPlaceIds(new Set(restoredMatchingIds));
+      setMatching(restoredMatchingIds.length > 0);
       setSelectionReady(true);
     });
+    return () => { disposed = true; };
   }, []);
   useEffect(() => {
     if (!selectionReady) return;
     void saveUiSelection({ source, target, mode });
   }, [source, target, mode, selectionReady]);
 
-  // Popup 是短生命周期窗口；重新打开时恢复后台仍在处理的任务，避免用户误以为任务已结束。
-  useEffect(() => {
-    void sendBg({ type: 'get-state' }).then((res) => {
-      if (res.type !== 'state') return;
-      const latest = res.jobs
-        .filter((item) => item.status !== 'cancelled' && item.status !== 'draft')
-        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
-      if (!latest || latest.status === 'done' || latest.status === 'failed') {
-        restoredWorkflow.current = 'none';
-        setJob(undefined);
-        setStep('setup');
-        return;
-      }
-      // Export creates a persisted extraction job only to produce the file;
-      // it is not a resumable migration workflow. Never restore it as the
-      // shared migration preview step when the popup is reopened.
-      if (latest.workflow === 'export') {
-        restoredWorkflow.current = 'export';
-        setJob(undefined);
-        setMode('export');
-        setStep('setup');
-        return;
-      }
-      const active = latest;
-      restoredWorkflow.current = active.workflow;
-      setJob(active);
-      setMode(active.workflow === 'import-file' ? 'import-file' : 'migrate');
-      setSource(active.sourceProvider);
-      setTarget(active.targetProvider);
-      setStep(
-        active.status === 'importing' || active.status === 'done' || active.status === 'failed'
-          ? 'report'
-          : active.status === 'preview'
-            ? 'preview'
-            : 'extract',
-      );
-      const restoredMatchingIds = Object.entries(active.amapPoiMatches ?? {})
-        .filter(([, result]) => result.status === 'matching')
-        .map(([placeId]) => placeId);
-      setMatchingPlaceIds(new Set(restoredMatchingIds));
-      setMatching(restoredMatchingIds.length > 0);
-    });
-  }, []);
 
   useEffect(() => {
     if (!job || (job.status !== 'importing' && !matching)) return;
@@ -419,9 +388,9 @@ export default function App() {
     }
   }
 
-  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab): Promise<void> {
+  async function savePreview(places: Job['places'], tab: Job['previewTab'] = previewTab, phase: 'preview' | 'import' = 'preview'): Promise<void> {
     if (!job) return;
-    const res = await sendBg({ type: 'preview-update', jobId: job.id, places, previewTab: tab });
+    const res = await sendBg({ type: 'preview-update', jobId: job.id, places, previewTab: tab, phase });
     if (res.type === 'job' && res.job) setJob(res.job);
   }
 
@@ -790,7 +759,7 @@ export default function App() {
             previous={<button className="ghost" onClick={() => setStep(previewPreviousStep(job.workflow))}>返回</button>}
             next={<NextImportButton
               disabled={(targetCapabilities?.importKinds.includes('route') ? previewRoutes.length : 0) === 0 && previewPlaces.length === 0}
-              onClick={async () => { await savePreview(previewPlaces, previewTab); setStep('import'); }}
+                onClick={async () => { await savePreview(previewPlaces, previewTab, 'import'); setStep('import'); }}
             />}
             cancel={<button className="ghost" onClick={() => void cancelCurrentJob()}>取消任务</button>}
           />

@@ -15,7 +15,7 @@ export type BgRequest =
   | { type: 'select-poi-match'; jobId: string; placeId: string; candidate: { poiid: string; name: string; address: string; cityCode?: string; cityName?: string } }
   | { type: 'clear-poi-match'; jobId: string; placeId: string }
   | { type: 'cancel-job'; jobId: string }
-  | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab'] }
+  | { type: 'preview-update'; jobId: string; places: CanonicalPlace[]; previewTab?: Job['previewTab']; phase?: 'preview' | 'import' }
   | { type: 'import'; jobId: string; tabId: number }
   | { type: 'import-file'; source?: ProviderId; target: ProviderId; items: CanonicalItem[]; places: CanonicalPlace[]; warnings?: string[] }
   | { type: 'get-settings' }
@@ -29,7 +29,7 @@ export type BgRequest =
   | { type: 'undo-import'; jobId: string; tabId: number };
 
 export type BgResponse =
-  | { type: 'state'; jobs: Job[]; settings: AppSettings }
+  | { type: 'state'; jobs: Job[]; settings: AppSettings; activeJobId?: string }
   | { type: 'job'; job: Job | undefined }
   | { type: 'jobs'; jobs: Job[] }
   | { type: 'settings'; settings: AppSettings }
