@@ -158,6 +158,14 @@ export default function App() {
     ).length ?? 0;
   const reportImportable =
     job?.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind)).length ?? 0;
+  const reportImportablePlaces =
+    job?.items.filter(
+      (item) => item.kind === 'poi' && targetCapabilities?.importKinds.includes(item.kind),
+    ).length ?? 0;
+  const reportImportableRoutes =
+    job?.items.filter(
+      (item) => item.kind === 'route' && targetCapabilities?.importKinds.includes(item.kind),
+    ).length ?? 0;
   const reportSkipped =
     job?.extractionSkipped.filter((item) => item.reason !== '源地图已标记为删除，已跳过').length ??
     0;
@@ -545,6 +553,8 @@ export default function App() {
       startAmapMatch={startAmapMatch}
       selectAmapPoi={selectAmapPoi}
       reportImportable={reportImportable}
+      reportImportablePlaces={reportImportablePlaces}
+      reportImportableRoutes={reportImportableRoutes}
       reportRoutes={reportRoutes}
       startImport={startImport}
       undoMsg={undoMsg}

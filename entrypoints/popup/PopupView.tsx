@@ -61,6 +61,8 @@ export function PopupView({
   startAmapMatch,
   selectAmapPoi,
   reportImportable,
+  reportImportablePlaces,
+  reportImportableRoutes,
   reportRoutes,
   startImport,
   undoMsg,
@@ -129,6 +131,8 @@ export function PopupView({
     candidate?: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number],
   ) => Promise<void>;
   reportImportable: number;
+  reportImportablePlaces: number;
+  reportImportableRoutes: number;
   reportRoutes: number;
   startImport: () => Promise<void>;
   undoMsg: string;
@@ -439,11 +443,22 @@ export function PopupView({
           </div>
           {job.items.length > 0 && (
             <div className="count">
-              已提取 <b>{job.items.length}</b> 条，其中可导入项目{' '}
+              已提取 <b>{job.items.length}</b> 条，其中待导入：地点{' '}
               <b>
                 {
-                  job.items.filter((item) => targetCapabilities?.importKinds.includes(item.kind))
-                    .length
+                  job.items.filter(
+                    (item) =>
+                      item.kind === 'poi' && targetCapabilities?.importKinds.includes(item.kind),
+                  ).length
+                }
+              </b>{' '}
+              条，路线{' '}
+              <b>
+                {
+                  job.items.filter(
+                    (item) =>
+                      item.kind === 'route' && targetCapabilities?.importKinds.includes(item.kind),
+                  ).length
                 }
               </b>{' '}
               条
@@ -578,7 +593,9 @@ export function PopupView({
               </button>
             </>
           )}
-          <div className="count">待导入 {reportImportable} 条</div>
+          <div className="count">
+            待导入：地点 <b>{reportImportablePlaces}</b> 条，路线 <b>{reportImportableRoutes}</b> 条
+          </div>
           {reportRoutes > 0 && (
             <p className="hint warning">
               另有 {reportRoutes} 条 Route 不会导入：当前目标平台不支持，或路线交通方式无法识别。
@@ -642,8 +659,12 @@ export function PopupView({
               <strong>{job.items.length} 条</strong>
             </div>
             <div>
-              <span>可导入项目</span>
-              <strong>{reportImportable} 条</strong>
+              <span>可导入地点</span>
+              <strong>{reportImportablePlaces} 条</strong>
+            </div>
+            <div>
+              <span>可导入路线</span>
+              <strong>{reportImportableRoutes} 条</strong>
             </div>
           </div>
           {job.status === 'importing' && (
