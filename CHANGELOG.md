@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Removed the misleading em dash from the empty place-table action column.
 - Made popup task recovery workflow-aware, including persisted import confirmation, active-task selection, cancellation, and export isolation.
 - Restored the export tab after reopening the popup instead of incorrectly resuming the migration preview step.
 - Made selected native POI imports use the target map's native-name rendering fields instead of custom-place fields.

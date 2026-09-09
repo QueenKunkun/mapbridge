@@ -940,7 +940,7 @@ function PlaceTable({
         <span></span>
         <span>名称</span>
         <span>地址</span>
-        <span>{canMatchAmap ? 'POI 匹配' : '操作'}</span>
+        <span>{canMatchAmap ? 'POI 匹配' : ''}</span>
       </div>
       <div className="table-body">
         {shown.map((p) => (
@@ -1017,7 +1017,7 @@ function PlaceRow({
             onMatch={onMatch}
             onSelect={onSelect}
           />
-        ) : <span className="hint">—</span>}
+        ) : <span aria-hidden="true" />}
       </div>
       {import.meta.env.DEV && diagnosticOpen && match && (
         <PoiMatchDiagnostic place={place} match={match} />
