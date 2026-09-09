@@ -2,7 +2,7 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
+  color-scheme: light;
   color: #1f2430;
   background-color: #f7f8fa;
   font-synthesis: none;
@@ -598,6 +598,9 @@ button.small {
   border-radius: 6px;
   border: 1px solid #d1d5db;
   font-size: 14px;
+  color: #1f2430;
+  background: #fff;
+  color-scheme: light;
 }
 
 .arrow {
