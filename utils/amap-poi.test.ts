@@ -141,4 +141,26 @@ describe('Amap POI matching', () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0]!.poiid).toBe('B-HOUSE-ENTRANCE');
   });
+
+  it('parses the full house suggestion shape even with an extra response wrapper', () => {
+    const candidates = parseAmapPoiCandidates({
+      data: { data: { result: 'true', tip_list: [{ tip: {
+        id: 'B0FFFZD19R',
+        name: '住建佳苑',
+        x: '116.349403',
+        y: '35.069764',
+        x_entr: '116.348192',
+        y_entr: '35.069933',
+        poiid: 'B0FFFZD19R',
+      } }] } },
+      status: '1',
+    }, {
+      ...source,
+      name: '住建佳苑',
+      address: '山东省济宁市金乡县光明路与泰康路交叉口东南180米',
+      wgs84: { lng: 116.343774, lat: 35.070243 },
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ poiid: 'B0FFFZD19R', name: '住建佳苑' });
+  });
 });

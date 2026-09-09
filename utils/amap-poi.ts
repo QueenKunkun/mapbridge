@@ -62,6 +62,19 @@ function unwrapCandidate(value: unknown): Record<string, unknown> | undefined {
   return record;
 }
 
+function findCandidateList(value: unknown, depth = 0): unknown[] {
+  if (depth > 4) return [];
+  const record = asRecord(value);
+  if (!record) return [];
+  if (Array.isArray(record.poi_list)) return record.poi_list;
+  if (Array.isArray(record.tip_list)) return record.tip_list;
+  for (const child of Object.values(record)) {
+    const found = findCandidateList(child, depth + 1);
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
 function levenshtein(a: string, b: string): number {
   const row = Array.from({ length: b.length + 1 }, (_, i) => i);
   for (let i = 1; i <= a.length; i++) {
@@ -99,13 +112,7 @@ function distanceMeters(a: LngLat, b: LngLat): number {
 /** Extract the SSR search result list without depending on provider response wrappers elsewhere. */
 export function parseAmapPoiCandidates(response: unknown, source: CanonicalPlace): AmapPoiCandidate[] {
   const root = asRecord(response);
-  const outer = asRecord(root?.data);
-  const data = asRecord(outer?.data) ?? outer;
-  const list = Array.isArray(data?.['poi_list'])
-    ? data['poi_list']
-    : Array.isArray(data?.['tip_list'])
-      ? data['tip_list'].flatMap((value) => unwrapCandidate(value) ? [value] : [])
-      : [];
+  const list = findCandidateList(root);
   if (!Array.isArray(list)) return [];
 
   return list.flatMap((value) => {
