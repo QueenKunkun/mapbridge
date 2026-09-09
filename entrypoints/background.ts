@@ -32,6 +32,7 @@ import {
 } from '@/core/jobs';
 import { dedupPlaces } from '@/core/dedup';
 import type { ProviderId } from '@/core/model';
+import { detectAmapPageVersion } from '@/utils/map-version';
 
 function now(): string {
   return new Date().toISOString();
@@ -884,12 +885,7 @@ export default defineBackground(() => {
               command: { mb: BRIDGE_CHANNEL, type: 'whoami' },
             } as never)) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
             if (resp?.provider) {
-              const version =
-                resp.provider === 'amap'
-                  ? t.url?.includes('/ssr/')
-                    ? 'new'
-                    : 'legacy'
-                  : undefined;
+              const version = resp.provider === 'amap' ? detectAmapPageVersion(t.url) : undefined;
               detected.push({
                 providerId: resp.provider,
                 tabId: t.id,

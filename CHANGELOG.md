@@ -6,6 +6,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Fixed
 
+- Fixed the Amap page-version label so SSR favorite pages are shown as the new version.
 - Accepted alternate Amap favorite coordinate fields so POIs imported through matching are not skipped by the legacy endpoint.
 - Fixed the development backup-and-clear controls so only the selected provider button shows the active-processing state.
 - Added consistent spacing between the page-size label, selector, and adjacent place-table tools.

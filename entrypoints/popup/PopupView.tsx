@@ -245,7 +245,9 @@ export function PopupView({
                               <span className="version-tag">
                                 {detected.find((d) => d.providerId === pid)?.version === 'new'
                                   ? '新版'
-                                  : '旧版'}
+                                  : detected.find((d) => d.providerId === pid)?.version === 'legacy'
+                                    ? '旧版'
+                                    : '版本未知'}
                               </span>
                             )}
                             {loggedIn === false ? (
