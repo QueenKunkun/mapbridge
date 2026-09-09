@@ -50,7 +50,7 @@ export default function App() {
   const [saved, setSaved] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'general' | 'baidu' | 'amap'>('general');
   const [devLog, setDevLog] = useState<string[]>([]);
-  const [devBusy, setDevBusy] = useState(false);
+  const [devBusy, setDevBusy] = useState<'amap' | 'baidu' | null>(null);
   const [version, setVersion] = useState('');
   const [msg, setMsg] = useState('');
   const [undoingId, setUndoingId] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export default function App() {
 
   async function devBackupAndClear(provider: 'amap' | 'baidu'): Promise<void> {
     if (devBusy) return;
-    setDevBusy(true);
+    setDevBusy(provider);
     const lines: string[] = [];
     const logLine = (s: string): void => {
       lines.push(s);
@@ -200,7 +200,7 @@ export default function App() {
     } catch (e) {
       logLine(`✗ 出错：${String(e instanceof Error ? e.message : e)}`);
     } finally {
-      setDevBusy(false);
+      setDevBusy(null);
     }
   }
 
@@ -562,17 +562,17 @@ export default function App() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button
                   className="danger"
-                  disabled={devBusy}
+                  disabled={devBusy !== null}
                   onClick={() => void devBackupAndClear('amap')}
                 >
-                  {devBusy ? '处理中…' : '备份并清空高德收藏'}
+                  {devBusy === 'amap' ? '处理中…' : '备份并清空高德收藏'}
                 </button>
                 <button
                   className="danger"
-                  disabled={devBusy}
+                  disabled={devBusy !== null}
                   onClick={() => void devBackupAndClear('baidu')}
                 >
-                  {devBusy ? '处理中…' : '备份并清空百度收藏'}
+                  {devBusy === 'baidu' ? '处理中…' : '备份并清空百度收藏'}
                 </button>
               </div>
               {devLog.length > 0 && <pre className="dev-log">{devLog.join('\n')}</pre>}
