@@ -845,6 +845,13 @@ button.remove {
   background: #fff;
 }
 
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .place-search {
   position: relative;
 }

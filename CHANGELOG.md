@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Added consistent spacing between the page-size label, selector, and adjacent place-table tools.
 - Improved the place preview layout by labeling the page-size control, explaining address matching in the column header, and removing the empty matching column for unsupported targets.
 - Standardized place-table toolbar control heights and kept the active search control visibly highlighted while search is expanded.
 - Made place-table pagination buttons wider and standardized POI action and candidate-control sizing for consistent alignment.
