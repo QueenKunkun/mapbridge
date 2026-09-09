@@ -461,6 +461,15 @@ input[type='file'] {
   background: #f3f4f6;
 }
 
+.version-tag {
+  padding: 1px 5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #475569;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .steps {
   display: flex;
   gap: 6px;

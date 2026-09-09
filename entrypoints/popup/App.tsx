@@ -106,7 +106,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [matching, setMatching] = useState(false);
   const [matchingPlaceIds, setMatchingPlaceIds] = useState<Set<string>>(new Set());
-  const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean }[]>([]);
+  const [detected, setDetected] = useState<{ providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[]>([]);
   const [detecting, setDetecting] = useState(false);
   const [mode, setMode] = useState<'migrate' | 'export' | 'import-file'>('migrate');
   const [exportedCount, setExportedCount] = useState(0);
@@ -582,13 +582,16 @@ export default function App() {
                         <span className={`dot${ok ? ' ok' : ''}`} />
                         <span>{p.name}收藏页</span>
                         {ok ? (
-                          loggedIn === false ? (
-                            <span className="warn-tag">未登录</span>
-                          ) : loggedIn === true ? (
-                            <span className="ok-tag">已登录 ✓</span>
-                          ) : (
-                            <span className="hint">已检测到，登录状态待确认</span>
-                          )
+                          <>
+                            {pid === 'amap' && <span className="version-tag">{detected.find((d) => d.providerId === pid)?.version === 'new' ? '新版' : '旧版'}</span>}
+                            {loggedIn === false ? (
+                              <span className="warn-tag">未登录</span>
+                            ) : loggedIn === true ? (
+                              <span className="ok-tag">已登录 ✓</span>
+                            ) : (
+                              <span className="hint">已检测到，登录状态待确认</span>
+                            )}
+                          </>
                         ) : (
                           <button className="ghost small" onClick={() => void openPage(getAdapter(pid).extractPage)}>
                             打开

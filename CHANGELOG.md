@@ -17,6 +17,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Show whether the detected Amap favorites page is the new SSR version or the legacy version.
 - Numbered POI candidates in the selection menu so similarly named results remain distinguishable.
 - Kept POI retry, diagnostics, and candidate selection controls stable after a candidate is selected.
 - Placed POI diagnostics in a full-width expandable row and kept retry and candidate selection available after a match.

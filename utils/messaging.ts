@@ -36,7 +36,7 @@ export type BgResponse =
   | { type: 'ok' }
   | { type: 'error'; message: string }
   | { type: 'active-tab'; tabId: number; url?: string; providerId?: ProviderId }
-  | { type: 'detected'; tabs: { providerId: ProviderId; tabId: number }[] }
+  | { type: 'detected'; tabs: { providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[] }
   | { type: 'dev-fav-data'; data: { provider: 'amap' | 'baidu'; fav: unknown; error?: string } }
   | { type: 'dev-fav-cleared'; data: { provider: 'amap' | 'baidu'; deleted: number; failed: number; remaining: number; ok: boolean; error?: string } }
   | { type: 'dev-progress'; deleted: number; failed: number; total: number; done: number }

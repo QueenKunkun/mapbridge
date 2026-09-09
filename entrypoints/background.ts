@@ -573,7 +573,7 @@ export default defineBackground(() => {
       case 'detect-map-tabs': {
         // 无需读取标签页 URL 权限：向所有标签页广播 whoami，能应答的就是已打开的地图收藏页
         const tabs = await browser.tabs.query({});
-        const detected: { providerId: ProviderId; tabId: number; loggedIn?: boolean }[] = [];
+        const detected: { providerId: ProviderId; tabId: number; loggedIn?: boolean; version?: 'new' | 'legacy' }[] = [];
         for (const t of tabs) {
           if (!t.id) continue;
           try {
@@ -581,7 +581,12 @@ export default defineBackground(() => {
               t.id,
               { type: 'mb:command', command: { mb: BRIDGE_CHANNEL, type: 'whoami' } } as never,
             )) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
-            if (resp?.provider) detected.push({ providerId: resp.provider, tabId: t.id, loggedIn: resp.loggedIn });
+            if (resp?.provider) {
+              const version = resp.provider === 'amap'
+                ? (t.url?.includes('/ssr/') ? 'new' : 'legacy')
+                : undefined;
+              detected.push({ providerId: resp.provider, tabId: t.id, loggedIn: resp.loggedIn, version });
+            }
           } catch {
             /* 无内容脚本的标签页 */
           }
