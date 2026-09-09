@@ -31,10 +31,19 @@ interface AmapFavoriteData {
 function readPixelData(raw: Record<string, unknown>): { x: number; y: number } | null {
   const data = (raw['data'] ?? raw) as Record<string, unknown> | undefined;
   if (!data) return null;
-  const x = Number(data['point_x']);
-  const y = Number(data['point_y']);
-  if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
-    return { x, y };
+  const point = data['point'];
+  const nestedPoint = point && typeof point === 'object' ? (point as Record<string, unknown>) : {};
+  const coordinatePairs: [unknown, unknown][] = [
+    [data['point_x'], data['point_y']],
+    [data['x'], data['y']],
+    [nestedPoint['x'], nestedPoint['y']],
+  ];
+  for (const [rawX, rawY] of coordinatePairs) {
+    const x = Number(rawX);
+    const y = Number(rawY);
+    if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0) && Math.abs(x) > 180) {
+      return { x, y };
+    }
   }
   return null;
 }

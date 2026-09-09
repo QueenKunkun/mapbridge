@@ -362,6 +362,21 @@ describe('amap adapter', () => {
     expect(place!.identity).toContain('alphatechpark|104.03891|30.63747');
   });
 
+  it('normalizes Amap favorites when the endpoint returns x/y aliases', () => {
+    const place = normalizeAmap({
+      id: 'imported-native-poi',
+      type: 101,
+      data: {
+        name: 'Imported Native POI',
+        poiid: 'amap-poi-id',
+        x: 221000192,
+        y: 106256007,
+      },
+    });
+    expect(place).not.toBeNull();
+    expect(place!.name).toBe('Imported Native POI');
+  });
+
   it('buildExtractResult collects places', () => {
     const items = (amapGetFav.data as { items: unknown[] }).items;
     const result = amapAdapter.buildExtractResult({
