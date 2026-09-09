@@ -994,13 +994,13 @@ function PlaceTable({
             </div>
           )}
         </div>
-        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '尝试POI搜索匹配'}</button>}
+        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '尝试地址匹配'}</button>}
       </div>
       <div className="table-head">
         <span></span>
         <span>名称</span>
         <span>地址</span>
-        <span>{canMatchAmap ? 'POI 匹配' : ''}</span>
+        <span>{canMatchAmap ? '地址匹配' : ''}</span>
       </div>
       <div className="table-body">
         {shown.map((p) => (
