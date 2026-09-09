@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Kept the place-list count and pagination controls fixed while only the list body scrolls.
 - Fixed returning from preview getting stuck in the extraction step without a way to end the task or return to the first step.
 - Removed the misleading em dash from the empty place-table action column.
 - Made popup task recovery workflow-aware, including persisted import confirmation, active-task selection, cancellation, and export isolation.
