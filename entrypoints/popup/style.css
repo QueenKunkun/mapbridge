@@ -830,6 +830,13 @@ button.remove {
   position: relative;
 }
 
+.place-toolbar > .page-size select,
+.place-toolbar > .place-search > .icon-button,
+.place-toolbar > .page-match {
+  box-sizing: border-box;
+  height: 30px;
+}
+
 .page-size select {
   padding: 5px 4px;
   border: 1px solid #d1d5db;
@@ -840,6 +847,27 @@ button.remove {
 
 .place-search {
   position: relative;
+}
+
+.place-toolbar > .place-search > .icon-button {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+}
+
+.place-toolbar > .place-search > .icon-button svg {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.place-toolbar > .place-search > .icon-button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .place-search-popover {
