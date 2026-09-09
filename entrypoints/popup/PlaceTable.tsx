@@ -302,7 +302,7 @@ function PoiMatchCell({
     );
   const candidates = match?.candidates ?? [];
   const selector =
-    import.meta.env.DEV && candidates.length > 0 ? (
+    candidates.length > 0 ? (
       <select
         className="match-candidate-select"
         value={resolution?.poiid ?? ''}
@@ -352,7 +352,7 @@ function PoiMatchCell({
         </button>
       )}
       {selector}
-      {import.meta.env.DEV && match?.status === 'not-found' && candidates.length === 0 && (
+      {match?.status === 'not-found' && candidates.length === 0 && (
         <select
           className="match-candidate-select"
           value=""

@@ -39,6 +39,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ### Changed
 
+- Enabled POI search matching and candidate selection in production builds.
 - Added a hover and click explanation for the address-matching column.
 - Added project-wide Prettier formatting with `format` and `format:check` scripts.
 - Improved extraction warning labels by showing place names or route endpoints instead of internal IDs.
