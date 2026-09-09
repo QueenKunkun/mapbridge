@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Standardized place-table toolbar control heights and kept the active search control visibly highlighted while search is expanded.
 - Made place-table pagination buttons wider and standardized POI action and candidate-control sizing for consistent alignment.
 - Made development backup files use the standard MapBridge export format so they can be restored through the normal file-import flow.
 - Added full-text tooltips for long place names and addresses, moved diagnostic copy controls to the top, and widened the popup for POI candidate selection.
@@ -32,6 +33,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 - Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
 
 ### Changed
+- Renamed the page-level POI matching action to make clear that it performs a POI search attempt.
 - Show per-place Amap POI matching progress so only the currently requested place is marked as matching.
 - Replaced popup search and settings text glyphs with consistent inline icons.
 - Added paginated place preview with 10/30/50 rows per page, compact full-list search, and a page-scoped Amap POI matching action.

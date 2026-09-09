@@ -986,7 +986,7 @@ function PlaceTable({
           </select>
         </label>
         <div className="place-search">
-          <button className="small icon-button" aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}><IconSearch /></button>
+          <button className={`small icon-button${searchOpen ? ' active' : ''}`} aria-label="搜索地点" title="搜索地点" aria-expanded={searchOpen} onClick={() => setSearchOpen((open) => !open)}><IconSearch /></button>
           {searchOpen && (
             <div className="place-search-popover">
               <input autoFocus className="filter" placeholder="搜索名称 / 地址…" value={filter} onChange={(e) => updateFilter(e.target.value)} />
@@ -994,7 +994,7 @@ function PlaceTable({
             </div>
           )}
         </div>
-        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '匹配'}</button>}
+        {canMatchAmap && <button className="small secondary page-match" disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0} onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}>{matching ? '匹配中…' : '尝试POI搜索匹配'}</button>}
       </div>
       <div className="table-head">
         <span></span>
