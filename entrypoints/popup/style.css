@@ -922,10 +922,36 @@ button.remove {
   align-items: center;
 }
 
+.place-table:not(.can-match) .table-head,
+.place-table:not(.can-match) .row {
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.4fr);
+}
+
 .table-head {
   font-size: 11px;
   color: #6b7280;
   text-transform: uppercase;
+}
+
+.match-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.column-help {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #94a3b8;
+  border-radius: 50%;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
 }
 
 .row {

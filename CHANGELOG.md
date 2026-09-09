@@ -5,6 +5,7 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [Unreleased]
 
 ### Fixed
+- Improved the place preview layout by labeling the page-size control, explaining address matching in the column header, and removing the empty matching column for unsupported targets.
 - Standardized place-table toolbar control heights and kept the active search control visibly highlighted while search is expanded.
 - Made place-table pagination buttons wider and standardized POI action and candidate-control sizing for consistent alignment.
 - Made development backup files use the standard MapBridge export format so they can be restored through the normal file-import flow.
