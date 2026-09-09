@@ -131,7 +131,7 @@ export function PlaceTable({
             disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0}
             onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}
           >
-            {matching ? '匹配中…' : '尝试地址匹配'}
+            {matching ? '匹配中…' : '批量地址匹配'}
           </button>
         )}
       </div>
@@ -148,7 +148,7 @@ export function PlaceTable({
               aria-label="地址匹配说明"
               aria-expanded={matchHelpOpen}
               aria-describedby="place-table-match-help"
-              data-tooltip="将导入地点关联到目标地图的原生 POI，以便地图显示正确的名称和地点信息。"
+              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点。"
               onClick={() => setMatchHelpOpen((open) => !open)}
             >
               ?
@@ -158,8 +158,7 @@ export function PlaceTable({
       </div>
       {canMatchAmap && matchHelpOpen && (
         <div id="place-table-match-help" className="column-help-popover" role="tooltip">
-          将导入地点关联到目标地图的原生
-          POI，以便地图显示正确的名称和地点信息；无法匹配时仍可作为自定义坐标地点导入。
+          寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。
         </div>
       )}
       <div className="table-body">
@@ -398,7 +397,7 @@ function PoiMatchCell({
     );
   return (
     <button className="small secondary" disabled={disabled} onClick={() => onMatch?.(place.id)}>
-      匹配
+      地址匹配
     </button>
   );
 }

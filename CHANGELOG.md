@@ -4,68 +4,32 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
-### Fixed
+## [0.6.0] - 2026-09-09
 
-- Fixed the Amap page-version label so SSR favorite pages are shown as the new version.
-- Accepted alternate Amap favorite coordinate fields so POIs imported through matching are not skipped by the legacy endpoint.
-- Fixed the development backup-and-clear controls so only the selected provider button shows the active-processing state.
-- Added consistent spacing between the page-size label, selector, and adjacent place-table tools.
-- Improved the place preview layout by labeling the page-size control, explaining address matching in the column header, and removing the empty matching column for unsupported targets.
-- Standardized place-table toolbar control heights and kept the active search control visibly highlighted while search is expanded.
-- Made place-table pagination buttons wider and standardized POI action and candidate-control sizing for consistent alignment.
-- Made development backup files use the standard MapBridge export format so they can be restored through the normal file-import flow.
-- Added full-text tooltips for long place names and addresses, moved diagnostic copy controls to the top, and widened the popup for POI candidate selection.
-- Removed the duplicate start-extraction action from the extraction step.
-- Kept the place-list count and pagination controls fixed while only the list body scrolls.
-- Fixed returning from preview getting stuck in the extraction step without a way to end the task or return to the first step.
-- Removed the misleading em dash from the empty place-table action column.
-- Made popup task recovery workflow-aware, including persisted import confirmation, active-task selection, cancellation, and export isolation.
-- Restored the export tab after reopening the popup instead of incorrectly resuming the migration preview step.
-- Made selected native POI imports use the target map's native-name rendering fields instead of custom-place fields.
-- Fixed file-import preview navigation incorrectly returning to the map extraction step instead of the file-selection step.
-- Fixed Amap POI matching progress remaining at `0/n` when the final progress and completion events arrived out of order.
-- Restored active extraction, matching, preview, and import tasks when the popup is reopened, so closing the popup no longer makes an in-progress task appear lost.
-- Scoped popup task recovery to the browser tab associated with the current workflow, and removed tab recovery pointers when a tab is closed without deleting the durable task.
-- Restored the migration/file-import mode and the selected places/routes preview tab when reopening a persisted task.
-- Preserved Routes when importing MapBridge JSON files, and prevented re-importing existing Amap favorites when provider IDs differ.
-- Routed legacy Amap driving, transit, and walking favorites through the compatible sync API during re-import.
-- Used the selected native Amap POI's coordinates for imports and skipped an existing favorite when its native POI ID already exists on the target map.
-- Improved Amap POI search parsing and added a fallback search when the nearby search returns no parseable candidates.
-- Accepted additional Amap suggestion POI ID and entrance-coordinate fields so returned suggestions are not incorrectly shown as zero candidates.
-- Made Amap suggestion-list parsing resilient to additional response nesting.
-- Preserved the candidate list after an automatic Amap POI match so users can inspect and change the selected result.
-- Improved Amap duplicate matching for small coordinate conversion differences and exposed HTTP status details for Route sync failures.
-- Added a configurable distance tolerance in meters for duplicate detection on supported map providers, with a safe default and maximum.
-- Fixed the development Amap cleanup tool to use the verified delete API and report the actual backup and remaining counts.
+### Added
+
+- Added POI search matching before import for both Baidu Maps and Amap.
+- Added candidate selection so users can choose the target map's native POI when several search results are available.
+- Added paginated place preview with full-list search and configurable page sizes of 10, 30, or 50 places.
 
 ### Changed
 
-- Enabled POI search matching and candidate selection in production builds.
-- Added a hover and click explanation for the address-matching column.
-- Added project-wide Prettier formatting with `format` and `format:check` scripts.
-- Improved extraction warning labels by showing place names or route endpoints instead of internal IDs.
-- Added preview-time POI search matching for Baidu Maps, including native POI selection before import.
-- Renamed the page-level POI matching action to make clear that it performs a POI search attempt.
-- Show per-place Amap POI matching progress so only the currently requested place is marked as matching.
-- Replaced popup search and settings text glyphs with consistent inline icons.
-- Added paginated place preview with 10/30/50 rows per page, compact full-list search, and a page-scoped Amap POI matching action.
-- Show whether the detected Amap favorites page is the new SSR version or the legacy version.
-- Numbered POI candidates in the selection menu so similarly named results remain distinguishable.
-- Kept POI retry, diagnostics, and candidate selection controls stable after a candidate is selected.
-- Placed POI diagnostics in a full-width expandable row and kept retry and candidate selection available after a match.
-- Clarified settings scope and renamed the Amap batch-size setting; hid settings that are not yet connected to an active import behavior.
-- Added in-place selection of a candidate when Amap POI matching finds multiple nearby results.
-- Added a bounded setting for the maximum Amap POI matching distance, defaulting to 150 meters.
-- Moved manual Amap POI matching into the Places preview table, with per-place status, retry actions, and coordinates available on hover.
-- Kept the wizard footer limited to navigation controls; matching, refresh, and other task actions now stay in the page content.
-- Shortened wizard back buttons to `Back`-equivalent labels so they remain compact and do not wrap in the popup.
-- Standardized wizard navigation actions: previous on the left, the primary next action in the center, optional actions immediately before it, and cancel on the right.
-- Added separate local settings for import request spacing and the upcoming Amap POI matching phase; import writes now honor the configured serial request interval with a safe bounded range.
-- Added the first Amap POI matching flow: matching is explicitly started before import, uses conservative name-and-distance scoring, and keeps unmatched places as custom-coordinate favorites.
-- Made Amap POI matching prefer the search strategy appropriate for the current page version, with the other strategy as a fallback when the first one fails.
-- Added a previous-step action from preview back to extraction without discarding the current preview until extraction is explicitly started again.
-- Added per-record Amap POI matching results so users can see which places use native POIs and which fall back to custom coordinates.
-- Added a bounded scroll area for detailed matching results so large match lists do not expand the popup indefinitely.
+- Production builds now support POI matching and candidate selection, not only development builds.
+- Added version-aware Amap POI search with support for both SSR and legacy favorites pages.
+- Added clearer matching progress, retry controls, candidate numbering, and explanations for address matching.
+- Improved preview navigation, task recovery, warning grouping, and import-result clarity.
+- Improved duplicate detection across coordinate conversion differences and preserved native POI fields when a match is selected.
+- Added configurable request spacing and duplicate-distance limits to reduce accidental duplicates and excessive request rates.
+- Added clearer place and route labels in extraction warnings instead of internal record identifiers.
+
+### Fixed
+
+- Fixed Amap favorites imported through POI matching being skipped by the legacy endpoint when alternate coordinate fields were returned.
+- Fixed repeated imports creating duplicate favorites after refreshing the target map state.
+- Fixed Amap page-version labels so SSR favorites pages are shown as the new version.
+- Fixed development backup files so they use the normal MapBridge export format and can be restored through file import.
+- Fixed popup recovery and navigation across migration, file import, export, preview, and report states.
+- Fixed development cleanup controls so only the selected provider shows an active-processing state.
 
 ## [0.5.1] - 2026-09-07
 
