@@ -665,10 +665,18 @@ export function PopupView({
             <div>
               <span>原始记录</span>
               <strong>{job.rawCount} 条</strong>
+              <ReportBreakdown
+                places={job.rawKindCounts?.places ?? '—'}
+                routes={job.rawKindCounts?.routes ?? '—'}
+              />
             </div>
             <div>
               <span>已识别项目</span>
               <strong>{job.items.length} 条</strong>
+              <ReportBreakdown
+                places={job.items.filter((item) => item.kind === 'poi').length}
+                routes={job.items.filter((item) => item.kind === 'route').length}
+              />
             </div>
             <div>
               <span>可导入</span>
