@@ -31,6 +31,11 @@ export interface ImportReport {
   imported: number;
   skippedDuplicates: number;
   failed: number;
+  breakdown?: {
+    imported: { places: number; routes: number };
+    skippedDuplicates: { places: number; routes: number };
+    failed: { places: number; routes: number };
+  };
   failedItems: { placeId: string; error: string }[];
   /** 实际写入目标地图的收藏 id（用于撤销导入）。 */
   importedIds?: string[];

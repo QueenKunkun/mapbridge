@@ -14,6 +14,7 @@ export type ImportMergeStatus = 'imported' | 'duplicate' | 'failed';
 export interface ImportMergeDetail {
   id: string;
   status: ImportMergeStatus;
+  type?: number;
   error?: string;
 }
 
@@ -62,13 +63,13 @@ export function mergeImportItems(
   for (const item of payloadItems) {
     const key = getKey(item);
     if (!item.id || !item.data || !key) {
-      detail.push({ id: item.id ?? '', status: 'failed', error: '缺少 id/data' });
+      detail.push({ id: item.id ?? '', type: item.type, status: 'failed', error: '缺少 id/data' });
       failed += 1;
       continue;
     }
     if (merged.has(key)) {
       duplicates += 1;
-      detail.push({ id: item.id, status: 'duplicate' });
+      detail.push({ id: item.id, type: item.type, status: 'duplicate' });
       continue;
     }
     merged.set(key, {
@@ -78,7 +79,7 @@ export function mergeImportItems(
       data: item.data as Record<string, unknown>,
     });
     imported += 1;
-    detail.push({ id: item.id, status: 'imported' });
+    detail.push({ id: item.id, type: item.type, status: 'imported' });
   }
 
   return { merged: Array.from(merged.values()), detail, imported, duplicates, failed };
