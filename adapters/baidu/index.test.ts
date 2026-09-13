@@ -400,6 +400,36 @@ describe('baidu adapter', () => {
     expect(route!.identity).toContain('自驾路线|起点@');
   });
 
+  it('preserves Baidu route waypoints from extdata.wp', () => {
+    const favorite = structuredClone(routeFavorite) as typeof routeFavorite;
+    const extdata = favorite.detail.data.extdata as typeof favorite.detail.data.extdata & {
+      wp?: unknown[];
+    };
+    extdata.wp = [
+      {
+        cityid: 1,
+        geoptx: 11582800.01,
+        geopty: 3564380.74,
+        uid: 'waypoint-1',
+        name: '途径点',
+        type: 1,
+      },
+    ];
+
+    const route = normalizeBaiduRoute(favorite);
+    expect(route?.stops.map((stop) => stop.role)).toEqual(['start', 'waypoint', 'end']);
+    expect(route?.stops.map((stop) => stop.name)).toEqual(['起点', '途径点', '终点']);
+
+    const payload = baiduAdapter.buildImportItemsPayload!([route!], []) as Array<{
+      extdata?: { wp?: Array<{ name: string; uid: string }> };
+    }>;
+    expect(payload[0]?.extdata?.wp).toHaveLength(1);
+    expect(payload[0]?.extdata?.wp?.[0]).toMatchObject({
+      name: '途径点',
+      uid: 'waypoint-1',
+    });
+  });
+
   it('builds Baidu route payloads from canonical routes for all supported modes', () => {
     const sourceRoute = normalizeBaiduRoute(routeFavorite)!;
     const modes = [

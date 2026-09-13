@@ -225,11 +225,7 @@ interface BaiduRouteNode {
   uid?: string;
 }
 
-function readRouteNode(
-  extdata: Record<string, unknown>,
-  key: 'sfavnode' | 'efavnode',
-): BaiduRouteNode | null {
-  const node = extdata[key];
+function readRouteNodeValue(node: unknown): BaiduRouteNode | null {
   if (!node || typeof node !== 'object') return null;
   const record = node as Record<string, unknown>;
   const x = Number(record['geoptx']);
@@ -237,6 +233,13 @@ function readRouteNode(
   const name = String(record['name'] ?? '').trim();
   if (!name || !Number.isFinite(x) || !Number.isFinite(y) || (x === 0 && y === 0)) return null;
   return { name, point: { x, y }, uid: record['uid'] ? String(record['uid']) : undefined };
+}
+
+function readRouteNode(
+  extdata: Record<string, unknown>,
+  key: 'sfavnode' | 'efavnode',
+): BaiduRouteNode | null {
+  return readRouteNodeValue(extdata[key]);
 }
 
 function readOptionalNumber(record: Record<string, unknown>, key: string): number | undefined {
@@ -296,6 +299,10 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
   const ext = extdata as Record<string, unknown>;
   const start = readRouteNode(ext, 'sfavnode');
   const end = readRouteNode(ext, 'efavnode');
+  const middleRaw = ext['wp'] ?? ext['mid_pois'] ?? ext['midPois'];
+  const middle = Array.isArray(middleRaw)
+    ? middleRaw.map(readRouteNodeValue).filter((node): node is BaiduRouteNode => node !== null)
+    : [];
   const pathname = String(ext['pathname'] ?? '').trim();
   if (!start || !end || !pathname) return null;
 
@@ -316,7 +323,11 @@ export function normalizeBaiduRoute(raw: unknown): CanonicalRoute | null {
     kind: 'route',
     id: randomUUID(),
     name: pathname,
-    stops: [toStop(start, 'start'), toStop(end, 'end')],
+    stops: [
+      toStop(start, 'start'),
+      ...middle.map((node) => toStop(node, 'waypoint')),
+      toStop(end, 'end'),
+    ],
     // Baidu route favorite types identify the mode even when transkind is empty.
     travelMode:
       (
