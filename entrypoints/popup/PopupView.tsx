@@ -9,6 +9,16 @@ import { ExtractionWarningPanel, NextImportButton, WizardActions } from './Popup
 type Step = 'setup' | 'extract' | 'preview' | 'import' | 'report';
 type ExportFormat = 'mapbridge' | 'gpx' | 'kml';
 type ProviderOption = { id: ProviderId; name: string };
+type OutcomeStatus = 'imported' | 'skippedDuplicates' | 'failed';
+type OutcomeKind = 'places' | 'routes';
+
+function ReportBreakdown({ places, routes }: { places: number | string; routes: number | string }) {
+  return (
+    <small className="report-breakdown">
+      地点 {places} 条 / 路线 {routes} 条
+    </small>
+  );
+}
 
 export function PopupView({
   providers,
@@ -141,6 +151,8 @@ export function PopupView({
 }) {
   const stepIndex = (value: Step) =>
     ['setup', 'extract', 'preview', 'import', 'report'].indexOf(value);
+  const reportKindCount = (status: OutcomeStatus, kind: OutcomeKind): number | string =>
+    job?.report?.breakdown?.[status]?.[kind] ?? '—';
   return (
     <div className="app">
       <header className="app-header">
@@ -659,12 +671,9 @@ export function PopupView({
               <strong>{job.items.length} 条</strong>
             </div>
             <div>
-              <span>可导入地点</span>
-              <strong>{reportImportablePlaces} 条</strong>
-            </div>
-            <div>
-              <span>可导入路线</span>
-              <strong>{reportImportableRoutes} 条</strong>
+              <span>可导入</span>
+              <strong>{reportImportable} 条</strong>
+              <ReportBreakdown places={reportImportablePlaces} routes={reportImportableRoutes} />
             </div>
           </div>
           {job.status === 'importing' && (
@@ -701,18 +710,30 @@ export function PopupView({
                   <strong>
                     {job.report?.imported ?? '—'} <small>条</small>
                   </strong>
+                  <ReportBreakdown
+                    places={reportKindCount('imported', 'places')}
+                    routes={reportKindCount('imported', 'routes')}
+                  />
                 </div>
                 <div className="report-stat duplicate">
                   <span>重复跳过</span>
                   <strong>
                     {job.report?.skippedDuplicates ?? '—'} <small>条</small>
                   </strong>
+                  <ReportBreakdown
+                    places={reportKindCount('skippedDuplicates', 'places')}
+                    routes={reportKindCount('skippedDuplicates', 'routes')}
+                  />
                 </div>
                 <div className="report-stat failure">
                   <span>导入失败</span>
                   <strong>
                     {job.report?.failed ?? '—'} <small>条</small>
                   </strong>
+                  <ReportBreakdown
+                    places={reportKindCount('failed', 'places')}
+                    routes={reportKindCount('failed', 'routes')}
+                  />
                 </div>
               </div>
               {job.report?.targetCount !== undefined && (
