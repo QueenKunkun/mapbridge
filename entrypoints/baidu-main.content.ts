@@ -321,9 +321,16 @@ export default defineContentScript({
         total: items.length,
         message: `准备写入 ${deduped.items.length} 条，跳过重复 ${deduped.duplicates.length} 条…`,
       });
-      const results: { ok: boolean; duplicate?: boolean; info?: string }[] = deduped.duplicates.map(
-        () => ({ ok: true, duplicate: true }),
-      );
+      const results: {
+        ok: boolean;
+        duplicate?: boolean;
+        kind: 'place' | 'route';
+        info?: string;
+      }[] = deduped.duplicates.map((item) => ({
+        ok: true,
+        duplicate: true,
+        kind: ['20', '21', '22', '23'].includes(String(item['type'] ?? '')) ? 'route' : 'place',
+      }));
 
       async function searchBaiduPoi(
         item: Record<string, unknown>,
@@ -386,7 +393,7 @@ export default defineContentScript({
           importKey &&
           currentRecords.some((record) => baiduImportKey(record as BaiduImportRecord) === importKey)
         ) {
-          results.push({ ok: true, duplicate: true });
+          results.push({ ok: true, duplicate: true, kind: routeItem ? 'route' : 'place' });
           processed++;
           emit({
             phase: 'sync',
@@ -417,9 +424,17 @@ export default defineContentScript({
           // 百度成功响应的每条记录也会携带 status: "100"；真正的接口
           // 成功标志是顶层 result.error === 0，不能按记录 status 判错。
           const ok = isBaiduFavWriteSuccess(res.status, text);
-          results.push({ ok, info: ok ? undefined : text.slice(0, 200) });
+          results.push({
+            ok,
+            kind: routeItem ? 'route' : 'place',
+            info: ok ? undefined : text.slice(0, 200),
+          });
         } catch (e) {
-          results.push({ ok: false, info: String(e instanceof Error ? e.message : e) });
+          results.push({
+            ok: false,
+            kind: routeItem ? 'route' : 'place',
+            info: String(e instanceof Error ? e.message : e),
+          });
         }
         processed++;
         emit({

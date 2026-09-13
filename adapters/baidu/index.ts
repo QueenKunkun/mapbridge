@@ -533,17 +533,41 @@ export const baiduAdapter: ProviderAdapter = {
 
   summarizeImportResult(result: RawImportResult) {
     const raw = result.raw as
-      | { imported?: number; duplicates?: number; failed?: number }
+      | {
+          imported?: number;
+          duplicates?: number;
+          failed?: number;
+          results?: { ok: boolean; duplicate?: boolean; kind?: 'place' | 'route' }[];
+        }
       | undefined;
     const imported = raw?.imported ?? (result.done ? 1 : 0);
     const failed = raw?.failed ?? (result.error ? 1 : 0);
+    const results = raw?.results;
+    const breakdown = results
+      ? {
+          imported: countImportKinds(results.filter((item) => item.ok && !item.duplicate)),
+          skippedDuplicates: countImportKinds(results.filter((item) => item.duplicate)),
+          failed: countImportKinds(results.filter((item) => !item.ok)),
+        }
+      : undefined;
     return {
       imported,
       skippedDuplicates: raw?.duplicates ?? 0,
       failed,
       failedItems: result.error ? [{ placeId: '', error: result.error }] : [],
       targetCount: result.targetCount,
+      breakdown,
       raw: result.raw,
     };
   },
 };
+
+function countImportKinds(items: { kind?: 'place' | 'route' }[]): {
+  places: number;
+  routes: number;
+} {
+  return {
+    places: items.filter((item) => item.kind !== 'route').length,
+    routes: items.filter((item) => item.kind === 'route').length,
+  };
+}
