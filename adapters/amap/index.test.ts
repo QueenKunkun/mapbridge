@@ -505,9 +505,9 @@ describe('amap adapter', () => {
       targetCount: 3,
       raw: {
         detail: [
-          { id: 'a', status: 'imported' },
-          { id: 'b', status: 'duplicate' },
-          { id: 'c', status: 'failed', error: 'boom' },
+          { id: 'a', type: 101, status: 'imported' },
+          { id: 'b', type: 102, status: 'duplicate' },
+          { id: 'c', type: 117, status: 'failed', error: 'boom' },
         ],
       },
     });
@@ -515,5 +515,10 @@ describe('amap adapter', () => {
     expect(report.skippedDuplicates).toBe(1);
     expect(report.failed).toBe(1);
     expect(report.failedItems[0]).toMatchObject({ placeId: 'c', error: 'boom' });
+    expect(report.breakdown).toEqual({
+      imported: { places: 1, routes: 0 },
+      skippedDuplicates: { places: 0, routes: 1 },
+      failed: { places: 0, routes: 1 },
+    });
   });
 });

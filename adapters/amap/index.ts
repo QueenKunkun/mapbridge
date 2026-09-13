@@ -604,6 +604,11 @@ export const amapAdapter: ProviderAdapter = {
     const failedItems: { placeId: string; error: string }[] = [];
     let imported = 0;
     let skippedDuplicates = 0;
+    const breakdown = {
+      imported: { places: 0, routes: 0 },
+      skippedDuplicates: { places: 0, routes: 0 },
+      failed: { places: 0, routes: 0 },
+    };
 
     if (result.error) {
       failedItems.push({ placeId: '', error: result.error });
@@ -612,15 +617,25 @@ export const amapAdapter: ProviderAdapter = {
     // 若 MAIN 执行器带了明细（raw.detail），按条统计。
     const detail =
       result.raw && typeof result.raw === 'object'
-        ? (result.raw as { detail?: Array<{ id?: string; status?: string; error?: string }> })
-            .detail
+        ? (
+            result.raw as {
+              detail?: Array<{ id?: string; type?: number; status?: string; error?: string }>;
+            }
+          ).detail
         : undefined;
     if (Array.isArray(detail)) {
       for (const item of detail) {
-        if (item.status === 'duplicate') skippedDuplicates += 1;
-        else if (item.status === 'failed' || item.error) {
+        const kind = isAmapRouteType(item.type) ? 'routes' : 'places';
+        if (item.status === 'duplicate') {
+          skippedDuplicates += 1;
+          breakdown.skippedDuplicates[kind] += 1;
+        } else if (item.status === 'failed' || item.error) {
           failedItems.push({ placeId: item.id ?? '', error: item.error ?? '未知错误' });
-        } else imported += 1;
+          breakdown.failed[kind] += 1;
+        } else {
+          imported += 1;
+          breakdown.imported[kind] += 1;
+        }
       }
     }
 
@@ -630,7 +645,12 @@ export const amapAdapter: ProviderAdapter = {
       failed: failedItems.length,
       failedItems,
       targetCount: result.targetCount,
+      breakdown,
       raw: result.raw,
     };
   },
 };
+
+function isAmapRouteType(type: unknown): boolean {
+  return [102, 103, 104, 117].includes(Number(type));
+}
