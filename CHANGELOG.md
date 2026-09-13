@@ -6,6 +6,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [0.7.0] - 2026-09-13
 
+## [0.7.0] - 2026-09-13
+
 ### Added
 
 - Import reports now show place and route counts for source records, recognized items, importable items, and each import outcome.
