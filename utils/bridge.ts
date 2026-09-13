@@ -35,6 +35,7 @@ export interface BridgeReply {
   type: 'pong' | 'whoami';
   provider: 'baidu' | 'amap' | 'tencent';
   loggedIn?: boolean;
+  version?: 'new' | 'legacy';
 }
 
 export interface BridgeEvent {

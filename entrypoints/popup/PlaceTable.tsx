@@ -361,9 +361,6 @@ function PoiMatchCell({
           <option value="">未找到</option>
         </select>
       )}
-      {!import.meta.env.DEV && match?.status === 'not-found' && (
-        <span className="match-status warning">未找到</span>
-      )}
     </div>
   );
   if (resolution || match?.status === 'matched' || match?.status === 'not-found')

@@ -883,9 +883,18 @@ export default defineBackground(() => {
             const resp = (await browser.tabs.sendMessage(t.id, {
               type: 'mb:command',
               command: { mb: BRIDGE_CHANNEL, type: 'whoami' },
-            } as never)) as { provider?: ProviderId; loggedIn?: boolean } | undefined;
+            } as never)) as
+              | {
+                  provider?: ProviderId;
+                  loggedIn?: boolean;
+                  version?: 'new' | 'legacy';
+                }
+              | undefined;
             if (resp?.provider) {
-              const version = resp.provider === 'amap' ? detectAmapPageVersion(t.url) : undefined;
+              const version =
+                resp.provider === 'amap'
+                  ? (resp.version ?? detectAmapPageVersion(t.url ?? t.pendingUrl))
+                  : undefined;
               detected.push({
                 providerId: resp.provider,
                 tabId: t.id,

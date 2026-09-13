@@ -2,6 +2,7 @@ import { BRIDGE_CHANNEL, isBridgeEvent } from '@/utils/bridge';
 import type { BridgeCommand, BridgeReply } from '@/utils/bridge';
 import { parseMaybeJsonp } from '@/utils/capture';
 import { readAmapLoginStatus } from '@/utils/login-status';
+import { detectAmapPageVersion } from '@/utils/map-version';
 
 const log = (...args: unknown[]): void => console.log('[mb:content:amap]', ...args);
 
@@ -60,6 +61,7 @@ export default defineContentScript({
               type: 'whoami',
               provider: 'amap',
               loggedIn,
+              version: detectAmapPageVersion(window.location.href),
             };
             log('reply to background', reply);
             return reply;
