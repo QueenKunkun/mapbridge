@@ -4,6 +4,17 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-13
+
+### Added
+
+- Import reports now show place and route counts for source records, recognized items, importable items, and each import outcome.
+- Import result summaries now distinguish imported places and routes, duplicate skips, and failures.
+
+### Changed
+
+- Import previews and reports use consistent item-type terminology for mixed place and route collections.
+
 ## [0.6.2] - 2026-09-10
 
 ## [0.6.1] - 2026-09-09
