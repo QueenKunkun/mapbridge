@@ -478,8 +478,20 @@ export const amapAdapter: ProviderAdapter = {
     const places: CanonicalPlace[] = [];
     const skipped: { index: number; reason: string; label?: string }[] = [];
     const seenIds = new Set<string>();
+    const rawKindCounts = { places: 0, routes: 0 };
 
     raw.records.forEach((record, index) => {
+      const recordData =
+        record && typeof record === 'object' && (record as Record<string, unknown>)['data'];
+      const recordType =
+        record && typeof record === 'object'
+          ? ((record as Record<string, unknown>)['type'] ??
+            (recordData && typeof recordData === 'object'
+              ? (recordData as Record<string, unknown>)['type']
+              : undefined))
+          : undefined;
+      if (isAmapRouteType(recordType)) rawKindCounts.routes += 1;
+      else rawKindCounts.places += 1;
       const route = normalizeAmapRoute(record) ?? normalizeAmapLegacyRoute(record);
       if (route) {
         items.push(route);
@@ -525,7 +537,7 @@ export const amapAdapter: ProviderAdapter = {
       createdAt: new Date().toISOString(),
     };
 
-    return { collection, items, places, skipped, rawCount: raw.records.length };
+    return { collection, items, places, skipped, rawCount: raw.records.length, rawKindCounts };
   },
 
   buildImportPayload(

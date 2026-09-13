@@ -492,6 +492,7 @@ describe('baidu adapter', () => {
     expect(result.items.map((item) => item.kind)).toEqual(['route', 'poi']);
     expect(result.places).toHaveLength(1);
     expect(result.collection.placeCount).toBe(2);
+    expect(result.rawKindCounts).toEqual({ places: 1, routes: 1 });
   });
 
   it('rejects a type 20 route without a valid endpoint', () => {

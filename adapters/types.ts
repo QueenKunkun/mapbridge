@@ -78,6 +78,7 @@ export interface ProviderAdapter {
     places: CanonicalPlace[];
     skipped: { index: number; reason: string; label?: string }[];
     rawCount: number;
+    rawKindCounts?: { places: number; routes: number };
   };
 
   /**

@@ -225,6 +225,19 @@ interface BaiduRouteNode {
   uid?: string;
 }
 
+function isBaiduRouteRecord(raw: unknown): boolean {
+  if (!raw || typeof raw !== 'object') return false;
+  const record = raw as Record<string, unknown>;
+  const detail = record['detail'];
+  const data =
+    detail && typeof detail === 'object' ? (detail as Record<string, unknown>)['data'] : record;
+  return Boolean(
+    data &&
+      typeof data === 'object' &&
+      ['20', '21', '22', '23'].includes(String((data as Record<string, unknown>)['type'] ?? '')),
+  );
+}
+
 function readRouteNodeValue(node: unknown): BaiduRouteNode | null {
   if (!node || typeof node !== 'object') return null;
   const record = node as Record<string, unknown>;
@@ -372,6 +385,7 @@ export const baiduAdapter: ProviderAdapter = {
     const places: CanonicalPlace[] = [];
     const skipped: { index: number; reason: string; label?: string }[] = [];
     const seenIds = new Set<string>();
+    const rawKindCounts = { places: 0, routes: 0 };
 
     raw.records.forEach((record, index) => {
       if (!record || typeof record !== 'object') {
@@ -380,6 +394,8 @@ export const baiduAdapter: ProviderAdapter = {
       }
       const r = record as Record<string, unknown>;
       const detail = r['detail'] as Record<string, unknown> | undefined;
+      if (isBaiduRouteRecord(record)) rawKindCounts.routes += 1;
+      else rawKindCounts.places += 1;
       if (r['action'] === 'del' || detail?.data === false) {
         skipped.push({
           index,
@@ -420,7 +436,7 @@ export const baiduAdapter: ProviderAdapter = {
       createdAt: new Date().toISOString(),
     };
 
-    return { collection, items, places, skipped, rawCount: raw.records.length };
+    return { collection, items, places, skipped, rawCount: raw.records.length, rawKindCounts };
   },
 
   buildImportPayload(

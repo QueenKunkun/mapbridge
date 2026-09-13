@@ -388,6 +388,7 @@ describe('amap adapter', () => {
     expect(result.items.every((item) => item.kind === 'poi')).toBe(true);
     expect(result.places).toHaveLength(2);
     expect(result.skipped).toHaveLength(0);
+    expect(result.rawKindCounts).toEqual({ places: 2, routes: 0 });
   });
 
   it('buildImportPayload reproduces the verified amap favorite payload', () => {

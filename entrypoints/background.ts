@@ -99,6 +99,7 @@ async function applyExtractData(data: RawExtract): Promise<void> {
     result.rawCount,
     warnings,
     result.skipped,
+    result.rawKindCounts,
   );
   await saveJob(updated);
   if (job.workflow === 'export') {
@@ -832,6 +833,11 @@ export default defineBackground(() => {
           req.places,
           req.items.length,
           req.warnings ?? [],
+          [],
+          {
+            places: req.items.filter((item) => item.kind === 'poi').length,
+            routes: req.items.filter((item) => item.kind === 'route').length,
+          },
         );
         await saveJob(applied);
         await setActiveJobId(

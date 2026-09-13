@@ -119,6 +119,8 @@ export interface Job {
   extractionSkipped: ExtractionSkip[];
   /** 提取阶段收到的原始记录数。 */
   rawCount: number;
+  /** 原始记录按项目类型拆分的数量，包含后续被跳过的记录。 */
+  rawKindCounts?: { places: number; routes: number };
   /** 目标导入 payload（幂等构建一次，重试复用）。 */
   importPayload?: unknown;
   /** 目标地图已有的收藏（用于去重提示，可选）。 */
@@ -134,9 +136,14 @@ export interface Job {
 
 type PersistedJob = Omit<
   Job,
-  'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'
+  'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount' | 'rawKindCounts'
 > &
-  Partial<Pick<Job, 'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount'>>;
+  Partial<
+    Pick<
+      Job,
+      'workflow' | 'items' | 'warnings' | 'extractionSkipped' | 'rawCount' | 'rawKindCounts'
+    >
+  >;
 
 /** Fill fields introduced after the first persisted Job format. */
 export function hydrateJob(job: PersistedJob): Job {
@@ -148,6 +155,10 @@ export function hydrateJob(job: PersistedJob): Job {
     warnings: job.warnings ?? [],
     extractionSkipped: job.extractionSkipped ?? [],
     rawCount: job.rawCount ?? job.places.length,
+    rawKindCounts: job.rawKindCounts ?? {
+      places: job.items?.filter((item) => item.kind === 'poi').length ?? job.places.length,
+      routes: job.items?.filter((item) => item.kind === 'route').length ?? 0,
+    },
   };
 }
 
@@ -170,6 +181,7 @@ export function createJob(
     warnings: [],
     extractionSkipped: [],
     rawCount: 0,
+    rawKindCounts: { places: 0, routes: 0 },
     progress: { processed: 0, total: 0 },
     previewTab: 'places',
   };
@@ -186,6 +198,7 @@ export function applyExtractionItems(
   rawCount: number,
   warnings: string[] = [],
   extractionSkipped: ExtractionSkip[] = [],
+  rawKindCounts?: { places: number; routes: number },
 ): Job {
   const isExport = job.workflow === 'export';
   return {
@@ -195,6 +208,10 @@ export function applyExtractionItems(
     warnings,
     extractionSkipped,
     rawCount,
+    rawKindCounts: rawKindCounts ?? {
+      places: items.filter((item) => item.kind === 'poi').length,
+      routes: items.filter((item) => item.kind === 'route').length,
+    },
     status: isExport ? 'done' : 'preview',
     phase: isExport ? 'result' : 'preview',
     progress: { processed: 0, total: places.length },
