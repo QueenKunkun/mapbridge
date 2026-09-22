@@ -459,7 +459,10 @@ export default function App() {
     try {
       const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds });
       if (res.type === 'job' && res.job) setJob(res.job);
-      else if (res.type === 'error') setError(res.message);
+      else if (res.type === 'error') {
+        setError(res.message);
+        await refreshJob();
+      }
     } finally {
       clearInterval(poll);
       setMatching(false);
