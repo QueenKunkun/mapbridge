@@ -242,6 +242,12 @@ export default defineContentScript({
       });
     }
 
+    let matchCancelled = false;
+
+    function throwIfMatchCancelled(): void {
+      if (matchCancelled) throw new Error('POI 匹配已取消');
+    }
+
     async function runMatchPoi(
       payload: unknown,
       options?: {
@@ -250,6 +256,7 @@ export default defineContentScript({
         poiMatchDistanceMeters?: number;
       },
     ): Promise<void> {
+      matchCancelled = false;
       const places = Array.isArray(payload) ? (payload as CanonicalPlace[]) : [];
       const configuredDelay = Number(options?.poiMatchDelayMs);
       const delayMs = Number.isFinite(configuredDelay)
@@ -299,6 +306,7 @@ export default defineContentScript({
         data: { processed: 0, total: places.length, message: '准备匹配高德 POI…' },
       });
       for (let index = 0; index < places.length; index++) {
+        throwIfMatchCancelled();
         const place = places[index]!;
         postEvent({
           mb: BRIDGE_CHANNEL,
@@ -320,6 +328,7 @@ export default defineContentScript({
               await withTimeout(search(place), POI_SEARCH_TIMEOUT_MS),
               { maxDistanceMeters },
             );
+            throwIfMatchCancelled();
             if (match.status === 'matched') {
               resolutions[place.id] = {
                 poiid: match.candidate.poiid,
@@ -359,8 +368,10 @@ export default defineContentScript({
         });
         if (index < places.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, delayMs));
+          throwIfMatchCancelled();
           if ((index + 1) % pageSize === 0)
             await new Promise((resolve) => setTimeout(resolve, delayMs));
+          throwIfMatchCancelled();
         }
       }
       postEvent({
@@ -872,10 +883,16 @@ export default defineContentScript({
             data: {
               provider: 'amap',
               done: false,
+              cancelled: matchCancelled,
               error: String(error instanceof Error ? error.message : error),
             },
           });
         }
+        return;
+      }
+
+      if (cmd.type === 'cancel-match-poi') {
+        matchCancelled = true;
         return;
       }
 

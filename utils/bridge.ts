@@ -8,6 +8,7 @@ export interface BridgeCommand {
     | 'extract'
     | 'import'
     | 'match-poi'
+    | 'cancel-match-poi'
     | 'ping'
     | 'whoami'
     | 'dev-read-fav'

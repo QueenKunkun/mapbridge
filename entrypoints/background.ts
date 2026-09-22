@@ -55,7 +55,9 @@ let pendingExtract: PendingExtract | undefined;
 let pendingAmapMatch:
   | {
       jobId: string;
+      tabId: number;
       placeIds: string[];
+      cancelRequested?: boolean;
       resolve: (result: {
         ok: boolean;
         resolutions?: Record<string, AmapPoiResolution>;
@@ -147,6 +149,7 @@ async function sendCommandToTab(
       | 'extract'
       | 'import'
       | 'match-poi'
+      | 'cancel-match-poi'
       | 'ping'
       | 'dev-read-fav'
       | 'dev-clear-fav'
@@ -370,6 +373,7 @@ async function handleMatchAmapPoi(
   }>((resolve) => {
     pendingAmapMatch = {
       jobId,
+      tabId,
       placeIds,
       resolve,
     };
@@ -394,6 +398,8 @@ async function handleMatchAmapPoi(
     });
   });
   const latest = await getJob(jobId);
+  if (latest?.status === 'cancelled')
+    return { type: 'error', message: result.error ?? 'POI 匹配已取消' };
   if (!result.ok) {
     if (latest) {
       const failed = { ...(latest.amapPoiMatches ?? {}) };
@@ -474,6 +480,13 @@ async function handleCancelJob(jobId: string): Promise<BgResponse> {
     return { type: 'error', message: '导入已经开始，不能取消；请等待完成后再撤销已写入记录' };
   if (job.status === 'done' || job.status === 'failed' || job.status === 'cancelled')
     return { type: 'error', message: '当前任务已经结束' };
+  const pending = pendingAmapMatch?.jobId === jobId ? pendingAmapMatch : undefined;
+  if (pending) {
+    pending.cancelRequested = true;
+    void sendCommandToTab(pending.tabId, { type: 'cancel-match-poi' }).catch((error) => {
+      log('cancel POI match command failed', String(error));
+    });
+  }
   const cancelled: Job = { ...job, status: 'cancelled', updatedAt: now() };
   await saveJob(cancelled);
   await clearActiveJobId(jobId);
@@ -526,6 +539,21 @@ async function handleImportEvent(data: RawImportResult): Promise<void> {
 async function handleAmapMatchResult(data: unknown): Promise<void> {
   const pending = pendingAmapMatch;
   if (!pending) return;
+  const value =
+    data && typeof data === 'object'
+      ? (data as {
+          done?: boolean;
+          cancelled?: boolean;
+          resolutions?: Record<string, AmapPoiResolution>;
+          matches?: Record<string, AmapPoiMatchRecord>;
+          error?: string;
+        })
+      : {};
+  if (pending.cancelRequested || value.cancelled) {
+    pendingAmapMatch = undefined;
+    pending.resolve({ ok: false, matches: value.matches, error: 'POI 匹配已取消' });
+    return;
+  }
   const job = await getJob(pending.jobId);
   if (job) {
     await saveJob(
@@ -538,15 +566,6 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
     );
   }
   pendingAmapMatch = undefined;
-  const value =
-    data && typeof data === 'object'
-      ? (data as {
-          done?: boolean;
-          resolutions?: Record<string, AmapPoiResolution>;
-          matches?: Record<string, AmapPoiMatchRecord>;
-          error?: string;
-        })
-      : {};
   if (value.error) {
     pending.resolve({ ok: false, matches: value.matches, error: value.error });
     return;

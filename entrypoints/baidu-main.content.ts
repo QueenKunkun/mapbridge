@@ -510,6 +510,12 @@ export default defineContentScript({
       });
     }
 
+    let matchCancelled = false;
+
+    function throwIfMatchCancelled(): void {
+      if (matchCancelled) throw new Error('POI 匹配已取消');
+    }
+
     async function runMatchPoi(
       payload: unknown,
       options?: {
@@ -518,6 +524,7 @@ export default defineContentScript({
         baiduPoiMatchDistanceMeters?: number;
       },
     ): Promise<void> {
+      matchCancelled = false;
       const places = Array.isArray(payload)
         ? (payload as Array<{ id: string; name: string; wgs84: { lng: number; lat: number } }>)
         : [];
@@ -582,6 +589,7 @@ export default defineContentScript({
         data: { processed: 0, total: places.length, message: '准备匹配百度 POI…' },
       });
       for (let index = 0; index < places.length; index++) {
+        throwIfMatchCancelled();
         const place = places[index]!;
         postEvent({
           mb: BRIDGE_CHANNEL,
@@ -595,6 +603,7 @@ export default defineContentScript({
         });
         try {
           const first = await withTimeout(request(place, 0), POI_SEARCH_TIMEOUT_MS);
+          throwIfMatchCancelled();
           const city =
             chooseBaiduSearchCity(first, wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat)) ?? 0;
           if (city !== 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -603,6 +612,7 @@ export default defineContentScript({
             { name: place.name, ...wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat) },
             maxDistance,
           );
+          throwIfMatchCancelled();
           if (match) {
             const location = toWgs84({ crs: 'bd09mc', lng: match.x, lat: match.y });
             const candidate = {
@@ -654,8 +664,10 @@ export default defineContentScript({
         });
         if (index < places.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, delayMs));
+          throwIfMatchCancelled();
           if ((index + 1) % pageSize === 0)
             await new Promise((resolve) => setTimeout(resolve, delayMs));
+          throwIfMatchCancelled();
         }
       }
       postEvent({
@@ -709,11 +721,14 @@ export default defineContentScript({
               provider: 'baidu',
               resolutions: {},
               matches: {},
-              done: true,
+              done: false,
+              cancelled: matchCancelled,
               error: String(error instanceof Error ? error.message : error),
             },
           });
         });
+      } else if (cmd.type === 'cancel-match-poi') {
+        matchCancelled = true;
       } else if (cmd.type === 'import') {
         log('recv import command');
         void runImport(cmd.payload, cmd.options).catch((error) => {
