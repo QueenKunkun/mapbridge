@@ -57,7 +57,6 @@ export function PlaceTable({
 }) {
   const [filter, setFilter] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [matchHelpOpen, setMatchHelpOpen] = useState(false);
   const [pageSize, setPageSize] = useState<10 | 30 | 50>(10);
   const [page, setPage] = useState(1);
   const filtered = places.filter(
@@ -126,20 +125,32 @@ export function PlaceTable({
           )}
         </div>
         {canMatchAmap && (
-          <button
-            className="small secondary page-match"
-            disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0}
-            aria-busy={matching === true}
-            title={matching ? '正在匹配全部地点，请等待当前任务完成' : '尝试匹配全部地点'}
-            onClick={() =>
-              onMatchAmapAll?.(
-                filtered.map((place) => place.id),
-                pageSize,
-              )
-            }
-          >
-            {matching ? '匹配中…' : '尝试POI搜索匹配'}
-          </button>
+          <span className="match-action">
+            <button
+              className="small secondary page-match"
+              disabled={
+                shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0
+              }
+              aria-busy={matching === true}
+              title={matching ? '正在匹配全部地点，请等待当前任务完成' : '尝试匹配全部地点'}
+              onClick={() =>
+                onMatchAmapAll?.(
+                  filtered.map((place) => place.id),
+                  pageSize,
+                )
+              }
+            >
+              {matching ? '匹配中…' : '尝试POI搜索匹配'}
+            </button>
+            <button
+              type="button"
+              className="column-help"
+              aria-label="尝试 POI 搜索匹配说明"
+              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。"
+            >
+              ?
+            </button>
+          </span>
         )}
       </div>
       <div className="table-head">
@@ -153,25 +164,18 @@ export function PlaceTable({
               type="button"
               className="column-help"
               aria-label="地址匹配说明"
-              aria-expanded={matchHelpOpen}
-              aria-describedby="place-table-match-help"
-              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点。"
-              onClick={() => setMatchHelpOpen((open) => !open)}
+              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。"
             >
               ?
             </button>
           </span>
         )}
       </div>
-      {canMatchAmap && matchHelpOpen && (
-        <div id="place-table-match-help" className="column-help-popover" role="tooltip">
-          寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。
-        </div>
-      )}
       <div className="table-body">
-        {shown.map((place) => (
+        {shown.map((place, index) => (
           <PlaceRow
             key={place.id}
+            index={(currentPage - 1) * pageSize + index + 1}
             place={place}
             canMatchAmap={canMatchAmap}
             match={amapPoiMatches?.[place.id]}
@@ -214,6 +218,7 @@ export function PlaceTable({
 }
 
 function PlaceRow({
+  index,
   place,
   canMatchAmap,
   match,
@@ -225,6 +230,7 @@ function PlaceRow({
   onMatch,
   onSelect,
 }: {
+  index: number;
   place: Job['places'][number];
   canMatchAmap?: boolean;
   match?: NonNullable<Job['amapPoiMatches']>[string];
@@ -240,14 +246,19 @@ function PlaceRow({
   return (
     <div className="place-row">
       <div className="row">
-        <button
-          className="remove"
-          aria-label={`删除${place.name}`}
-          title="删除此记录"
-          onClick={() => onRemove(place.id)}
-        >
-          ✕
-        </button>
+        <div className="row-leading">
+          <span className="row-index" aria-label={`第 ${index} 条`}>
+            {index}
+          </span>
+          <button
+            className="remove"
+            aria-label={`删除${place.name}`}
+            title="删除此记录"
+            onClick={() => onRemove(place.id)}
+          >
+            ✕
+          </button>
+        </div>
         <input
           value={place.name}
           title={`名称：${place.name}\nWGS-84：${place.wgs84.lng.toFixed(6)}, ${place.wgs84.lat.toFixed(6)}`}
