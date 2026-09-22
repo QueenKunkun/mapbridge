@@ -6,6 +6,8 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [0.8.0] - 2026-09-22
 
+## [0.8.0] - 2026-09-22
+
 ### Added
 
 - Added full-list POI matching from the place preview, with serial requests, configurable pacing, paginated review, numbered candidates, and manual candidate selection.
