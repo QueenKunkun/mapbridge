@@ -1009,10 +1009,10 @@ button.remove {
 .column-help:hover::after,
 .column-help:focus-visible::after {
   content: attr(data-tooltip);
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
+  z-index: 100;
+  top: var(--poi-tooltip-top, 8px);
+  left: var(--poi-tooltip-left, 8px);
   width: max-content;
   max-width: min(320px, calc(100vw - 32px));
   box-sizing: border-box;

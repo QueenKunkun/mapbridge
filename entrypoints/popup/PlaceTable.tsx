@@ -4,6 +4,30 @@ import { updatePreviewPlace, type Job } from '@/core/jobs';
 
 type PoiCandidate = NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number];
 
+function PoiHelpButton({ label, tooltip }: { label: string; tooltip: string }) {
+  function positionTooltip(button: HTMLButtonElement): void {
+    const rect = button.getBoundingClientRect();
+    const maxWidth = Math.min(320, window.innerWidth - 16);
+    const left = Math.min(Math.max(8, rect.right - maxWidth), window.innerWidth - maxWidth - 8);
+    const top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - 160));
+    button.style.setProperty('--poi-tooltip-left', `${left}px`);
+    button.style.setProperty('--poi-tooltip-top', `${top}px`);
+  }
+
+  return (
+    <button
+      type="button"
+      className="column-help"
+      aria-label={label}
+      data-tooltip={tooltip}
+      onMouseEnter={(event) => positionTooltip(event.currentTarget)}
+      onFocus={(event) => positionTooltip(event.currentTarget)}
+    >
+      ?
+    </button>
+  );
+}
+
 export function RouteSummary({
   route,
 }: {
@@ -140,18 +164,14 @@ export function PlaceTable({
                 )
               }
             >
-              {matching ? '匹配中…' : '尝试POI搜索匹配'}
+              {matching ? '匹配中…' : '尝试批量地址匹配'}
             </button>
-            <button
-              type="button"
-              className="column-help"
-              aria-label="尝试 POI 搜索匹配说明"
-              data-tooltip={
+            <PoiHelpButton
+              label="尝试批量地址匹配"
+              tooltip={
                 '可选项。无需匹配也可导入。\n匹配目标地图的原生地点并关联之后，信息会更多，位置会更准确。'
               }
-            >
-              ?
-            </button>
+            />
           </span>
         )}
       </div>
@@ -162,16 +182,12 @@ export function PlaceTable({
         {canMatchAmap && (
           <span className="match-heading">
             地址匹配{' '}
-            <button
-              type="button"
-              className="column-help"
-              aria-label="匹配规则说明"
-              data-tooltip={
+            <PoiHelpButton
+              label="匹配规则说明"
+              tooltip={
                 '匹配规则：\n1. 按地点名称搜索目标地图 POI。\n2. 按坐标距离筛选候选，距离阈值可在设置中调整。\n3. 高德还会检查名称相似度；百度要求名称一致。\n4. 候选不明确时不会自动关联，可手动选择。'
               }
-            >
-              ?
-            </button>
+            />
           </span>
         )}
       </div>
