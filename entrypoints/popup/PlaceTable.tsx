@@ -129,6 +129,8 @@ export function PlaceTable({
           <button
             className="small secondary page-match"
             disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0}
+            aria-busy={matching === true}
+            title={matching ? '正在匹配全部地点，请等待当前任务完成' : '尝试匹配全部地点'}
             onClick={() =>
               onMatchAmapAll?.(
                 filtered.map((place) => place.id),

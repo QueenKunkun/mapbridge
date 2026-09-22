@@ -105,7 +105,10 @@ export default function App() {
           .filter(([, result]) => result.status === 'matching')
           .map(([placeId]) => placeId);
         setMatchingPlaceIds(new Set(activeMatchingIds));
-        setMatching(activeMatchingIds.length > 0);
+        // The content script emits a short gap between two places/pages. Keep the
+        // command-level matching state during that gap so the bulk-match button
+        // cannot become clickable while the same run is still in progress.
+        if (activeMatchingIds.length > 0) setMatching(true);
       });
     }, 800);
     return () => clearInterval(timer);
