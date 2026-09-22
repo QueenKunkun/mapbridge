@@ -135,7 +135,7 @@ export function PopupView({
   ) => Promise<void>;
   matchingPlaceIds: Set<string>;
   matching: boolean;
-  startAmapMatch: (ids: string | string[]) => Promise<void>;
+  startAmapMatch: (ids: string | string[], pageSize?: number) => Promise<void>;
   selectAmapPoi: (
     placeId: string,
     candidate?: NonNullable<NonNullable<Job['amapPoiMatches']>[string]['candidates']>[number],
@@ -547,7 +547,7 @@ export function PopupView({
                 matchingPlaceIds={matchingPlaceIds}
                 matching={matching}
                 onMatchAmapPoi={(placeId) => void startAmapMatch(placeId)}
-                onMatchAmapPage={(placeIds) => void startAmapMatch(placeIds)}
+                onMatchAmapAll={(placeIds, pageSize) => void startAmapMatch(placeIds, pageSize)}
                 onSelectAmapPoi={(placeId, candidate) => void selectAmapPoi(placeId, candidate)}
               />
             ) : (

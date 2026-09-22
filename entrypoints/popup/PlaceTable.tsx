@@ -41,7 +41,7 @@ export function PlaceTable({
   matchingPlaceIds,
   matching,
   onMatchAmapPoi,
-  onMatchAmapPage,
+  onMatchAmapAll,
   onSelectAmapPoi,
 }: {
   places: Job['places'];
@@ -52,7 +52,7 @@ export function PlaceTable({
   matchingPlaceIds?: Set<string>;
   matching?: boolean;
   onMatchAmapPoi?: (placeId: string) => void;
-  onMatchAmapPage?: (placeIds: string[]) => void;
+  onMatchAmapAll?: (placeIds: string[], pageSize: number) => void;
   onSelectAmapPoi?: (placeId: string, candidate?: PoiCandidate) => void;
 }) {
   const [filter, setFilter] = useState('');
@@ -129,9 +129,14 @@ export function PlaceTable({
           <button
             className="small secondary page-match"
             disabled={shown.length === 0 || matching === true || (matchingPlaceIds?.size ?? 0) > 0}
-            onClick={() => onMatchAmapPage?.(shown.map((place) => place.id))}
+            onClick={() =>
+              onMatchAmapAll?.(
+                filtered.map((place) => place.id),
+                pageSize,
+              )
+            }
           >
-            {matching ? '匹配中…' : '批量地址匹配'}
+            {matching ? '匹配中…' : '尝试POI搜索匹配'}
           </button>
         )}
       </div>

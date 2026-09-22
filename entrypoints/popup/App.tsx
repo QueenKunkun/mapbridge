@@ -436,7 +436,7 @@ export default function App() {
     }
   }
 
-  async function startAmapMatch(placeIdOrIds: string | string[]): Promise<void> {
+  async function startAmapMatch(placeIdOrIds: string | string[], pageSize?: number): Promise<void> {
     if (!job || !['amap', 'baidu'].includes(job.targetProvider) || job.places.length === 0) return;
     if (matching) return;
     const tabId = detectedTab(job.targetProvider) ?? (await currentTabId());
@@ -457,7 +457,7 @@ export default function App() {
       });
     }, 500);
     try {
-      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds });
+      const res = await sendBg({ type: 'match-poi', jobId: job.id, tabId, placeIds, pageSize });
       if (res.type === 'job' && res.job) setJob(res.job);
       else if (res.type === 'error') {
         setError(res.message);

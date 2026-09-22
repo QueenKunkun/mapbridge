@@ -156,6 +156,7 @@ async function sendCommandToTab(
     options?: {
       importDelayMs?: number;
       poiMatchDelayMs?: number;
+      poiMatchPageSize?: number;
       baiduPoiMatchDelayMs?: number;
       baiduPoiMatchDistanceMeters?: number;
       poiMatchDistanceMeters?: number;
@@ -342,6 +343,7 @@ async function handleMatchAmapPoi(
   jobId: string,
   tabId: number,
   requestedPlaceIds?: string[],
+  pageSize?: number,
 ): Promise<BgResponse> {
   const job = await getJob(jobId);
   if (!job || !['amap', 'baidu'].includes(job.targetProvider))
@@ -376,6 +378,7 @@ async function handleMatchAmapPoi(
       payload: job.places.filter((place) => placeIds.includes(place.id)),
       options: {
         poiMatchDelayMs: settings.poiMatchDelayMs,
+        poiMatchPageSize: pageSize,
         poiMatchDistanceMeters: settings.poiMatchDistanceMeters,
         baiduPoiMatchDelayMs: settings.baiduPoiMatchDelayMs,
         baiduPoiMatchDistanceMeters: settings.baiduPoiMatchDistanceMeters,
@@ -788,7 +791,7 @@ export default defineBackground(() => {
         return await handleExtract(req.jobId, req.tabId);
       }
       case 'match-poi': {
-        return await handleMatchAmapPoi(req.jobId, req.tabId, req.placeIds);
+        return await handleMatchAmapPoi(req.jobId, req.tabId, req.placeIds, req.pageSize);
       }
       case 'select-poi-match': {
         return await handleSelectAmapPoi(req.jobId, req.placeId, req.candidate);

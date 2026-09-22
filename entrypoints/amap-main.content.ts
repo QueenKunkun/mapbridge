@@ -244,13 +244,21 @@ export default defineContentScript({
 
     async function runMatchPoi(
       payload: unknown,
-      options?: { poiMatchDelayMs?: number; poiMatchDistanceMeters?: number },
+      options?: {
+        poiMatchDelayMs?: number;
+        poiMatchPageSize?: number;
+        poiMatchDistanceMeters?: number;
+      },
     ): Promise<void> {
       const places = Array.isArray(payload) ? (payload as CanonicalPlace[]) : [];
       const configuredDelay = Number(options?.poiMatchDelayMs);
       const delayMs = Number.isFinite(configuredDelay)
         ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay)))
         : 1_000;
+      const configuredPageSize = Number(options?.poiMatchPageSize);
+      const pageSize = Number.isFinite(configuredPageSize)
+        ? Math.min(50, Math.max(1, Math.floor(configuredPageSize)))
+        : 10;
       const maxDistanceMeters = Number.isFinite(Number(options?.poiMatchDistanceMeters))
         ? Math.min(1_000, Math.max(50, Math.floor(Number(options?.poiMatchDistanceMeters))))
         : 150;
@@ -349,7 +357,11 @@ export default defineContentScript({
             message: `匹配高德 POI：${index + 1} / ${places.length}`,
           },
         });
-        if (index < places.length - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+        if (index < places.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          if ((index + 1) % pageSize === 0)
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
       postEvent({
         mb: BRIDGE_CHANNEL,

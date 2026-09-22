@@ -21,6 +21,7 @@ export interface BridgeCommand {
   options?: {
     importDelayMs?: number;
     poiMatchDelayMs?: number;
+    poiMatchPageSize?: number;
     baiduPoiMatchDelayMs?: number;
     baiduPoiMatchDistanceMeters?: number;
     poiMatchDistanceMeters?: number;

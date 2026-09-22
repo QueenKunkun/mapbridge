@@ -19,7 +19,13 @@ export type BgRequest =
     }
   | { type: 'delete-job'; id: string }
   | { type: 'extract'; jobId: string; tabId: number }
-  | { type: 'match-poi'; jobId: string; tabId: number; placeIds?: string[] }
+  | {
+      type: 'match-poi';
+      jobId: string;
+      tabId: number;
+      placeIds?: string[];
+      pageSize?: number;
+    }
   | {
       type: 'select-poi-match';
       jobId: string;
