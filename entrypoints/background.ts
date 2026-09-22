@@ -698,7 +698,7 @@ export default defineBackground(() => {
         const jobs = await listJobs();
         const matchJobId = pendingAmapMatch?.jobId;
         const job = matchJobId ? jobs.find((j) => j.id === matchJobId) : undefined;
-        if (job) {
+        if (job && job.status !== 'cancelled') {
           // 完成事件可能与最后一次进度事件乱序到达；完成后丢弃迟到的旧进度。
           if (!pendingAmapMatch || pendingAmapMatch.jobId !== job.id) return undefined;
           const p = event.data as {
