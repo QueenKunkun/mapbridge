@@ -73,20 +73,11 @@ export function NextImportButton({
   );
 }
 
-export function WizardActions({
-  previous,
-  next,
-  cancel,
-}: {
-  previous?: ReactNode;
-  next: ReactNode;
-  cancel?: ReactNode;
-}) {
+export function WizardActions({ previous, next }: { previous?: ReactNode; next: ReactNode }) {
   return (
     <div className="wizard-actions">
-      <div className="wizard-actions-previous">{previous}</div>
+      {previous && <div className="wizard-actions-previous">{previous}</div>}
       <div className="wizard-actions-next">{next}</div>
-      <div className="wizard-actions-cancel">{cancel}</div>
     </div>
   );
 }

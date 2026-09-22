@@ -628,17 +628,16 @@ button.small {
 }
 
 .wizard-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
   width: 100%;
   margin-top: 12px;
 }
 
 .wizard-actions-previous,
-.wizard-actions-next,
-.wizard-actions-cancel {
+.wizard-actions-next {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -646,16 +645,16 @@ button.small {
 }
 
 .wizard-actions-previous {
-  justify-content: flex-start;
-}
-
-.wizard-actions-next {
-  justify-content: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
 }
 
-.wizard-actions-cancel {
+.wizard-actions-next {
   justify-content: flex-end;
+}
+
+.step-cancel {
+  margin-left: 6px;
 }
 
 button {
