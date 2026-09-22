@@ -235,7 +235,7 @@ section {
 .match-candidates {
   position: relative;
   overflow: visible;
-  white-space: pre-line;
+  white-space: normal;
 }
 
 .match-candidates summary {
@@ -1023,7 +1023,7 @@ button.remove {
   line-height: 1.45;
   text-align: left;
   text-transform: none;
-  white-space: normal;
+  white-space: pre-line;
   box-shadow: 0 3px 12px rgb(15 23 42 / 14%);
   pointer-events: none;
 }
