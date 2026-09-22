@@ -235,7 +235,7 @@ section {
 .match-candidates {
   position: relative;
   overflow: visible;
-  white-space: normal;
+  white-space: pre-line;
 }
 
 .match-candidates summary {

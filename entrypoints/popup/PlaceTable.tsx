@@ -146,7 +146,9 @@ export function PlaceTable({
               type="button"
               className="column-help"
               aria-label="尝试 POI 搜索匹配说明"
-              data-tooltip="可选项。无需匹配也可导入；匹配目标地图的原生地点并关联之后，信息会更多，位置会更准确。"
+              data-tooltip={
+                '可选项。无需匹配也可导入。\n匹配目标地图的原生地点并关联之后，信息会更多，位置会更准确。'
+              }
             >
               ?
             </button>
@@ -164,7 +166,9 @@ export function PlaceTable({
               type="button"
               className="column-help"
               aria-label="匹配规则说明"
-              data-tooltip="匹配规则：距离不超过设置值"
+              data-tooltip={
+                '匹配规则：\n1. 按地点名称搜索目标地图 POI。\n2. 按坐标距离筛选候选，距离阈值可在设置中调整。\n3. 高德还会检查名称相似度；百度要求名称一致。\n4. 候选不明确时不会自动关联，可手动选择。'
+              }
             >
               ?
             </button>
