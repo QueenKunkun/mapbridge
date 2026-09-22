@@ -215,11 +215,6 @@ export function PopupView({
               </span>
             ))}
             <strong className="step-title">{stepTitle[step]}</strong>
-            {step !== 'report' && (
-              <button className="step-cancel ghost small" onClick={() => void cancelCurrentJob()}>
-                取消任务
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -503,6 +498,11 @@ export function PopupView({
                 {busy ? '提取中…' : '开始提取'}
               </button>
             }
+            cancel={
+              <button className="ghost" onClick={() => void cancelCurrentJob()}>
+                取消任务
+              </button>
+            }
           />
         </section>
       )}
@@ -588,6 +588,11 @@ export function PopupView({
                 }}
               />
             }
+            cancel={
+              <button className="ghost" onClick={() => void cancelCurrentJob()}>
+                取消任务
+              </button>
+            }
           />
         </section>
       )}
@@ -634,6 +639,11 @@ export function PopupView({
                 onClick={() => void startImport()}
               >
                 {busy ? '导入中…' : reportImportable === 0 ? '没有可导入的项目' : '开始导入'}
+              </button>
+            }
+            cancel={
+              <button className="ghost" onClick={() => void cancelCurrentJob()}>
+                取消任务
               </button>
             }
           />

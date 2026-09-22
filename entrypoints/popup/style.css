@@ -630,10 +630,22 @@ button.small {
 .wizard-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   width: 100%;
   margin-top: 12px;
+}
+
+.wizard-actions-cancel,
+.wizard-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wizard-actions-right {
+  justify-content: flex-end;
 }
 
 .wizard-actions-previous,
@@ -651,10 +663,6 @@ button.small {
 
 .wizard-actions-next {
   justify-content: flex-end;
-}
-
-.step-cancel {
-  margin-left: 6px;
 }
 
 button {
