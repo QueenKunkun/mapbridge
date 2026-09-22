@@ -146,7 +146,7 @@ export function PlaceTable({
               type="button"
               className="column-help"
               aria-label="尝试 POI 搜索匹配说明"
-              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。"
+              data-tooltip="可选项。无需匹配也可导入；匹配目标地图的原生地点并关联之后，信息会更多，位置会更准确。"
             >
               ?
             </button>
@@ -163,8 +163,8 @@ export function PlaceTable({
             <button
               type="button"
               className="column-help"
-              aria-label="地址匹配说明"
-              data-tooltip="寻找目标地图的原生 POI，关联之后，不再是自定义地点；无法匹配时仍可作为自定义坐标地点导入。"
+              aria-label="匹配规则说明"
+              data-tooltip="匹配规则：距离不超过设置值"
             >
               ?
             </button>
