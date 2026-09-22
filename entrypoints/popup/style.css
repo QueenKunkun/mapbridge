@@ -487,8 +487,15 @@ input[type='file'] {
 
 .steps {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-bottom: 12px;
+}
+
+.step-title {
+  margin-left: 2px;
+  font-size: 13px;
+  color: #1f2430;
 }
 
 .step {
@@ -724,6 +731,11 @@ button.remove {
   max-height: 150px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.warning-details > summary {
+  cursor: pointer;
+  color: #92400e;
 }
 
 .warning-scroll ul {

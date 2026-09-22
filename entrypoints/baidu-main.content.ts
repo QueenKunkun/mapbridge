@@ -8,6 +8,27 @@ import { BRIDGE_CHANNEL, postEvent, isBridgeCommand } from '@/utils/bridge';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:baidu]', ...args);
 
+const POI_SEARCH_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`POI 搜索超时（${timeoutMs / 1000} 秒）`)),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /**
  * 百度地图收藏页 MAIN world 提取器。
  * 拦截页面自身的收藏接口响应，供后续 normalize 为规范收藏。
@@ -567,12 +588,12 @@ export default defineContentScript({
           },
         });
         try {
-          const first = await request(place, 0);
+          const first = await withTimeout(request(place, 0), POI_SEARCH_TIMEOUT_MS);
           const city =
             chooseBaiduSearchCity(first, wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat)) ?? 0;
           if (city !== 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
           const match = chooseBaiduPoiMatch(
-            await request(place, city),
+            await withTimeout(request(place, city), POI_SEARCH_TIMEOUT_MS),
             { name: place.name, ...wgs84ToBd09mc(place.wgs84.lng, place.wgs84.lat) },
             maxDistance,
           );

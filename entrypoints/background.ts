@@ -62,7 +62,6 @@ let pendingAmapMatch:
         matches?: Record<string, AmapPoiMatchRecord>;
         error?: string;
       }) => void;
-      timer: ReturnType<typeof setTimeout>;
     }
   | undefined;
 
@@ -371,10 +370,6 @@ async function handleMatchAmapPoi(
       jobId,
       placeIds,
       resolve,
-      timer: setTimeout(() => {
-        pendingAmapMatch = undefined;
-        resolve({ ok: false, error: 'POI 匹配超时' });
-      }, 30000),
     };
     sendCommandToTab(tabId, {
       type: 'match-poi',
@@ -387,7 +382,6 @@ async function handleMatchAmapPoi(
       },
     }).catch((e) => {
       if (pendingAmapMatch) {
-        clearTimeout(pendingAmapMatch.timer);
         pendingAmapMatch = undefined;
       }
       resolve({
@@ -541,7 +535,6 @@ async function handleAmapMatchResult(data: unknown): Promise<void> {
     );
   }
   pendingAmapMatch = undefined;
-  clearTimeout(pending.timer);
   const value =
     data && typeof data === 'object'
       ? (data as {

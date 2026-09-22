@@ -24,35 +24,37 @@ export function ExtractionWarningPanel({
   if (groups.length === 0 && otherWarnings.length === 0) return null;
   return (
     <div className="export-warning">
-      <strong>提取/解析提示：共 {warningCount} 条</strong>
-      <div className="warning-scroll">
-        {groups.length > 0 && (
-          <ul>
-            {groups.map((group) => (
-              <li key={group.reason}>
-                {group.reason}（{group.items.length} 条）
-                <details>
-                  <summary>查看记录</summary>
-                  <ul>
-                    {group.items.map((item) => (
-                      <li key={item.index}>
-                        第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              </li>
-            ))}
-          </ul>
-        )}
-        {otherWarnings.length > 0 && (
-          <ul>
-            {otherWarnings.map((warning, index) => (
-              <li key={`${index}-${warning}`}>{warning}</li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <details className="warning-details">
+        <summary>提取/解析提示：共 {warningCount} 条</summary>
+        <div className="warning-scroll">
+          {groups.length > 0 && (
+            <ul>
+              {groups.map((group) => (
+                <li key={group.reason}>
+                  {group.reason}（{group.items.length} 条）
+                  <details>
+                    <summary>查看记录</summary>
+                    <ul>
+                      {group.items.map((item) => (
+                        <li key={item.index}>
+                          第 {item.index + 1} 条：{item.label ?? '没有可识别的记录信息'}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          )}
+          {otherWarnings.length > 0 && (
+            <ul>
+              {otherWarnings.map((warning, index) => (
+                <li key={`${index}-${warning}`}>{warning}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
     </div>
   );
 }

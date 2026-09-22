@@ -151,6 +151,13 @@ export function PopupView({
 }) {
   const stepIndex = (value: Step) =>
     ['setup', 'extract', 'preview', 'import', 'report'].indexOf(value);
+  const stepTitle: Record<Step, string> = {
+    setup: '选择地图',
+    extract: '提取收藏',
+    preview: '预览与编辑',
+    import: '导入收藏',
+    report: '导入结果',
+  };
   const reportKindCount = (status: OutcomeStatus, kind: OutcomeKind): number | string =>
     job?.report?.breakdown?.[status]?.[kind] ?? '—';
   return (
@@ -207,6 +214,7 @@ export function PopupView({
                 {i + 1}
               </span>
             ))}
+            <strong className="step-title">{stepTitle[step]}</strong>
           </div>
         </div>
       )}
@@ -501,7 +509,6 @@ export function PopupView({
 
       {step === 'preview' && job && (
         <section className="migration-content preview">
-          <h2>预览与编辑</h2>
           <ExtractionWarningPanel skips={job.extractionSkipped} warnings={job.warnings} />
           <div className="preview-tabs" role="tablist" aria-label="导入项目类型">
             <button

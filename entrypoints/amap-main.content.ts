@@ -13,6 +13,27 @@ import type { CanonicalPlace } from '@/core/model';
 
 const log = (...args: unknown[]): void => console.log('[mb:main:amap]', ...args);
 
+const POI_SEARCH_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`POI 搜索超时（${timeoutMs / 1000} 秒）`)),
+      timeoutMs,
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** 高德收藏页 getFav 响应里提取 items。 */
 function extractAmapRecords(json: unknown): unknown[] {
   if (!json || typeof json !== 'object') return [];
@@ -287,7 +308,10 @@ export default defineContentScript({
           : [searchAmapSdk, searchAmapSsr];
         for (const search of searchers) {
           try {
-            const match = chooseAmapPoiMatch(await search(place), { maxDistanceMeters });
+            const match = chooseAmapPoiMatch(
+              await withTimeout(search(place), POI_SEARCH_TIMEOUT_MS),
+              { maxDistanceMeters },
+            );
             if (match.status === 'matched') {
               resolutions[place.id] = {
                 poiid: match.candidate.poiid,
