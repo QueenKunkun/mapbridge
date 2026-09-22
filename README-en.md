@@ -51,7 +51,7 @@ pnpm compile       # typecheck
 1. Open the popup, pick **source → target** (e.g. Baidu Maps → Amap).
 2. Open the source favorites page (the popup auto-detects open favorites tabs and their login state).
 3. **Extract** → preview/edit the list → **Import** → view the report.
-4. In the place preview, try POI matching page by page. Requests are sent serially with the configured delay; you can choose a candidate or keep the place as a custom-coordinate favorite.
+4. In the place preview, try POI matching for the full filtered list. Requests are sent serially with the configured delay and pauses between pages; you can choose a candidate or keep the place as a custom-coordinate favorite.
 
 ## Project layout
 

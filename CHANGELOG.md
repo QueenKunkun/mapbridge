@@ -4,7 +4,17 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 
 ## [Unreleased]
 
-## [0.7.0] - 2026-09-13
+## [0.8.0] - 2026-09-22
+
+### Added
+
+- Added full-list POI matching from the place preview, with serial requests, configurable pacing, paginated review, numbered candidates, and manual candidate selection.
+- Added the ability to cancel an in-progress POI matching task without sending the remaining searches.
+
+### Changed
+
+- Expanded POI matching explanations and made matching controls easier to understand in the preview.
+- Improved matching progress, timeout handling, and candidate diagnostics.
 
 ## [0.7.0] - 2026-09-13
 
@@ -20,8 +30,6 @@ User-facing changes for MapBridge. Versioning follows [Semantic Versioning](http
 ## [0.6.2] - 2026-09-10
 
 ## [0.6.1] - 2026-09-09
-
-## [0.6.0] - 2026-09-09
 
 ## [0.6.0] - 2026-09-09
 
