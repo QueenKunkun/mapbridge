@@ -8,6 +8,7 @@ import {
   AMAP_SYNC_BATCH_SIZE_MIN,
   DEFAULT_SETTINGS,
   IMPORT_DELAY_MS_DEFAULT,
+  POI_MATCH_DELAY_MS_MIN,
   POI_MATCH_DELAY_MS_DEFAULT,
   POI_MATCH_DISTANCE_METERS_DEFAULT,
   POI_MATCH_DISTANCE_METERS_MAX,
@@ -269,7 +270,7 @@ export default function App() {
                   <span>导入请求间隔（ms）</span>
                   <input
                     type="number"
-                    min={REQUEST_DELAY_MS_MIN}
+                    min={POI_MATCH_DELAY_MS_MIN}
                     max={REQUEST_DELAY_MS_MAX}
                     step={100}
                     value={settings.importDelayMs}
@@ -300,12 +301,14 @@ export default function App() {
                     onChange={(e) =>
                       setSettings({
                         ...settings,
-                        poiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT,
+                        poiMatchDelayMs: Number.isFinite(Number(e.target.value))
+                          ? Number(e.target.value)
+                          : POI_MATCH_DELAY_MS_DEFAULT,
                       })
                     }
                   />
                   <small>
-                    仅影响导入到高德时的 POI 匹配；范围 {REQUEST_DELAY_MS_MIN}–
+                    仅影响导入到高德时的 POI 匹配；范围 {POI_MATCH_DELAY_MS_MIN}–
                     {REQUEST_DELAY_MS_MAX} ms。请求越慢，对目标地图接口越温和。
                   </small>
                 </label>
@@ -317,19 +320,21 @@ export default function App() {
                   <span>百度 POI 匹配请求间隔（ms）</span>
                   <input
                     type="number"
-                    min={REQUEST_DELAY_MS_MIN}
+                    min={POI_MATCH_DELAY_MS_MIN}
                     max={REQUEST_DELAY_MS_MAX}
                     step={100}
                     value={settings.baiduPoiMatchDelayMs}
                     onChange={(e) =>
                       setSettings({
                         ...settings,
-                        baiduPoiMatchDelayMs: Number(e.target.value) || POI_MATCH_DELAY_MS_DEFAULT,
+                        baiduPoiMatchDelayMs: Number.isFinite(Number(e.target.value))
+                          ? Number(e.target.value)
+                          : POI_MATCH_DELAY_MS_DEFAULT,
                       })
                     }
                   />
                   <small>
-                    仅影响导入到百度时的 POI 搜索；范围 {REQUEST_DELAY_MS_MIN}–
+                    仅影响导入到百度时的 POI 搜索；范围 {POI_MATCH_DELAY_MS_MIN}–
                     {REQUEST_DELAY_MS_MAX} ms。
                   </small>
                 </label>

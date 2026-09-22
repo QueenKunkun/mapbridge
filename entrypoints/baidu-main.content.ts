@@ -522,9 +522,7 @@ export default defineContentScript({
         ? (payload as Array<{ id: string; name: string; wgs84: { lng: number; lat: number } }>)
         : [];
       const delay = Number(options?.baiduPoiMatchDelayMs);
-      const delayMs = Number.isFinite(delay)
-        ? Math.min(10_000, Math.max(300, Math.floor(delay)))
-        : 1_000;
+      const delayMs = Number.isFinite(delay) ? Math.min(10_000, Math.max(0, Math.floor(delay))) : 0;
       const configuredPageSize = Number(options?.poiMatchPageSize);
       const pageSize = Number.isFinite(configuredPageSize)
         ? Math.min(50, Math.max(1, Math.floor(configuredPageSize)))

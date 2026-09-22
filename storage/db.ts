@@ -96,7 +96,8 @@ export const AMAP_SYNC_BATCH_SIZE_DEFAULT = 50;
 export const REQUEST_DELAY_MS_MIN = 300;
 export const REQUEST_DELAY_MS_MAX = 10_000;
 export const IMPORT_DELAY_MS_DEFAULT = 500;
-export const POI_MATCH_DELAY_MS_DEFAULT = 1_000;
+export const POI_MATCH_DELAY_MS_MIN = 0;
+export const POI_MATCH_DELAY_MS_DEFAULT = 0;
 export const POI_MATCH_DISTANCE_METERS_MIN = 50;
 export const POI_MATCH_DISTANCE_METERS_MAX = 1_000;
 export const POI_MATCH_DISTANCE_METERS_DEFAULT = 150;
@@ -144,12 +145,12 @@ function normalizeSettings(settings: AppSettings): AppSettings {
       ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(importDelay)))
       : IMPORT_DELAY_MS_DEFAULT,
     poiMatchDelayMs: Number.isFinite(poiMatchDelay)
-      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(REQUEST_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
+      ? Math.min(REQUEST_DELAY_MS_MAX, Math.max(POI_MATCH_DELAY_MS_MIN, Math.floor(poiMatchDelay)))
       : POI_MATCH_DELAY_MS_DEFAULT,
     baiduPoiMatchDelayMs: Number.isFinite(baiduPoiMatchDelay)
       ? Math.min(
           REQUEST_DELAY_MS_MAX,
-          Math.max(REQUEST_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)),
+          Math.max(POI_MATCH_DELAY_MS_MIN, Math.floor(baiduPoiMatchDelay)),
         )
       : POI_MATCH_DELAY_MS_DEFAULT,
     baiduPoiMatchDistanceMeters: Number.isFinite(baiduPoiMatchDistance)

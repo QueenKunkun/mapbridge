@@ -253,8 +253,8 @@ export default defineContentScript({
       const places = Array.isArray(payload) ? (payload as CanonicalPlace[]) : [];
       const configuredDelay = Number(options?.poiMatchDelayMs);
       const delayMs = Number.isFinite(configuredDelay)
-        ? Math.min(10_000, Math.max(300, Math.floor(configuredDelay)))
-        : 1_000;
+        ? Math.min(10_000, Math.max(0, Math.floor(configuredDelay)))
+        : 0;
       const configuredPageSize = Number(options?.poiMatchPageSize);
       const pageSize = Number.isFinite(configuredPageSize)
         ? Math.min(50, Math.max(1, Math.floor(configuredPageSize)))

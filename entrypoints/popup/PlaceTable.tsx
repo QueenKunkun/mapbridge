@@ -320,7 +320,7 @@ function PoiMatchCell({
           )
         }
       >
-        <option value="">无最佳匹配</option>
+        <option value="">{match?.status === 'ambiguous' ? '候选不明确' : '无最佳匹配'}</option>
         {candidates.map((candidate, index) => {
           const score = Number.isFinite(candidate.nameScore) ? candidate.nameScore : 0;
           return (
@@ -370,26 +370,13 @@ function PoiMatchCell({
       )}
     </div>
   );
-  if (resolution || match?.status === 'matched' || match?.status === 'not-found')
+  if (
+    resolution ||
+    match?.status === 'matched' ||
+    match?.status === 'not-found' ||
+    match?.status === 'ambiguous'
+  )
     return <div className="match-cell">{controls}</div>;
-  if (match?.status === 'ambiguous')
-    return (
-      <span className="match-status warning">
-        候选不明确
-        <details className="match-candidates">
-          <summary>选择</summary>
-          <ul>
-            {(match.candidates ?? []).map((candidate) => (
-              <li key={candidate.poiid}>
-                <button className="small ghost" onClick={() => onSelect?.(place.id, candidate)}>
-                  {candidate.name}（{Math.round(candidate.distanceMeters)}m）
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      </span>
-    );
   if (match?.status === 'failed')
     return (
       <span className="match-status warning" title={match.error}>
