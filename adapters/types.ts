@@ -34,6 +34,8 @@ export interface RawImportResult {
   done: boolean;
   /** 报告给目标页面的最终收藏数量（如有）。 */
   targetCount?: number;
+    /** 目标计数是否因接口读取上限被截断。 */
+    targetTruncated?: boolean;
   /** 错误信息（如有）。 */
   error?: string;
   /** provider 特有明细。 */

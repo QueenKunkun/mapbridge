@@ -657,6 +657,7 @@ export const amapAdapter: ProviderAdapter = {
       failed: failedItems.length,
       failedItems,
       targetCount: result.targetCount,
+            targetTruncated: result.targetTruncated,
       breakdown,
       raw: result.raw,
     };

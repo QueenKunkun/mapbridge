@@ -46,6 +46,8 @@ export interface ImportReport {
   /** 撤销阶段未能删除的目标收藏数。 */
   undoFailed?: number;
   targetCount?: number;
+    /** 目标计数是否因接口读取上限（如高德1000条）被截断，真实总数可能更高。 */
+    targetTruncated?: boolean;
   raw?: unknown;
 }
 

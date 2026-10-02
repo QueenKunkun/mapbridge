@@ -755,6 +755,11 @@ export function PopupView({
                 <div className="report-target-total">
                   <span>目标地图导入后总数</span>
                   <strong>{job.report.targetCount} 条</strong>
+                  {job.report.targetTruncated && (
+                                                          <div className="report-truncated-hint">
+                                                            高德接口单次最多返回1000条，实际总数可能更高，请以手机App显示为准
+                                                                    </div>
+                                    )}
                 </div>
               )}
             </div>
